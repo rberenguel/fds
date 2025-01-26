@@ -66,6 +66,7 @@ const bindKeyHandlers = () => {
     event.preventDefault();
   });
 };
+
 const buttonPressed = (b) => {
   if (typeof b == "object") {
     return b.pressed; // binary
@@ -152,7 +153,7 @@ const handleControls = (gameActions, keyMap, buttonMap) => {
       const pressed = (b) => buttonPressed(controller.buttons[b]);
       for (let button in buttonMap) {
         if (buttonPressed(controller.buttons[button.slice(1)])) {
-          gameActions[buttonMap[button]]();
+          gameActions[buttonMap[button]]?.();
         }
       }
     }
