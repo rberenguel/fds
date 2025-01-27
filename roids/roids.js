@@ -49,16 +49,18 @@ if (buttonMap === undefined) {
 const gameActions = {
   moveUp: () => {
     const [sx, sy] = rotate(15, 0, ship.r);
+    const [vx, vy] = rotate(1, 0, ship.r)
     for (let i = 0; i < 4; i++) {
-      addFlames(ship.x + sx, ship.y + sy, 1, 0, 0);
+      addFlames(ship.x + sx, ship.y + sy, vx, vy, 0);
     }
     ship.vx -= 0.1 * Math.cos(ship.r);
     ship.vy -= 0.1 * Math.sin(ship.r);
   },
   moveDown: () => {
     const [sx, sy] = rotate(-5, 0, ship.r);
+    const [vx, vy] = rotate(-1, 0, ship.r)
     for (let i = 0; i < 4; i++) {
-      addFlames(ship.x + sx, ship.y + sy, -1, 0, 0);
+      addFlames(ship.x + sx, ship.y + sy, vx, vy, 0);
     }
     ship.vx += 0.05 * Math.cos(ship.r);
     ship.vy += 0.05 * Math.sin(ship.r);
@@ -166,6 +168,10 @@ class Bullet{
     this.pres.x += this.vx;
     this.pres.y += this.vy;
     this.e -= 0.3;
+    if(this.e <= 0.1){
+      this.e = 0;
+      this.pres.destroy()
+    }
     const ne = Math.max(0, Math.min(1, this.e / 10));
     const red = 0;
     const green = Math.floor(255 * ne);
