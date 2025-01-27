@@ -1,0 +1,20 @@
+{
+  "short_name": "Roids/2",
+  "name": "Roids/2",
+  "icons": [
+    {
+      "src": "media/icon512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "media/icon128.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    }
+  ],
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000"
+}

@@ -221,7 +221,7 @@ class VirtualPad {
       //console.log("Right"); 
       this.gameActions["moveRight"]()
     } else if (normalizedAngle >= Math.PI / 4 && normalizedAngle < Math.PI * 3 / 4) {
-      if(distance < 200) {
+      if(distance < 150) {
         return
       }
       this.gameActions["moveDown"]()
@@ -230,7 +230,7 @@ class VirtualPad {
       this.gameActions["moveLeft"]()
        //console.log("Left");
     } else if (normalizedAngle >= Math.PI * 5 / 4 && normalizedAngle < Math.PI * 7 / 4) {
-      if(distance < 200) {
+      if(distance < 150) {
         return
       }
       this.gameActions["moveUp"]()
