@@ -166,7 +166,7 @@ function pointInRect(x, y, rect) {
   console.log(x, y, rect)
   return (
     x >= rect.ul[0] && x <= rect.lr[0] && 
-    y >= rect.ul[0] && y <= rect.lr[1]
+    y >= rect.ul[1] && y <= rect.lr[1]
   );
 }
 
