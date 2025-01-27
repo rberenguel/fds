@@ -199,6 +199,7 @@ class VirtualPad {
     if (pointInRect(e.x, e.y, this.shootArea)) {
       this.stopShooting();
     }
+    this.padStarted = false
   }
 
   touchMove(e) {

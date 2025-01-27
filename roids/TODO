@@ -1,3 +1,4 @@
+The virtual gamepad works well, but… it is not intuitive: it would be better if it used the shift reference frame for the angles
 Convert keyboard/gamepad handling into class
 Harden all pad handling
 Add scaling for flames and bullets equivalent to ship
