@@ -1,0 +1,7 @@
+Convert keyboard/gamepad handling into class
+Harden all pad handling
+Add scaling for flames and bullets equivalent to ship
+Move bullets and flame out
+Generic update loop on object list
+Add asteroids
+

@@ -4,6 +4,7 @@ export {
   handleControls,
   touchZoneHandler,
   getDeviceInput,
+  VirtualPad
 };
 
 const keys = {};
@@ -159,3 +160,99 @@ const handleControls = (gameActions, keyMap, buttonMap) => {
     }
   }
 };
+
+
+function pointInRect(x, y, rect) {
+  console.log(x, y, rect)
+  return (
+    x >= rect.ul[0] && x <= rect.lr[0] && 
+    y >= rect.ul[0] && y <= rect.lr[1]
+  );
+}
+
+class VirtualPad {
+  constructor(props){
+    this.ix = 0
+    this.iy = 0
+    this.gameActions = props.gameActions
+    this.padArea = props.padArea
+    this.shootArea = props.shootArea
+    this.padStarted = false
+    this.shooting = false; 
+    this.shootInterval = null;
+    this.repeatFire = props.repeatFire ?? 100
+  }
+  touchStart(e) {
+    // e should have x and y
+    if(pointInRect(e.x, e.y, this.padArea)){
+      this.ix = e.x
+      this.iy = e.y
+      this.padStarted = true
+      return
+    }
+    this.padStarted = false
+    if(pointInRect(e.x, e.y, this.shootArea)){
+      this.startShooting()
+    }
+  }
+  touchEnd(e) {
+    if (pointInRect(e.x, e.y, this.shootArea)) {
+      this.stopShooting();
+    }
+  }
+
+  touchMove(e) {
+    if(!this.padStarted){
+      return
+    }
+    const vx = e.x - this.ix
+    const vy = e.y - this.iy
+    const angle = Math.atan2(vy, vx); 
+    const distance = Math.sqrt(vx * vx + vy * vy);
+    if(distance < 50){
+      return
+    }
+    const normalizedAngle = (angle + 2 * Math.PI) % (2 * Math.PI); // Normalize angle to 0-2PI
+    if (normalizedAngle >= Math.PI * 7 / 4 || normalizedAngle < Math.PI / 4) {
+      //console.log("Right"); 
+      this.gameActions["moveRight"]()
+    } else if (normalizedAngle >= Math.PI / 4 && normalizedAngle < Math.PI * 3 / 4) {
+      this.gameActions["moveDown"]()
+      //console.log("Down");
+    } else if (normalizedAngle >= Math.PI * 3 / 4 && normalizedAngle < Math.PI * 5 / 4) {
+      this.gameActions["moveLeft"]()
+      //console.log("Left");
+    } else if (normalizedAngle >= Math.PI * 5 / 4 && normalizedAngle < Math.PI * 7 / 4) {
+      this.gameActions["moveUp"]()
+      //console.log("Up");
+    }
+
+    // Intermediate areas (combine actions)
+    if (normalizedAngle >= Math.PI / 8 && normalizedAngle < Math.PI * 3 / 8) {
+      //console.log("Down-Right");
+    } else if (normalizedAngle >= Math.PI * 5 / 8 && normalizedAngle < Math.PI * 7 / 8) {
+      //console.log("Down-Left");
+    } else if (normalizedAngle >= Math.PI * 9 / 8 && normalizedAngle < Math.PI * 11 / 8) {
+      //console.log("Up-Left");
+    } else if (normalizedAngle >= Math.PI * 13 / 8 && normalizedAngle < Math.PI * 15 / 8) {
+      //console.log("Up-Right");
+    } 
+  }
+  startShooting() {
+    if (!this.shooting) {
+      this.shooting = true;
+      this.gameActions["shoot"](); 
+
+      this.shootInterval = setInterval(() => {
+        this.gameActions["shoot"]();
+      }, this.repeatFire); 
+    }
+  }
+
+  stopShooting() {
+    if (this.shooting) {
+      this.shooting = false;
+      clearInterval(this.shootInterval); // Clear the interval
+    }
+  }
+}

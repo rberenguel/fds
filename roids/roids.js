@@ -13,6 +13,7 @@ import {
   bindKeyHandlers,
   handleControls,
   getDeviceInput,
+  VirtualPad
 } from "../libs/controlHandling.js";
 
 import { Ship } from "./ship.js"
@@ -59,14 +60,14 @@ const gameActions = {
     for (let i = 0; i < 4; i++) {
       addFlames(ship.x + sx, ship.y + sy, -1, 0, 0);
     }
-    ship.vx += 0.1 * Math.cos(ship.r);
-    ship.vy += 0.1 * Math.sin(ship.r);
+    ship.vx += 0.05 * Math.cos(ship.r);
+    ship.vy += 0.05 * Math.sin(ship.r);
   },
   moveRight: () => {
-    ship.r += 0.1;
+    ship.r += 0.05;
   },
   moveLeft: () => {
-    ship.r -= 0.1;
+    ship.r -= 0.05;
   },
   shoot: () => {
     const [sx, sy] = rotate(15, 0, ship.r);
@@ -122,6 +123,10 @@ class Flame{
     this.pres.x += this.vx;
     this.pres.y += this.vy;
     this.e -= 0.1;
+    if(this.e <= 0.1){
+      this.e = 0;
+      this.pres.destroy()
+    }
     const ne = Math.max(0, Math.min(1, this.e / 10));
 
     const red = Math.floor(255 * ne); // Red decreases from 255 to 0
@@ -138,7 +143,7 @@ class Bullet{
   constructor(props={}){
     const accel = 5;
     const rf = Math.random();
-    const r = 0.01 - 0.02 * rf;
+    const r = 0.01 + 0.01 * rf;
     this.x = props.x
     this.y = props.y
     console.log(props.d)
@@ -149,9 +154,9 @@ class Bullet{
     this.vx = nvx;
     this.vy = nvy;
     const bullet = new Graphics();
-    const path = [0, 0, 2, -1, 2, 1];
+    const path = [0, 0, 3, -2, 3, 2];
     bullet.poly(path);
-    bullet.fill(0xffff);
+    bullet.fill(0x00ffff);
     bullet.x = this.x;
     bullet.y = this.y;
     this.pres = bullet;
@@ -208,7 +213,7 @@ void Scene::addPlasmaBullet() {
 */
 
 const app = new Application();
-await app.init({ width: 600, height: 600 });
+await app.init({ width: window.innerWidth, height: window.innerHeight });
 
 document.body.appendChild(app.canvas);
 
@@ -217,11 +222,53 @@ const ship = new Ship({
   y: 200,
 });
 
+    // Enable interactivity
+    app.stage.eventMode = 'static';
+
+    // Make sure the whole canvas area is interactive, not just the circle.
+    app.stage.hitArea = app.screen;
+
+    let ig_x, ig_y // Initial global position
+const virtualPad = new VirtualPad({
+  gameActions: gameActions, 
+  padArea: {
+    ul: [0, 0], lr: [app.renderer.width/2, app.renderer.height]
+  },
+  shootArea: {
+    ul: [app.renderer.width/2, 0],
+    lr: [app.renderer.width, app.renderer.height]
+  }
+})
+
+    app.stage.addEventListener('pointerdown', (e) =>
+    {
+      virtualPad.touchStart(e.global)
+    });
+   app.stage.addEventListener('pointermove', (e) =>
+    {
+      virtualPad.touchMove(e.global)
+    });
+app.stage.addEventListener('pointerup', (e) => {
+  virtualPad.touchEnd(e.global); 
+});
 app.stage.addChild(ship.pres);
 
 app.ticker.add((delta) => {
   handleControls(gameActions, keyMap, buttonMap);
   ship.update(delta)
+  // TODO: wrap method
+  if(ship.x > app.renderer.width){
+    ship.x = 0
+  }
+  if(ship.y > app.renderer.height){
+    ship.y = 0
+  } 
+  if(ship.x < 0){
+    ship.x = app.renderer.width
+  }
+  if(ship.y < 0){
+    ship.y = app.renderer.height
+  }
   for (const fl of flameList) {
     if (fl.drawn) {
       continue;
