@@ -3,12 +3,12 @@
   "name": "Roids/2",
   "icons": [
     {
-      "src": "media/icon512.png",
+      "src": "media/icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
     },
     {
-      "src": "media/icon128.png",
+      "src": "media/icon-128.png",
       "sizes": "128x128",
       "type": "image/png"
     }
