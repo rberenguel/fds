@@ -181,9 +181,11 @@ class VirtualPad {
     this.shooting = false; 
     this.shootInterval = null;
     this.repeatFire = props.repeatFire ?? 100
+    this.relativeRotation = props.relativeRotation
   }
-  touchStart(e) {
-    // e should have x and y
+  touchStart(e, ev) {
+    // e should have x and y, and ev be a full event
+    ev.preventDefault()
     if(pointInRect(e.x, e.y, this.padArea)){
       this.ix = e.x
       this.iy = e.y
@@ -192,6 +194,7 @@ class VirtualPad {
     }
     this.padStarted = false
     if(pointInRect(e.x, e.y, this.shootArea)){
+      console.log(ev)
       this.startShooting()
     }
   }
@@ -202,28 +205,34 @@ class VirtualPad {
     this.padStarted = false
   }
 
-  touchMove(e) {
+  touchMove(e, r) {
     if(!this.padStarted){
       return
     }
     const vx = e.x - this.ix
     const vy = e.y - this.iy
-    const angle = Math.atan2(vy, vx); 
+    const angle = Math.atan2(vy, vx)
     const distance = Math.sqrt(vx * vx + vy * vy);
-    if(distance < 50){
+    if(distance < 75){
       return
     }
-    const normalizedAngle = (angle + 2 * Math.PI) % (2 * Math.PI); // Normalize angle to 0-2PI
+    const normalizedAngle = (angle + 2 * Math.PI) % (2 * Math.PI)// + r + Math.PI/2; // Normalize angle to 0-2PI
     if (normalizedAngle >= Math.PI * 7 / 4 || normalizedAngle < Math.PI / 4) {
       //console.log("Right"); 
       this.gameActions["moveRight"]()
     } else if (normalizedAngle >= Math.PI / 4 && normalizedAngle < Math.PI * 3 / 4) {
+      if(distance < 200) {
+        return
+      }
       this.gameActions["moveDown"]()
       //console.log("Down");
     } else if (normalizedAngle >= Math.PI * 3 / 4 && normalizedAngle < Math.PI * 5 / 4) {
       this.gameActions["moveLeft"]()
-      //console.log("Left");
+       //console.log("Left");
     } else if (normalizedAngle >= Math.PI * 5 / 4 && normalizedAngle < Math.PI * 7 / 4) {
+      if(distance < 200) {
+        return
+      }
       this.gameActions["moveUp"]()
       //console.log("Up");
     }

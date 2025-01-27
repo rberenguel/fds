@@ -245,14 +245,25 @@ const virtualPad = new VirtualPad({
     lr: [app.renderer.width, app.renderer.height]
   }
 })
+// Prevent the default behavior of touch events
+app.view.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+}, { passive: false });
 
+app.view.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+}, { passive: false });
+
+app.view.addEventListener('touchend', (e) => {
+  e.preventDefault();
+}, { passive: false });
     app.stage.addEventListener('pointerdown', (e) =>
     {
-      virtualPad.touchStart(e.global)
+      virtualPad.touchStart(e.global, e)
     });
    app.stage.addEventListener('pointermove', (e) =>
     {
-      virtualPad.touchMove(e.global)
+      virtualPad.touchMove(e.global, ship.r)
     });
 app.stage.addEventListener('pointerup', (e) => {
   virtualPad.touchEnd(e.global); 
