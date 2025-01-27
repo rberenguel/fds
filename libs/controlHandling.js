@@ -124,7 +124,6 @@ const _getDeviceInput = (kind) => {
     for (let i in controllers) {
       let controller = gamepads[i];
       if (controller.buttons) {
-        console.log("Buttons done");
         for (let b = 0; b < controller.buttons.length; b++) {
           if (buttonPressed(controller.buttons[b])) {
             return b;
@@ -163,7 +162,6 @@ const handleControls = (gameActions, keyMap, buttonMap) => {
 
 
 function pointInRect(x, y, rect) {
-  console.log(x, y, rect)
   return (
     x >= rect.ul[0] && x <= rect.lr[0] && 
     y >= rect.ul[1] && y <= rect.lr[1]
@@ -181,7 +179,11 @@ class VirtualPad {
     this.shooting = false; 
     this.shootInterval = null;
     this.repeatFire = props.repeatFire ?? 100
+    this.repeatMove = props.repeatMove ?? 30
     this.relativeRotation = props.relativeRotation
+    this.displacement = props.displacement ?? 75
+    this.moving = false
+    console.log(this.displacement)
   }
   touchStart(e, ev) {
     // e should have x and y, and ev be a full event
@@ -194,13 +196,15 @@ class VirtualPad {
     }
     this.padStarted = false
     if(pointInRect(e.x, e.y, this.shootArea)){
-      console.log(ev)
       this.startShooting()
     }
   }
   touchEnd(e) {
     if (pointInRect(e.x, e.y, this.shootArea)) {
       this.stopShooting();
+    }
+    if(this.padStarted){
+      this.stopMoving()
     }
     this.padStarted = false
   }
@@ -213,41 +217,44 @@ class VirtualPad {
     const vy = e.y - this.iy
     const angle = Math.atan2(vy, vx)
     const distance = Math.sqrt(vx * vx + vy * vy);
-    if(distance < 75){
+    if(distance < this.displacement/2){
       return
     }
     const normalizedAngle = (angle + 2 * Math.PI) % (2 * Math.PI)// + r + Math.PI/2; // Normalize angle to 0-2PI
     if (normalizedAngle >= Math.PI * 7 / 4 || normalizedAngle < Math.PI / 4) {
-      //console.log("Right"); 
-      this.gameActions["moveRight"]()
+      this.startMoving("moveRight")
     } else if (normalizedAngle >= Math.PI / 4 && normalizedAngle < Math.PI * 3 / 4) {
-      if(distance < 150) {
+      if(distance < this.displacement) {
         return
       }
-      this.gameActions["moveDown"]()
-      //console.log("Down");
+      this.startMoving("moveDown", 0.8)
     } else if (normalizedAngle >= Math.PI * 3 / 4 && normalizedAngle < Math.PI * 5 / 4) {
-      this.gameActions["moveLeft"]()
-       //console.log("Left");
+      this.startMoving("moveLeft")
     } else if (normalizedAngle >= Math.PI * 5 / 4 && normalizedAngle < Math.PI * 7 / 4) {
-      if(distance < 150) {
+      if(distance < this.displacement) {
         return
       }
-      this.gameActions["moveUp"]()
-      //console.log("Up");
+      this.startMoving("moveUp", 0.8)
     }
-
+    if(distance < this.displacement) {
+        return
+    }
     // Intermediate areas (combine actions)
     if (normalizedAngle >= Math.PI / 8 && normalizedAngle < Math.PI * 3 / 8) {
-      //console.log("Down-Right");
+      this.startMoving("moveDown", 0.8)
+      this.startMoving("moveRight")
     } else if (normalizedAngle >= Math.PI * 5 / 8 && normalizedAngle < Math.PI * 7 / 8) {
-      //console.log("Down-Left");
+      this.startMoving("moveDown", 0.8)
+      this.startMoving("moveLeft")
     } else if (normalizedAngle >= Math.PI * 9 / 8 && normalizedAngle < Math.PI * 11 / 8) {
-      //console.log("Up-Left");
+      this.startMoving("moveUp", 0.8)
+      this.startMoving("moveLeft")
     } else if (normalizedAngle >= Math.PI * 13 / 8 && normalizedAngle < Math.PI * 15 / 8) {
-      //console.log("Up-Right");
+      this.startMoving("moveUp", 0.8)
+      this.startMoving("moveRight")
     } 
   }
+
   startShooting() {
     if (!this.shooting) {
       this.shooting = true;
@@ -258,11 +265,34 @@ class VirtualPad {
       }, this.repeatFire); 
     }
   }
+ 
+  startMoving(direction, f) {
+    if (this.padStarted) {
+      if(this.moving == direction){
+        return
+      }
+      this.moving = direction
+      this.gameActions[direction](f); 
+      if(this.moveInterval){
+        clearInterval(this.moveInterval)
+      }
+
+      this.moveInterval = setInterval(() => {
+        this.gameActions[direction](f);
+      }, this.repeatMove); 
+    }
+  }
+
 
   stopShooting() {
     if (this.shooting) {
       this.shooting = false;
       clearInterval(this.shootInterval); // Clear the interval
+    }
+  }
+  stopMoving() {
+    if (this.moveInterval) {
+      clearInterval(this.moveInterval); // Clear the interval
     }
   }
 }
