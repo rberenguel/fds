@@ -27,13 +27,19 @@ class Flame{
     this.pres = flame;
   }
 
+  kind(){
+    return "kFlame"
+  }
+
   update(){
     this.pres.x += this.vx;
     this.pres.y += this.vy;
-    this.e -= 0.1;
+    this.e -= 0.3;
     if(this.e <= 0.1){
       this.e = 0;
       this.pres.destroy()
+      this.pres = null
+      return
     }
     const ne = Math.max(0, Math.min(1, this.e / 10));
 

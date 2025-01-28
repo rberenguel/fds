@@ -28,9 +28,15 @@ class Bullet{
     this.pres = bullet;
   }
 
+  kind() {
+    return "kBullet"
+  }
+
   update(){
-    this.pres.x += this.vx;
-    this.pres.y += this.vy;
+    this.x += this.vx;
+    this.y += this.vy;
+    this.pres.x = this.x
+    this.pres.y = this.y
     this.e -= 0.3;
     if(this.e <= 0.1){
       this.e = 0;

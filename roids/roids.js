@@ -20,6 +20,7 @@ import { rotate } from "./math.js"
 
 import { Ship } from "./ship.js"
 import { Bullet } from "./bullet.js"
+import { Asteroid } from "./asteroid.js"
 import { Flame } from "./flame.js"
 
 bindGamepadHandlers();
@@ -84,11 +85,15 @@ const gameActions = {
 
 let flameList = [];
 let bulletList = [];
+let asteroidList = [];
 
 const addFlames = (x, y, vx, vy, d) => {
   const flame = new Flame({x: x, y: y, vx: vx, vy: vy, d: d})
   flameList.push(flame);
 };
+
+const ast = new Asteroid({x: 300, y: 300}, {x: 0, y: 0}, 8, 50, 0.1)
+
 
 const addBullets = (x, y, vx, vy, d) => {
   const bullet = new Bullet({x: x, y: y, vx: vx, vy: vy, d: d})
@@ -108,7 +113,7 @@ const ship = new Ship({
 
     // Enable interactivity
     app.stage.eventMode = 'static';
-
+app.renderer.view.tabIndex = -1;
     // Make sure the whole canvas area is interactive, not just the circle.
     app.stage.hitArea = app.screen;
 
@@ -144,16 +149,23 @@ app.view.addEventListener('touchend', (e) => {
     });
    app.stage.addEventListener('pointermove', (e) =>
     {
-      virtualPad.touchMove(e.global, ship.r)
+      virtualPad.touchMove(e.global, () => ship.r)
     });
 app.stage.addEventListener('pointerup', (e) => {
   virtualPad.touchEnd(e.global); 
 });
 app.stage.addChild(ship.pres);
+app.stage.addChild(ast.pres);
+
+const focusTrap = document.getElementById('focus-trap');
+focusTrap.focus(); // Set focus to the hidden input
+
+
 
 app.ticker.add((delta) => {
   handleControls(gameActions, keyMap, buttonMap);
   ship.update(delta)
+  ast.update(delta)
   // TODO: wrap method
   if(ship.x > app.renderer.width){
     ship.x = 0
@@ -177,5 +189,21 @@ app.ticker.add((delta) => {
   for (const fl of flameList) {
     fl.update()    
   }
-  flameList = flameList.filter((fl) => fl.e > 0.1);
+  flameList = flameList.filter((fl) => fl.e > 0);
+  for(let i=0;i< flameList.length;i++){
+    const fl = flameList[i]
+    if(fl.e < 0.1){
+      fl.pres.destroy()
+    }
+    if(fl.kind() != "kBullet"){
+      continue
+    }
+    if(ast.collision(fl)){
+      const r = 0.15 - 0.3*Math.random()
+      const e = 0.15*fl.e
+      const [vx, vy] = rotate(-fl.vx*e, -fl.vy*e, r)
+      addFlames(fl.x, fl.y, vx, vy, 0);
+      fl.e = 0
+    }
+  }
 });

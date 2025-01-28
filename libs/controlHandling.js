@@ -215,12 +215,13 @@ class VirtualPad {
     }
     const vx = e.x - this.ix
     const vy = e.y - this.iy
-    const angle = Math.atan2(vy, vx)
+    // The r correction works here but is not natural at all
+    const angle = Math.atan2(vy, vx) // - Math.PI/2 - r()
     const distance = Math.sqrt(vx * vx + vy * vy);
     if(distance < this.displacement/2){
       return
     }
-    const normalizedAngle = (angle + 2 * Math.PI) % (2 * Math.PI)// + r + Math.PI/2; // Normalize angle to 0-2PI
+    const normalizedAngle = (angle + 2 * Math.PI) % (2 * Math.PI)
     if (normalizedAngle >= Math.PI * 7 / 4 || normalizedAngle < Math.PI / 4) {
       this.startMoving("moveRight")
     } else if (normalizedAngle >= Math.PI / 4 && normalizedAngle < Math.PI * 3 / 4) {
@@ -236,7 +237,7 @@ class VirtualPad {
       }
       this.startMoving("moveUp", 0.8)
     }
-    if(distance < this.displacement) {
+    if(distance < 0.6*this.displacement) {
         return
     }
     // Intermediate areas (combine actions)

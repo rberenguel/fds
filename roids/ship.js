@@ -27,7 +27,7 @@ class Ship {
   update(delta) {
     this.x += this.vx * delta.deltaTime;
     this.y += this.vy * delta.deltaTime;
-    this.pres.angle = this.r * 180 / Math.PI;
+    this.pres.rotation = this.r;
     this.pres.x = this.x
     this.pres.y = this.y; 
   }
