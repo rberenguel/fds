@@ -12,7 +12,6 @@ class Bullet{
     const r = 0.01 + 0.01 * rf;
     this.x = props.x
     this.y = props.y
-    console.log(props.d)
     this.vx = accel * Math.cos(props.d) * rf
     this.vy = accel * Math.sin(props.d) * rf
     this.e = props.e ?? 10

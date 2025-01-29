@@ -7,7 +7,6 @@ import {
 
 class Ship {
   constructor(props) {
-    console.log(props)
     this.x = props.x;
     this.y = props.y;
     this.vx = props.vx ?? 0;
@@ -18,7 +17,7 @@ class Ship {
     const path = [-70, 50, 70, 0, -70, -50, -30, 0, -70, 50];
     this.pres.poly(path);
 
-    this.pres.scale.set(0.2);
+    this.pres.scale.set(0.1);
     this.pres.stroke({ color: 0xffffff, width: 10 });
   }
 

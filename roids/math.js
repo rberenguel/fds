@@ -1,4 +1,4 @@
-export { dist, rotate }
+export { dist, sqdist, sqnorm, rotate }
 
 const rotate = (x1, x2, ang) => {
   const cos = Math.cos(ang);
@@ -8,8 +8,12 @@ const rotate = (x1, x2, ang) => {
   return [x, y];
 };
 
-const dist = (p, q) => {
+const sqnorm = (a, b) => a*a+b*b
+
+const sqdist = (p, q) => {
   const dx = q.x - p.x
   const dy = q.y - p.y
-  return Math.sqrt(dx*dx+dy*dy)
+  return sqnorm(dx, dy)
 }
+
+const dist = (p, q) => Math.sqrt(sqdist(p, q))

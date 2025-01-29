@@ -22,6 +22,7 @@ import { Ship } from "./ship.js"
 import { Bullet } from "./bullet.js"
 import { Asteroid } from "./asteroid.js"
 import { Flame } from "./flame.js"
+import { Entity, explode } from "./entity.js"
 
 bindGamepadHandlers();
 bindKeyHandlers();
@@ -85,15 +86,17 @@ const gameActions = {
 
 let flameList = [];
 let bulletList = [];
-let asteroidList = [];
+let asteroids = [];
+let transients = []
 
 const addFlames = (x, y, vx, vy, d) => {
   const flame = new Flame({x: x, y: y, vx: vx, vy: vy, d: d})
   flameList.push(flame);
 };
 
-const ast = new Asteroid({x: 300, y: 300}, {x: 0, y: 0}, 8, 50, 0.1)
+const ast = new Asteroid({x: 300, y: 300}, {x: 0, y: 0}, 8, 50, 0.01)
 
+asteroids = [ast]
 
 const addBullets = (x, y, vx, vy, d) => {
   const bullet = new Bullet({x: x, y: y, vx: vx, vy: vy, d: d})
@@ -161,24 +164,31 @@ const focusTrap = document.getElementById('focus-trap');
 focusTrap.focus(); // Set focus to the hidden input
 
 
+const wrap = (thing) => {
+  if(thing.x > app.renderer.width){
+    thing.x = 0
+  }
+  if(thing.y > app.renderer.height){
+    thing.y = 0
+  } 
+  if(thing.x < 0){
+    thing.x = app.renderer.width
+  }
+  if(thing.y < 0){
+    thing.y = app.renderer.height
+  }
+
+}
 
 app.ticker.add((delta) => {
   handleControls(gameActions, keyMap, buttonMap);
   ship.update(delta)
-  ast.update(delta)
+  wrap(ship)
+  for(const a of asteroids){
+    a.update(delta)
+    wrap(a)
+  }
   // TODO: wrap method
-  if(ship.x > app.renderer.width){
-    ship.x = 0
-  }
-  if(ship.y > app.renderer.height){
-    ship.y = 0
-  } 
-  if(ship.x < 0){
-    ship.x = app.renderer.width
-  }
-  if(ship.y < 0){
-    ship.y = app.renderer.height
-  }
   for (const fl of flameList) {
     if (fl.drawn) {
       continue;
@@ -188,8 +198,11 @@ app.ticker.add((delta) => {
   }
   for (const fl of flameList) {
     fl.update()    
+    wrap(fl)
   }
   flameList = flameList.filter((fl) => fl.e > 0);
+  asteroids = asteroids.filter(a => a.e > 0);
+  let brokens = []
   for(let i=0;i< flameList.length;i++){
     const fl = flameList[i]
     if(fl.e < 0.1){
@@ -198,12 +211,32 @@ app.ticker.add((delta) => {
     if(fl.kind() != "kBullet"){
       continue
     }
-    if(ast.collision(fl)){
-      const r = 0.15 - 0.3*Math.random()
-      const e = 0.15*fl.e
-      const [vx, vy] = rotate(-fl.vx*e, -fl.vy*e, r)
-      addFlames(fl.x, fl.y, vx, vy, 0);
-      fl.e = 0
+    for(let a of asteroids){
+      if(a.collision(fl)){
+        const r = 0.15 - 0.3*Math.random()
+        const e = 0.15*fl.e
+        const [vx, vy] = rotate(-fl.vx*e, -fl.vy*e, r)
+        addFlames(fl.x, fl.y, vx, vy, 0);
+        fl.e = 0
+        const breaks = a.addCrack(fl)
+        if(breaks){
+          transients = transients.concat(explode(a))
+          const [a1, a2] = breaks
+          app.stage.addChild(a1.pres);
+          app.stage.addChild(a2.pres);
+          brokens.push(a1)
+          brokens.push(a2)
+        }
+      }
+    }
+  }
+  asteroids = brokens.concat(asteroids)
+  transients = transients.filter(t => t.e >= 0 )
+  for(let t of transients){
+    t.update(delta)
+    if(!t.drawn){
+      app.stage.addChild(t.pres)
+      t.drawn = true
     }
   }
 });
