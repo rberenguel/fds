@@ -135,7 +135,7 @@ const _getDeviceInput = (kind) => {
   }
 };
 
-const handleControls = (gameActions, keyMap, buttonMap) => {
+const handleControls = (gameActions, keyMap, buttonMap) => () => {
   let gamepads = navigator.getGamepads();
 
   if (controllers.length == 0) {
@@ -183,7 +183,6 @@ class VirtualPad {
     this.relativeRotation = props.relativeRotation
     this.displacement = props.displacement ?? 75
     this.moving = false
-    console.log(this.displacement)
   }
   touchStart(e, ev) {
     // e should have x and y, and ev be a full event
