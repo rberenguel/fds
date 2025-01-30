@@ -3,7 +3,8 @@ import {
   Graphics
 } from "../libs/3rdparty/pixi.mjs";
 
-
+import { dist, sqnorm, rotate } from "./math.js"
+// TODO: converted from C++ by Gemini, needs fixes
 class Entity {
   constructor(x = 0, y = 0, vertices=[], velocity = { x: 0, y: 0 }, spin = 0, r = 0) {
     this.x = x;
@@ -26,33 +27,38 @@ class Entity {
         flat.push(v.x*0.2)
         flat.push(v.y*0.2)
       }
-      console.log(flat)
       this.pres.poly(flat);
-      this.pres.stroke({color: 0x8080ff}); // Dark grey fill (adjust color as needed)
+      // TODO: add colors to entities
+      this.pres.stroke({color: 0xff0000}); 
       this.pres.x = this.x
       this.pres.y = this.y
     }
   }
 
   update(delta) {
+    this.e -= 0.2
     if(this.pres.destroyed){
-      console.log("Destroyed")
       return
     }
      if(this.e <= 0){
-       console.log("To destroy")
       this.pres.destroy()
-       console.log("Destroyed2")
       this.e = -1
       return
     }
-    this.x += this.v.x * delta.deltaTime;
-    this.y += this.v.y * delta.deltaTime;
+    const ne = Math.max(0, Math.min(1, this.e / 20));
+
+    const red = Math.floor(255 * ne); // Red decreases from 255 to 0
+    const green = Math.floor(255 * ne*ne); // Green decreases faster
+    const blue = 0;
+
+    const hexColor = (red << 16) | (green << 8) | blue;
+    this.pres.tint = hexColor;
+
+    this.x += this.v.x //* delta.deltaTime;
+    this.y += this.v.y //* delta.deltaTime;
     this.pres.rotation += this.spin * delta.deltaTime;
     this.pres.x = this.x;
     this.pres.y = this.y;
-    console.log(this.e)
-    this.e -= 0.2
   }
 }
 
@@ -64,19 +70,22 @@ function explode(entity) {
     const p = { x: vertices[i - 1], y: vertices[i] };
     const q = { x: vertices[i + 1], y: vertices[i + 2] }; // Get the next point
     const center = { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 };
-
+    // Each segment needs to go in the direction e.c -> s.c (from the relative coordinates!)
+    let vx = center.x, vy = center.y
+    const nv = Math.sqrt(sqnorm(vx, vy))
+    vx /= nv
+    vy /= nv
     const segment = new Entity(
-      center.x + entity.x,
-      center.y + entity.y,
+      entity.x,
+      entity.y,
       [p, q], // Vertices for the segment
-      { x: entity.v.x, y: entity.v.y }, // Use entity's velocity
-      Math.random(), // Spin
+      { x: entity.v.x + vx, y: entity.v.y + vy }, // Use entity's velocity
+      0.02*Math.random(), // Spin
       entity.r
     );
-    segment.e = 12; // Set energy for the segment
+    segment.e = 20; // Set energy for the segment
 
     segments.push(segment);
   }
-  console.log(segments)
   return segments;
 }

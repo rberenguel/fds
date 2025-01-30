@@ -35,7 +35,7 @@ class Asteroid {
     if(this.e <= 0){
       return false
     }
-    if(Math.random() > 0.1){
+    if(Math.random() > from.e){
       return false
     }
     let vx = this.x - from.x, vy = this.y - from.y
@@ -55,18 +55,19 @@ class Asteroid {
     const red = Math.floor(10 + 80 * Math.random());
     const hexColor = (red << 16);
     this.pres.stroke({color: hexColor})
-    this.e-=20
+    console.log(from.e)
+    this.e-= Math.max(2, from.e)
     if(this.e <= 0){
       // It's not exactly normal, why?
-      const [rvx, rvy] = rotate(vx, vy, -this.pres.rotation)
+      //const [rvx, rvy] = rotate(vx, vy, -this.pres.rotation)
       this.e = -1
       const a = this
       this.pres.destroy()
       if(a.size / 2 < 5){
         return false
       }
-      const a1 = new Asteroid({x: a.x, y: a.y}, {x: rvy, y: -rvx}, a.sides, a.size/2, a.spin)
-      const a2 = new Asteroid({x: a.x, y: a.y}, {x: -rvy, y: rvx}, a.sides, a.size/2, a.spin)
+      const a1 = new Asteroid({x: a.x, y: a.y}, {x: -vy, y: vx}, a.sides, a.size/2, a.spin)
+      const a2 = new Asteroid({x: a.x, y: a.y}, {x: vy, y: -vx}, a.sides, a.size/2, a.spin)
       return [a1, a2]
     }
     return false

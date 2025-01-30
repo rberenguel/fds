@@ -52,24 +52,32 @@ if (buttonMap === undefined) {
   };
 }
 
+let prevshot = -1
+
 const gameActions = {
   moveUp: (f=1) => {
-    const [sx, sy] = rotate(15, 0, ship.r);
+    if(ship.e < 10){
+      return
+    }
+     const [sx, sy] = rotate(15, 0, ship.r);
     const [vx, vy] = rotate(1, 0, ship.r)
     for (let i = 0; i < 4; i++) {
       addFlames(ship.x + sx, ship.y + sy, vx, vy, 0);
     }
-    ship.vx -= 0.05 * Math.cos(ship.r) * f;
-    ship.vy -= 0.05 * Math.sin(ship.r) * f;
+    ship.v.x -= 0.05 * Math.cos(ship.r) * f;
+    ship.v.y -= 0.05 * Math.sin(ship.r) * f;
   },
   moveDown: (f=1) => {
+    if(ship.e < 10){
+      return
+    }
     const [sx, sy] = rotate(-5, 0, ship.r);
     const [vx, vy] = rotate(-1, 0, ship.r)
     for (let i = 0; i < 4; i++) {
       addFlames(ship.x + sx, ship.y + sy, vx, vy, 0);
     }
-    ship.vx += 0.05 * Math.cos(ship.r) * f;
-    ship.vy += 0.05 * Math.sin(ship.r) * f;
+    ship.v.x += 0.05 * Math.cos(ship.r) * f;
+    ship.v.y += 0.05 * Math.sin(ship.r) * f;
   },
   moveRight: (f=1) => {
     ship.r += 0.05*f;
@@ -78,9 +86,17 @@ const gameActions = {
     ship.r -= 0.05*f;
   },
   shoot: () => {
+    if(ship.e < 10){
+      return
+    }
+     const now = performance.now()
+    if(now-prevshot < 100){
+      return;
+    }
+    prevshot = now
     const [sx, sy] = rotate(15, 0, ship.r);
     const [vx, vy] = rotate(2, 0, ship.r);
-    addBullets(ship.x + sx, ship.y + sy, vx, vy, ship.r)  
+    addBullets(ship.x + sx, ship.y + sy, ship.v.x + vx, ship.v.y + vy, ship.r)  
   }
 };
 
@@ -93,11 +109,6 @@ const addFlames = (x, y, vx, vy, d) => {
   const flame = new Flame({x: x, y: y, vx: vx, vy: vy, d: d})
   flameList.push(flame);
 };
-
-const ast = new Asteroid({x: 300, y: 300}, {x: 0, y: 0}, 8, 50, 0.01)
-
-asteroids = [ast]
-
 const addBullets = (x, y, vx, vy, d) => {
   const bullet = new Bullet({x: x, y: y, vx: vx, vy: vy, d: d})
   flameList.push(bullet);
@@ -109,10 +120,33 @@ await app.init({ width: window.innerWidth, height: window.innerHeight });
 
 document.body.appendChild(app.canvas);
 
-const ship = new Ship({
+
+const addRandomAsteroids = (n) => {
+  for(let i =0; i< n; i++){
+    const x = Math.random()*window.innerWidth, y = Math.random()*window.innerHeight
+    const vx = Math.random(), vy = Math.random()
+    const sides = Math.floor(5 + Math.random()*6)
+    const size = 12 + Math.random()*40
+    const spin = Math.random()*0.1
+    const ast = new Asteroid({x: x, y: y}, {x: vx, y: vy}, sides, size, spin)
+    asteroids.push(ast)
+    app.stage.addChild(ast.pres);
+  }
+}
+
+let gameOverCountdown = -1
+
+let ship
+
+const shipIt = () => {
+  ship = new Ship({
   x: 200,
   y: 200,
-});
+})
+app.stage.addChild(ship.pres);
+}
+
+shipIt()
 
     // Enable interactivity
     app.stage.eventMode = 'static';
@@ -157,8 +191,8 @@ app.view.addEventListener('touchend', (e) => {
 app.stage.addEventListener('pointerup', (e) => {
   virtualPad.touchEnd(e.global); 
 });
-app.stage.addChild(ship.pres);
-app.stage.addChild(ast.pres);
+
+addRandomAsteroids(5)
 
 const focusTrap = document.getElementById('focus-trap');
 focusTrap.focus(); // Set focus to the hidden input
@@ -181,6 +215,16 @@ const wrap = (thing) => {
 }
 
 app.ticker.add((delta) => {
+  if(ship.e <= 0){
+    const now = performance.now()
+    if(now - gameOverCountdown > 2000){
+      console.log("Shipping it")
+      shipIt()
+    }
+  }
+  if(asteroids.length == 0){
+      addRandomAsteroids(5)
+  }
   handleControls(gameActions, keyMap, buttonMap);
   ship.update(delta)
   wrap(ship)
@@ -188,7 +232,6 @@ app.ticker.add((delta) => {
     a.update(delta)
     wrap(a)
   }
-  // TODO: wrap method
   for (const fl of flameList) {
     if (fl.drawn) {
       continue;
@@ -203,21 +246,20 @@ app.ticker.add((delta) => {
   flameList = flameList.filter((fl) => fl.e > 0);
   asteroids = asteroids.filter(a => a.e > 0);
   let brokens = []
-  for(let i=0;i< flameList.length;i++){
-    const fl = flameList[i]
+  let collisionables = flameList.filter(f => f.kind() == "kBullet").concat([ship])
+  for(let i=0;i< collisionables.length;i++){
+    const fl = collisionables[i]
     if(fl.e < 0.1){
       fl.pres.destroy()
-    }
-    if(fl.kind() != "kBullet"){
-      continue
     }
     for(let a of asteroids){
       if(a.collision(fl)){
         const r = 0.15 - 0.3*Math.random()
         const e = 0.15*fl.e
-        const [vx, vy] = rotate(-fl.vx*e, -fl.vy*e, r)
+        console.log(e)
+        const [vx, vy] = rotate(-fl.v.x*e, -fl.v.y*e, r)
         addFlames(fl.x, fl.y, vx, vy, 0);
-        fl.e = 0
+        console.log(fl.e)
         const breaks = a.addCrack(fl)
         if(breaks){
           transients = transients.concat(explode(a))
@@ -227,6 +269,15 @@ app.ticker.add((delta) => {
           brokens.push(a1)
           brokens.push(a2)
         }
+        if(fl.kind() == "kShip" && fl.e > 0){
+          for(let ff = 0; ff < 3; ff++){
+            const zz = () => - 0.1 + 0.2*Math.random()
+            addFlames(ship.x +zz(), ship.y + zz(), -ship.v.x, -ship.v.y, 0);
+          }
+          gameOverCountdown = performance.now()
+          transients = transients.concat(explode(ship))
+        }
+        fl.e = 0
       }
     }
   }

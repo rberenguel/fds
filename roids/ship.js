@@ -9,10 +9,13 @@ class Ship {
   constructor(props) {
     this.x = props.x;
     this.y = props.y;
-    this.vx = props.vx ?? 0;
-    this.vy = props.vy ?? 0;
+    this.v = {
+      x: props.vx ?? 0,
+      y: props.vy ?? 0
+    }
     this.r = props.r ?? 0;
-
+    this.e = 1000
+    this.vertices = [[-70, 50], [70, 0], [-70, -50], [-30, 0], [-70, 50]];
     this.pres = new Graphics();
     const path = [-70, 50, 70, 0, -70, -50, -30, 0, -70, 50];
     this.pres.poly(path);
@@ -21,11 +24,19 @@ class Ship {
     this.pres.stroke({ color: 0xffffff, width: 10 });
   }
 
-
+  kind(){
+    return "kShip"
+  }
 
   update(delta) {
-    this.x += this.vx * delta.deltaTime;
-    this.y += this.vy * delta.deltaTime;
+    if(this.e <= 0.1){
+      this.e = 0;
+      this.pres.destroy()
+      return
+    }
+
+    this.x += this.v.x * delta.deltaTime;
+    this.y += this.v.y * delta.deltaTime;
     this.pres.rotation = this.r;
     this.pres.x = this.x
     this.pres.y = this.y; 

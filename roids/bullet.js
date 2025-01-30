@@ -9,15 +9,17 @@ class Bullet{
   constructor(props={}){
     const accel = 5;
     const rf = Math.random();
-    const r = 0.01 + 0.01 * rf;
+    const r = -0.01 + 0.02 * rf;
     this.x = props.x
     this.y = props.y
-    this.vx = accel * Math.cos(props.d) * rf
-    this.vy = accel * Math.sin(props.d) * rf
+    this.v = {
+      x:accel * Math.cos(props.d) * rf,
+      y:accel * Math.sin(props.d) * rf
+    }
     this.e = props.e ?? 10
-    const [nvx, nvy] = rotate(this.vx, this.vy, r);
-    this.vx = nvx;
-    this.vy = nvy;
+    const [nvx, nvy] = rotate(this.v.x, this.v.y, r);
+    this.v.x = nvx;
+    this.v.y = nvy;
     const bullet = new Graphics();
     const path = [0, 0, 3, -2, 3, 2];
     bullet.poly(path);
@@ -32,8 +34,8 @@ class Bullet{
   }
 
   update(){
-    this.x += this.vx;
-    this.y += this.vy;
+    this.x += this.v.x;
+    this.y += this.v.y;
     this.pres.x = this.x
     this.pres.y = this.y
     this.e -= 0.3;
