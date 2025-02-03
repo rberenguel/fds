@@ -1,9 +1,12 @@
 import { set, get } from "../libs/3rdparty/idb-keyval.js";
 
+import { planet } from "./planet.js"
+import { Starfield } from "./parallax.js"
 
 import {
   Application,
   Graphics,
+  Container,
   GraphicsPath,
   Matrix,
 } from "../libs/3rdparty/pixi.mjs";
@@ -16,9 +19,10 @@ import {
   VirtualPad
 } from "../libs/controlHandling.js";
 
-import { rotate } from "./math.js"
+import { rotate, sqnorm, easeInSq } from "./math.js"
 
-import { Ship } from "./ship.js"
+import { Viewframe } from "./viewframe.js"
+import { Bobcat, Lynx } from "./ship.js"
 import { Bullet } from "./bullet.js"
 import { Asteroid } from "./asteroid.js"
 import { Flame } from "./flame.js"
@@ -57,29 +61,32 @@ let ship
 
 const gameActions = {
   moveUp: (f=1) => {
-    console.log("AAAA")
     if(ship.e < 10){
       return
     }
-    const [sx, sy] = rotate(15, 0, ship.r);
-    const [vx, vy] = rotate(1, 0, ship.r)
-    for (let i = 0; i < 4; i++) {
-      //addFlames(ship.pos.x + sx, ship.pos.y + sy, vx, vy, 0);
+    const nv = sqnorm(ship.vel.x, ship.vel.y)
+    ship.forwardThrust(flameList)
+    const _vx = ship.vel.x - 0.1 * Math.cos(ship.r) * f
+    const _vy = ship.vel.y - 0.1 * Math.sin(ship.r) * f
+    const _nv = sqnorm(_vx, _vy)
+    if(_nv < 1500) {
+      ship.vel.x = _vx 
+      ship.vel.y = _vy
     }
-    ship.vel.x -= 0.05 * Math.cos(ship.r) * f;
-    ship.vel.y -= 0.05 * Math.sin(ship.r) * f;
   },
   moveDown: (f=1) => {
     if(ship.e < 10){
       return
     }
-    const [sx, sy] = rotate(-5, 0, ship.r);
-    const [vx, vy] = rotate(-1, 0, ship.r)
-    for (let i = 0; i < 4; i++) {
-      //addFlames(ship.pos.x + sx, ship.pos.y + sy, vx, vy, 0);
+    const nv = sqnorm(ship.vel.x, ship.vel.y)
+    ship.backThrust(flameList)
+    const _vx = ship.vel.x + 0.1 * Math.cos(ship.r) * f
+    const _vy = ship.vel.y + 0.1 * Math.sin(ship.r) * f
+    const _nv = sqnorm(_vx, _vy)
+    if(_nv < 1500) {
+      ship.vel.x = _vx 
+      ship.vel.y = _vy
     }
-    ship.vel.x += 0.05 * Math.cos(ship.r) * f;
-    ship.vel.y += 0.05 * Math.sin(ship.r) * f;
   },
   moveRight: (f=1) => {
     ship.r += 0.05*f;
@@ -96,9 +103,11 @@ const gameActions = {
       return;
     }
     prevshot = now
-    const [sx, sy] = rotate(15, 0, ship.r);
-    const [vx, vy] = rotate(2, 0, ship.r);
-    addBullets(ship.pos.x + sx, ship.pos.y + sy, ship.vel.x + vx, ship.vel.y + vy, ship.r)  
+    //const [sx, sy] = rotate(15, 0, ship.r);
+    //const [vx, vy] = rotate(2, 0, ship.r);
+    //addBullets(ship.pos.x + sx, ship.pos.y + sy, ship.vel.x + vx, ship.vel.y + vy, ship.r)  
+    ship.weapons[0].fire(ship, bulletList)
+    ship.weapons[1].fire(ship, bulletList)
   }
 };
 
@@ -106,16 +115,6 @@ let flameList = [];
 let bulletList = [];
 let asteroids = [];
 let transients = []
-
-const addFlames = (x, y, vx, vy, d) => {
-  const flame = new Flame({x: x, y: y, vx: vx, vy: vy, d: d})
-  flameList.push(flame);
-};
-const addBullets = (x, y, vx, vy, d) => {
-  const bullet = new Bullet({x: x, y: y, vx: vx, vy: vy, d: d})
-  flameList.push(bullet);
-};
-
 
 const app = new Application();
 await app.init({ width: window.innerWidth, height: window.innerHeight });
@@ -135,29 +134,6 @@ const addRandomAsteroids = (n) => {
     app.stage.addChild(ast.pres);
   }
 }
-
-let gameOverCountdown = -1
-
-ship = new Ship({
-  pos: {
-    x: 200,
-    y: 200,
-  }
-})
-
-
-ship.generate()
-ship.attach(app)
-
-/*const shipIt = () => {
-  ship = new Ship({
-  x: 200,
-  y: 200,
-})*/
-//app.stage.addChild(ship.pres);
-//}
-
-//shipIt()
 
 // Enable interactivity
 app.stage.eventMode = 'static';
@@ -225,17 +201,88 @@ const wrap = (thing) => {
 }
 
 const controller = handleControls(gameActions, keyMap, buttonMap)
+const logg = document.getElementById("logg")
+const log = (f) => {
+  logg.innerHTML = f
+}
+const viewframe = new Viewframe() //Container();
+
+ship = new Bobcat({
+  pos: {
+    x: 0,
+    y: 0,
+  },
+})
+
+ship.generate()
+
+const other = new Lynx({
+  pos: {
+    x: 500,
+    y: 200
+  }
+})
+
+other.generate()
+
+const starfield = new Starfield({width: app.renderer.width, height: app.renderer.height})
+starfield.generate()
+starfield.attach(app)
+
+viewframe.attach(app)
+viewframe.scale = 1;
+
+viewframe.pos.x = -1/viewframe.scale*app.screen.width / 2
+viewframe.pos.y = -1/viewframe.scale*app.screen.height / 2
+ship.attach(viewframe)
+other.attach(viewframe)
+
+viewframe.vel = ship.vel
+
+planet.generate()
+planet.attach(viewframe)
+
+
 
 app.ticker.add((delta) => {
-  /*if(ship.e <= 0){
-    const now = performance.now()
-    if(now - gameOverCountdown > 2000){
-      console.log("Shipping it")
-      shipIt()
+  const nv = sqnorm(ship.vel.x, ship.vel.y)
+  log(nv)
+  viewframe.move(delta.deltaTime)
+  viewframe.update() 
+  if(nv > 200){
+    let scale = 0.2*200/nv
+    if(scale < 1e-5){
+      scale = 1e-5
+      // This should have a faster option at some point?
     }
-  }*/
+    viewframe.scale = scale
+    viewframe.pos.x = ship.pos.x-1/scale*app.screen.width / 2
+    viewframe.pos.y = ship.pos.y-1/scale*app.screen.height / 2
+   } else {
+    //viewframe.scale = 0.2
+  }
+  if(ship.pos.x > 14500){
+    console.log("past")
+  }
+ //viewframe.scale = nv > 0.2 ? 0.2 * 10000 /nv : 0.2
   controller()
+  planet.update(delta)
   ship.update(delta)
-  wrap(ship)
-
+  other.update(delta)
+  flameList = flameList.filter(f => !f.presentation?.destroyed)
+  bulletList = bulletList.filter(b => !b.presentation?.destroyed)
+  for(let b of bulletList){
+    if(!b.drawn){
+      b.generate()
+      b.attach(viewframe)
+    }
+    b.update(delta)
+  }
+  for(let f of flameList){
+    if(!f.drawn){
+      f.generate()
+      f.attach(viewframe)
+    }
+    f.update(delta)
+  }
 });

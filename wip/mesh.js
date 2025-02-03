@@ -1,7 +1,8 @@
 export { Meshes, Mesh }
 
 const Meshes = {
-  kPoly: "kPoly"
+  kPoly: "kPoly",
+  kCircle: "kCircle"
 }
 
 class Mesh {
@@ -9,8 +10,10 @@ class Mesh {
     this.kind = props.kind
     this.vertices = props.vertices
     this.color = props.color
-    this.width = props.width ?? 1;
-    console.log(this)
+    this.width = props.width;
+    this.fill = props.fill
+    this.center = props.center
+    this.radius = props.radius
   }
   flatten() {
     let flat = []
