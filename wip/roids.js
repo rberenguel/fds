@@ -26,7 +26,6 @@ import { Bobcat, Lynx } from "./ship.js";
 import { Bullet } from "./bullet.js";
 import { Asteroid } from "./asteroid.js";
 import { Flame } from "./flame.js";
-import { Entity, explode } from "./entity.js";
 
 bindGamepadHandlers();
 bindKeyHandlers();
