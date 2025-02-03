@@ -1,20 +1,18 @@
-export { Flame }
+export { Flame };
 
-import { rotate } from "./math.js"
-import {
-  Graphics
-} from "../libs/3rdparty/pixi.mjs";
+import { rotate } from "./math.js";
+import { Graphics } from "../libs/3rdparty/pixi.mjs";
 
-class Flame{
-  constructor(props={}){
+class Flame {
+  constructor(props = {}) {
     const accel = 0.3;
     const rf = Math.random();
     const r = 0.3 - 0.6 * rf;
-    this.x = props.x
-    this.y = props.y
-    this.vx = props.vx + accel * Math.cos(props.d) * rf
-    this.vy = props.vy + accel * Math.sin(props.d) * rf
-    this.e = props.e ?? 10
+    this.x = props.x;
+    this.y = props.y;
+    this.vx = props.vx + accel * Math.cos(props.d) * rf;
+    this.vy = props.vy + accel * Math.sin(props.d) * rf;
+    this.e = props.e ?? 10;
     const [nvx, nvy] = rotate(this.vx, this.vy, r);
     this.vx = nvx;
     this.vy = nvy;
@@ -27,19 +25,19 @@ class Flame{
     this.pres = flame;
   }
 
-  kind(){
-    return "kFlame"
+  kind() {
+    return "kFlame";
   }
 
-  update(){
+  update() {
     this.pres.x += this.vx;
     this.pres.y += this.vy;
     this.e -= 0.3;
-    if(this.e <= 0.1){
+    if (this.e <= 0.1) {
       this.e = 0;
-      this.pres.destroy()
-      this.pres = null
-      return
+      this.pres.destroy();
+      this.pres = null;
+      return;
     }
     const ne = Math.max(0, Math.min(1, this.e / 10));
 
@@ -51,5 +49,3 @@ class Flame{
     this.pres.tint = hexColor;
   }
 }
-
-

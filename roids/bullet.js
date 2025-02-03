@@ -1,22 +1,20 @@
-export { Bullet }
+export { Bullet };
 
-import { rotate } from "./math.js"
-import {
-  Graphics
-} from "../libs/3rdparty/pixi.mjs";
+import { rotate } from "./math.js";
+import { Graphics } from "../libs/3rdparty/pixi.mjs";
 
-class Bullet{
-  constructor(props={}){
+class Bullet {
+  constructor(props = {}) {
     const accel = 5;
     const rf = Math.random();
     const r = -0.01 + 0.02 * rf;
-    this.x = props.x
-    this.y = props.y
+    this.x = props.x;
+    this.y = props.y;
     this.v = {
-      x:accel * Math.cos(props.d) * rf,
-      y:accel * Math.sin(props.d) * rf
-    }
-    this.e = props.e ?? 10
+      x: accel * Math.cos(props.d) * rf,
+      y: accel * Math.sin(props.d) * rf,
+    };
+    this.e = props.e ?? 10;
     const [nvx, nvy] = rotate(this.v.x, this.v.y, r);
     this.v.x = nvx;
     this.v.y = nvy;
@@ -30,18 +28,18 @@ class Bullet{
   }
 
   kind() {
-    return "kBullet"
+    return "kBullet";
   }
 
-  update(){
+  update() {
     this.x += this.v.x;
     this.y += this.v.y;
-    this.pres.x = this.x
-    this.pres.y = this.y
+    this.pres.x = this.x;
+    this.pres.y = this.y;
     this.e -= 0.3;
-    if(this.e <= 0.1){
+    if (this.e <= 0.1) {
       this.e = 0;
-      this.pres.destroy()
+      this.pres.destroy();
     }
     const ne = Math.max(0, Math.min(1, this.e / 10));
     const red = 0;
@@ -51,5 +49,3 @@ class Bullet{
     this.pres.tint = hexColor;
   }
 }
-
-

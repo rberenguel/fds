@@ -4,7 +4,7 @@ export {
   handleControls,
   touchZoneHandler,
   getDeviceInput,
-  VirtualPad
+  VirtualPad,
 };
 
 const keys = {};
@@ -160,129 +160,144 @@ const handleControls = (gameActions, keyMap, buttonMap) => () => {
   }
 };
 
-
 function pointInRect(x, y, rect) {
   return (
-    x >= rect.ul[0] && x <= rect.lr[0] && 
-    y >= rect.ul[1] && y <= rect.lr[1]
+    x >= rect.ul[0] && x <= rect.lr[0] && y >= rect.ul[1] && y <= rect.lr[1]
   );
 }
 
 class VirtualPad {
-  constructor(props){
-    this.ix = 0
-    this.iy = 0
-    this.gameActions = props.gameActions
-    this.padArea = props.padArea
-    this.shootArea = props.shootArea
-    this.padStarted = false
-    this.shooting = false; 
+  constructor(props) {
+    this.ix = 0;
+    this.iy = 0;
+    this.gameActions = props.gameActions;
+    this.padArea = props.padArea;
+    this.shootArea = props.shootArea;
+    this.padStarted = false;
+    this.shooting = false;
     this.shootInterval = null;
-    this.repeatFire = props.repeatFire ?? 100
-    this.repeatMove = props.repeatMove ?? 30
-    this.relativeRotation = props.relativeRotation
-    this.displacement = props.displacement ?? 75
-    this.moving = false
+    this.repeatFire = props.repeatFire ?? 100;
+    this.repeatMove = props.repeatMove ?? 30;
+    this.relativeRotation = props.relativeRotation;
+    this.displacement = props.displacement ?? 75;
+    this.moving = false;
   }
   touchStart(e, ev) {
     // e should have x and y, and ev be a full event
-    ev.preventDefault()
-    if(pointInRect(e.x, e.y, this.padArea)){
-      this.ix = e.x
-      this.iy = e.y
-      this.padStarted = true
-      return
+    ev.preventDefault();
+    if (pointInRect(e.x, e.y, this.padArea)) {
+      this.ix = e.x;
+      this.iy = e.y;
+      this.padStarted = true;
+      return;
     }
-    this.padStarted = false
-    if(pointInRect(e.x, e.y, this.shootArea)){
-      this.startShooting()
+    this.padStarted = false;
+    if (pointInRect(e.x, e.y, this.shootArea)) {
+      this.startShooting();
     }
   }
   touchEnd(e) {
     if (pointInRect(e.x, e.y, this.shootArea)) {
       this.stopShooting();
     }
-    if(this.padStarted){
-      this.stopMoving()
+    if (this.padStarted) {
+      this.stopMoving();
     }
-    this.padStarted = false
+    this.padStarted = false;
   }
 
   touchMove(e, r) {
-    if(!this.padStarted){
-      return
+    if (!this.padStarted) {
+      return;
     }
-    const vx = e.x - this.ix
-    const vy = e.y - this.iy
+    const vx = e.x - this.ix;
+    const vy = e.y - this.iy;
     // The r correction works here but is not natural at all
-    const angle = Math.atan2(vy, vx) // - Math.PI/2 - r()
+    const angle = Math.atan2(vy, vx); // - Math.PI/2 - r()
     const distance = Math.sqrt(vx * vx + vy * vy);
-    if(distance < this.displacement/2){
-      return
+    if (distance < this.displacement / 2) {
+      return;
     }
-    const normalizedAngle = (angle + 2 * Math.PI) % (2 * Math.PI)
-    if (normalizedAngle >= Math.PI * 7 / 4 || normalizedAngle < Math.PI / 4) {
-      this.startMoving("moveRight")
-    } else if (normalizedAngle >= Math.PI / 4 && normalizedAngle < Math.PI * 3 / 4) {
-      if(distance < this.displacement) {
-        return
+    const normalizedAngle = (angle + 2 * Math.PI) % (2 * Math.PI);
+    if (normalizedAngle >= (Math.PI * 7) / 4 || normalizedAngle < Math.PI / 4) {
+      this.startMoving("moveRight");
+    } else if (
+      normalizedAngle >= Math.PI / 4 &&
+      normalizedAngle < (Math.PI * 3) / 4
+    ) {
+      if (distance < this.displacement) {
+        return;
       }
-      this.startMoving("moveDown", 0.8)
-    } else if (normalizedAngle >= Math.PI * 3 / 4 && normalizedAngle < Math.PI * 5 / 4) {
-      this.startMoving("moveLeft")
-    } else if (normalizedAngle >= Math.PI * 5 / 4 && normalizedAngle < Math.PI * 7 / 4) {
-      if(distance < this.displacement) {
-        return
+      this.startMoving("moveDown", 0.8);
+    } else if (
+      normalizedAngle >= (Math.PI * 3) / 4 &&
+      normalizedAngle < (Math.PI * 5) / 4
+    ) {
+      this.startMoving("moveLeft");
+    } else if (
+      normalizedAngle >= (Math.PI * 5) / 4 &&
+      normalizedAngle < (Math.PI * 7) / 4
+    ) {
+      if (distance < this.displacement) {
+        return;
       }
-      this.startMoving("moveUp", 0.8)
+      this.startMoving("moveUp", 0.8);
     }
-    if(distance < 0.6*this.displacement) {
-        return
+    if (distance < 0.6 * this.displacement) {
+      return;
     }
     // Intermediate areas (combine actions)
-    if (normalizedAngle >= Math.PI / 8 && normalizedAngle < Math.PI * 3 / 8) {
-      this.startMoving("moveDown", 0.8)
-      this.startMoving("moveRight")
-    } else if (normalizedAngle >= Math.PI * 5 / 8 && normalizedAngle < Math.PI * 7 / 8) {
-      this.startMoving("moveDown", 0.8)
-      this.startMoving("moveLeft")
-    } else if (normalizedAngle >= Math.PI * 9 / 8 && normalizedAngle < Math.PI * 11 / 8) {
-      this.startMoving("moveUp", 0.8)
-      this.startMoving("moveLeft")
-    } else if (normalizedAngle >= Math.PI * 13 / 8 && normalizedAngle < Math.PI * 15 / 8) {
-      this.startMoving("moveUp", 0.8)
-      this.startMoving("moveRight")
-    } 
+    if (normalizedAngle >= Math.PI / 8 && normalizedAngle < (Math.PI * 3) / 8) {
+      this.startMoving("moveDown", 0.8);
+      this.startMoving("moveRight");
+    } else if (
+      normalizedAngle >= (Math.PI * 5) / 8 &&
+      normalizedAngle < (Math.PI * 7) / 8
+    ) {
+      this.startMoving("moveDown", 0.8);
+      this.startMoving("moveLeft");
+    } else if (
+      normalizedAngle >= (Math.PI * 9) / 8 &&
+      normalizedAngle < (Math.PI * 11) / 8
+    ) {
+      this.startMoving("moveUp", 0.8);
+      this.startMoving("moveLeft");
+    } else if (
+      normalizedAngle >= (Math.PI * 13) / 8 &&
+      normalizedAngle < (Math.PI * 15) / 8
+    ) {
+      this.startMoving("moveUp", 0.8);
+      this.startMoving("moveRight");
+    }
   }
 
   startShooting() {
     if (!this.shooting) {
       this.shooting = true;
-      this.gameActions["shoot"](); 
+      this.gameActions["shoot"]();
 
       this.shootInterval = setInterval(() => {
         this.gameActions["shoot"]();
-      }, this.repeatFire); 
+      }, this.repeatFire);
     }
   }
- 
+
   startMoving(direction, f) {
     if (this.padStarted) {
-      if(this.moving == direction){
-        return
+      if (this.moving == direction) {
+        return;
       }
-      this.moving = direction
-      this.gameActions[direction](f); 
-      if(this.moveInterval){
-        clearInterval(this.moveInterval)
+      this.moving = direction;
+      this.gameActions[direction](f);
+      if (this.moveInterval) {
+        clearInterval(this.moveInterval);
       }
 
       this.moveInterval = setInterval(() => {
         this.gameActions[direction](f);
-      }, this.repeatMove); 
+      }, this.repeatMove);
     }
   }
-
 
   stopShooting() {
     if (this.shooting) {
