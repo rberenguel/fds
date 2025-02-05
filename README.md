@@ -6,10 +6,10 @@ These may not be games you want to play, or want to see. But they are games I wa
 
 The name of the repository is inspiried by a Pixies song, because what I have here are _pixies_.
 
-> From distant star to this here bar
-> The me, the you, where are we now?
-> Hurray the blues of everyone
-> Allison
+> From distant star to this here bar \
+> The me, the you, where are we now? \
+> Hurray the blues of everyone \
+> _Allison_
 
 ---
 
