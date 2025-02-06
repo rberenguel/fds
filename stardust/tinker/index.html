@@ -1,0 +1,88 @@
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      :root {
+        --yellow: #b58900ff;
+        --orange: #cb4b16ff;
+        --red: #dc322fff;
+        --magenta: #d33682ff;
+        --violet: #6c71c4ff;
+        --blue: #268bd2ff;
+        --cyan: #2aa198ff;
+        --green: #859900ff;
+        --sky: #001b26ff;
+        --darkgrey: #333;
+        --lightgrey: #ccc;
+        --faded-grey: #99999933;
+      }
+      #system-info {
+        z-index: 1000;
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        padding: 8px;
+        background-color: var(--darkgrey);
+        color: var(--lightgrey);
+        border-radius: 0.1em;
+        border: 1px solid #c60;
+        opacity: 0; /* Initially hidden */
+        transition: opacity 0.2s ease-in-out;
+      }
+      body {
+        margin: 0;
+        background-color: var(--sky);
+      }
+
+      #universe-container {
+        width: 100%;
+        height: 100%;
+      }
+
+      .node {
+        box-shadow: 3px 3px 2px var(--cyan);
+      }
+
+      .link {
+        stroke-opacity: 0.6;
+      }
+
+      .highlighted-link {
+        stroke: var(--orange);
+        stroke-opacity: 1;
+        stroke-width: 4;
+      }
+
+      .highlighted-node {
+        fill: var(--orange);
+      }
+
+      .highlighted-dest-node {
+        fill: var(--green);
+      }
+
+      .tooltip {
+        position: absolute;
+        text-align: center;
+        padding: 8px;
+        font: 12px sans-serif;
+        background: #333;
+        color: white;
+        border: 0px;
+        border-radius: 8px;
+        pointer-events: none; /* Prevent the tooltip from interfering with mouse events */
+        opacity: 0; /* Initially hidden */
+        transition: opacity 0.2s ease-in-out; /* Add a fade-in effect */
+      }
+    </style>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://unpkg.com/@panzoom/panzoom@4.6.0/dist/panzoom.min.js"></script>
+  </head>
+  <body>
+    <div id="colorful" style="z-index: 1000; color: red">F</div>
+    <div id="logg" style="z-index: 1000; width: 3em"></div>
+    <div id="system-info"></div>
+    <div id="universe-container"></div>
+  </body>
+  <script type="module" src="universe.js"></script>
+</html>
