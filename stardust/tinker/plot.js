@@ -112,7 +112,7 @@ const plot = (nodes, links) => {
       .attr("height", 50)
       .attr("x", (d) => d.x - 25)
       .attr("y", (d) => d.y - 25)
-      .attr("xlink:href", canvas.toDataURL());
+      .attr("xlink:href", canvas.toDataURL()).classed("sun", true);
 
     if (d.system.stations() > 0) {
       for (let i = 0; i < d.system.stations(); i++) {
