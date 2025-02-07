@@ -51,6 +51,10 @@ Nebula Nebula in\nbackground $OBJ
 SunCorona [ ] Corona effect $OBJ margin=0.1
 Sun -> SunCorona $OBJ
 TexturesGG [ ] Textures $OBJ margin=0.1
+TexturesGGWip WIP, from shadertoy ; URL="https://www.shadertoy.com/view/tltXWM"
+TexturesGG -> TexturesGGWip
+note_textures_gg I'm having issues with the scaling, for some reason vertical movement of the viewframe affects the scaling applied to the texture ; $NOTE
+TexturesGGWip -> note_textures_gg $SUBTLE
 GasGiant -> TexturesGG $OBJ
 TexturesIG [ ] Textures $OBJ margin=0.1
 IceGiant -> TexturesIG $OBJ
