@@ -9,7 +9,7 @@ const planet = (texture) =>
   new Base1({
     pos: {
       x: 5000,
-      y: 1500,
+      y: 2500,
     },
     e: 100000000000,
 

@@ -21,12 +21,12 @@ uniform vec3      iResolution;
 uniform vec2 uTextureOffset;
 uniform float uTextureScale;
 // number of octaves of fbm
-#define NUM_NOISE_OCTAVES 10
+#define NUM_NOISE_OCTAVES 20
 // size of the planet
 #define PLANET_SIZE		0.75
 #define SMOOTH
 
-float iTime = 1.0;
+float iTime = 2.0;
 out vec4 fragColor;
 //////////////////////////////////////////////////////////////////////////////////////
 // Noise functions:
@@ -69,19 +69,6 @@ const float inf         = 9999999.9;
 float square(float x) { return x * x; }
 float infIfNegative(float x) { return (x >= 0.0) ? x : inf; }
 
-// C = sphere center, r = sphere radius, P = ray origin, w = ray direction
-float intersectSphere(vec3 C, float r, vec3 P, vec3 w) {	
-	vec3 v = P - C;
-	float b = -dot(w, v);
-	float c = dot(v, v) - square(r);
-	float d = (square(b) - c);
-	if (d < 0.0) { return inf; }	
-	float dsqrt = sqrt(d);
-	
-	// Choose the first positive intersection
-	return min(infIfNegative((b - dsqrt)), infIfNegative((b + dsqrt)));
-}
-
 // returns max of a single vec3
 float max3 (vec3 v) {
   return max (max (v.x, v.y), v.z);
@@ -103,14 +90,17 @@ vec3 getColorForCoord(vec2 fragCoord) {
     );
 
     // Ray-sphere
-    const float verticalFieldOfView = 50.0 * pi / 180.0;
+    const float verticalFieldOfView = 30.0 * pi / 180.0;
 
     //fragCoord.xy -= uTextureOffset.xy;
     
+
+    fragCoord.xy /= iResolution.xy;
     fragCoord.y -= uTextureOffset.y;
     fragCoord.x -= uTextureOffset.x;
-    fragCoord.xy /= iResolution.xy;
-    fragCoord.xy -= 0.0;
+
+    //fragCoord.y -= 0.5;
+    //fragCoord.xy *= 2.0;
     //fragCoord.xy /= uTextureScale;
 
     
@@ -119,7 +109,7 @@ vec3 getColorForCoord(vec2 fragCoord) {
 
     // position of viewpoint (P) and ray of vision (w)
     vec3 P = vec3(0.0, 0.0, 5.0);
-    vec3 w = normalize(vec3(fragCoord.xy, 1.0 / (-2.0 * tan(verticalFieldOfView / 2.0))));
+    vec3 w = normalize(vec3(fragCoord.xy, 1.0 / (-4.0 * tan(verticalFieldOfView / 2.0))));
     //vec3 w = vec3(fragCoord.xy, 1);
 
     // calculate intersect with sphere (along the "line" of w from P)
@@ -145,7 +135,7 @@ vec3 getColorForCoord(vec2 fragCoord) {
     
     // convert noise value into color
     // three colors: top - mid - bottom (mid being constructed by three colors)
-    vec3 col_top = vec3(1.0, 1.0, 1.0);
+    vec3 col_top = vec3(0.8, 0.5, 0.8);
     vec3 col_bot = vec3(0.0, 0.0, 0.0);
     vec3 col_mid1 = vec3(0.1, 0.2, 0.0);
     vec3 col_mid2 = vec3(0.7, 0.4, 0.3);

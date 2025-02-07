@@ -31,7 +31,7 @@ const renderGiant = async (app, texture) => {
     loadParser: "loadTxt",
   });
 
-  //console.log(fragment);
+  console.log(fragment);
   //console.log(vertex);
 
   const shader = Shader.from({
@@ -41,8 +41,8 @@ const renderGiant = async (app, texture) => {
     },
     resources: {
       shaderToyUniforms: {
-        iResolution: { value: [500, 500, 1], type: "vec3<f32>" },
-        iTime: { value: 0, type: "f32" },
+        iResolution: { value: [1000, 1000, 1], type: "vec3<f32>" },
+        iTime: { value: 1, type: "f32" },
         uTextureOffset: { value: [0, 0, 0], type: "vec2<f32>" },
         uTextureScale: { value: 1, type: "f32" },
       },
@@ -85,10 +85,10 @@ Represents the vertex and fragment shaders that processes the geometry and runs 
   });
   quad.i_shader = shader;
 
-  quad.width = 500;
-  quad.height = 500;
-  quad.x = 250;
-  quad.y = 250;
+  quad.width = 1000;
+  quad.height = 1000;
+  quad.x = 0;
+  quad.y = 0;
 
   //app.stage.addChild(quad);
 
@@ -198,18 +198,23 @@ class Base1 {
         presentation.y = this.pos.y - this.viewframe.pos.y;
         if (presentation.planetTexture) {
           const app = this.viewframe.app;
+          const w = app.screen.width;
+          const h = app.screen.height;
           const scale = this.viewframe.scale;
           let t = this.meshes[0].texture;
           //console.log(this.meshes[0].radius*scale)
-          t.scale.x = 10;
-          t.scale.y = 10;
+          const r = this.meshes[0].radius;
+          t.scale.x = r;
+          t.scale.y = r;
           //t.x = this.pos.x// - this.viewframe.pos.x;
           t.x = 0;
           t.y = 0;
           t.i_shader.resources.shaderToyUniforms.uniforms.uTextureOffset = [
-            scale * (this.pos.x - this.viewframe.pos.x),
-            -scale * (this.pos.y - this.viewframe.pos.y),
+            (scale * (this.pos.x - this.viewframe.pos.x)) / 1000,
+            (-scale * (this.pos.y - this.viewframe.pos.y)) / 1000,
           ]; //[scale*(this.pos.x - this.viewframe.pos.x), -scale*(this.pos.y - this.viewframe.pos.y)]
+          //console.log(scale*(this.pos.x - this.viewframe.pos.x)/1000)
+          //console.log(scale * (this.pos.x - this.viewframe.pos.x)/4000)
           //console.log(t.i_shader.resources.shaderToyUniforms.uniforms.uTextureOffset[0])
           //console.log(250-scale*(this.pos.y - this.viewframe.pos.y))
           t.i_shader.resources.shaderToyUniforms.uniforms.uTextureScale = scale;
