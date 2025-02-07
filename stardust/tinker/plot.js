@@ -56,13 +56,19 @@ const plot = (nodes, links) => {
       d3
         .forceLink(links)
         .id((d) => d.id)
-        .distance(50),
+        .distance(30),
     )
     .force("charge", d3.forceManyBody().strength(10))
     .force("center", d3.forceCenter(cx, cy))
     .force("collide", d3.forceCollide(30))
-    .force("x", d3.forceX())
-    .force("y", d3.forceY())
+    .force(
+      "x",
+      d3.forceX(() => Math.abs(Math.sin(Math.random()))),
+    )
+    .force(
+      "y",
+      d3.forceY().strength(() => 4 + Math.random()),
+    )
     .randomSource(myRandom);
 
   simulation.alphaDecay(0.0);
@@ -79,7 +85,7 @@ const plot = (nodes, links) => {
   });
 
   simulation.alphaDecay(0.1);
-  simulation.tick(100);
+  simulation.tick(200);
 
   simulation.stop();
 
@@ -112,7 +118,8 @@ const plot = (nodes, links) => {
       .attr("height", 50)
       .attr("x", (d) => d.x - 25)
       .attr("y", (d) => d.y - 25)
-      .attr("xlink:href", canvas.toDataURL()).classed("sun", true);
+      .attr("xlink:href", canvas.toDataURL())
+      .classed("sun", true);
 
     if (d.system.stations() > 0) {
       for (let i = 0; i < d.system.stations(); i++) {

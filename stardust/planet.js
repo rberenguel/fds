@@ -5,19 +5,21 @@ import { Base1 } from "./base.js";
 
 import { rotate } from "./math.js";
 
-const planet = new Base1({
-  pos: {
-    x: 30000,
-    y: 100,
-  },
-  e: 100000000000,
+const planet = (texture) =>
+  new Base1({
+    pos: {
+      x: 5000,
+      y: 1500,
+    },
+    e: 100000000000,
 
-  meshes: [
-    new Mesh({
-      kind: Meshes.kCircle,
-      center: [0, 0],
-      radius: 20000,
-      fill: 0x303030,
-    }),
-  ],
-});
+    meshes: [
+      new Mesh({
+        kind: Meshes.kPlanet,
+        center: [0, 0],
+        radius: 2000,
+        fill: 0x303030,
+        texture: texture,
+      }),
+    ],
+  });

@@ -3,6 +3,7 @@ export { Meshes, Mesh };
 const Meshes = {
   kPoly: "kPoly",
   kCircle: "kCircle",
+  kPlanet: "kPlanet",
 };
 
 class Mesh {
@@ -14,6 +15,7 @@ class Mesh {
     this.fill = props.fill;
     this.center = props.center;
     this.radius = props.radius;
+    this.texture = props.texture;
   }
   flatten() {
     let flat = [];

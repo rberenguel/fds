@@ -1,8 +1,102 @@
-export { Base1 };
+export { Base1, giantTexture, renderGiant };
 
-import { Graphics } from "../libs/3rdparty/pixi.mjs";
+import {
+  Graphics,
+  Filter,
+  Assets,
+  GlProgram,
+  Mesh,
+  Shader,
+  Geometry,
+  RenderTexture,
+  Container,
+} from "../libs/3rdparty/pixi.mjs";
 
-import { Mesh, Meshes } from "./mesh.js";
+import { Meshes } from "./mesh.js";
+
+const giantTexture = (app) =>
+  RenderTexture.create({
+    width: app.screen.width,
+    height: app.screen.height,
+    resolution: 1,
+  });
+
+const renderGiant = async (app, texture) => {
+  const fragment = await Assets.load({
+    src: "./custom.frg",
+    loadParser: "loadTxt",
+  });
+  const vertex = await Assets.load({
+    src: "./custom.vrt",
+    loadParser: "loadTxt",
+  });
+
+  //console.log(fragment);
+  //console.log(vertex);
+
+  const shader = Shader.from({
+    gl: {
+      vertex,
+      fragment,
+    },
+    resources: {
+      shaderToyUniforms: {
+        iResolution: { value: [500, 500, 1], type: "vec3<f32>" },
+        iTime: { value: 0, type: "f32" },
+        uTextureOffset: { value: [0, 0, 0], type: "vec2<f32>" },
+        uTextureScale: { value: 1, type: "f32" },
+      },
+    },
+  });
+
+  const quadGeometry = new Geometry({
+    attributes: {
+      aPosition: [
+        -250,
+        -250, // x, y
+        250,
+        -250, // x, y
+        250,
+        250, // x, y,
+        -250,
+        250, // x, y,
+      ],
+      //aUV: [0, 0, 1, 0, 1, 1, 0, 1],
+    },
+    indexBuffer: [0, 1, 2, 0, 3, 2],
+  });
+
+  /*
+geometry 
+Includes vertex positions, face indices, colors, UVs, and custom attributes within buffers, reducing the cost of passing all this data to the GPU. Can be shared between multiple Mesh objects.
+
+ material 
+Alias for shader.
+
+ shader SHADER | null
+Represents the vertex and fragment shaders that processes the geometry and runs on the GPU. Can be shared between multiple Mesh objects.
+
+
+  */
+
+  let quad = new Mesh({
+    geometry: quadGeometry,
+    shader,
+  });
+  quad.i_shader = shader;
+
+  quad.width = 500;
+  quad.height = 500;
+  quad.x = 250;
+  quad.y = 250;
+
+  //app.stage.addChild(quad);
+
+  //app.renderer.render({ container: quad, target: texture, clear: true });
+  //quad.destroy(true);
+  //quad = null;
+  return quad;
+};
 
 class Base1 {
   constructor(props) {
@@ -44,13 +138,43 @@ class Base1 {
           p.fill(mesh.fill);
         }
       }
+      if (mesh.kind === Meshes.kPlanet) {
+        let q = new Graphics();
+        p.circle(mesh.center[0], mesh.center[1], mesh.radius);
+        q.circle(mesh.center[0], mesh.center[1], mesh.radius);
+        if (mesh.width) {
+          p.stroke({ color: mesh.color, width: mesh.width ?? 0 });
+          q.stroke({ color: mesh.color, width: mesh.width ?? 0 });
+        }
+        if (mesh.fill !== undefined) {
+          p.fill(mesh.fill);
+          q.fill(mesh.fill);
+        }
+        let c = new Container();
+        let cc = new Container();
+        cc.mask = p;
+        cc.addChild(p);
+        cc.addChild(q);
+        cc.addChild(mesh.texture);
+        c.addChild(cc);
+        cc.planetTexture = true;
+        mesh.texture.x = mesh.center[0];
+        mesh.texture.y = mesh.center[1];
+        mesh.texture.scale = 1000;
+        this.generated = true;
+        this.presentations = [cc];
+        return;
+      }
     }
-    this.presentation = p;
+    this.presentations = [p];
     this.generated = true;
   }
 
   attach(viewframe) {
-    viewframe.presentation.addChild(this.presentation);
+    for (const presentation of this.presentations) {
+      viewframe.presentation.addChild(presentation);
+    }
+
     this.viewframe = viewframe;
     this.drawn = true;
   }
@@ -63,12 +187,34 @@ class Base1 {
   update() {
     if (this.e <= 0.1) {
       this.e = -1;
-      this.presentation?.destroy();
-      this.presentation = null;
+      for (let presentation of this.presentations) {
+        presentation.destroy();
+        presentation = null;
+      }
     }
-    if (this.presentation != null && !this.presentation.destroyed) {
-      this.presentation.x = this.pos.x - this.viewframe.pos.x;
-      this.presentation.y = this.pos.y - this.viewframe.pos.y;
+    for (let presentation of this.presentations) {
+      if (presentation != null && !presentation.destroyed) {
+        presentation.x = this.pos.x - this.viewframe.pos.x;
+        presentation.y = this.pos.y - this.viewframe.pos.y;
+        if (presentation.planetTexture) {
+          const app = this.viewframe.app;
+          const scale = this.viewframe.scale;
+          let t = this.meshes[0].texture;
+          //console.log(this.meshes[0].radius*scale)
+          t.scale.x = 10;
+          t.scale.y = 10;
+          //t.x = this.pos.x// - this.viewframe.pos.x;
+          t.x = 0;
+          t.y = 0;
+          t.i_shader.resources.shaderToyUniforms.uniforms.uTextureOffset = [
+            scale * (this.pos.x - this.viewframe.pos.x),
+            -scale * (this.pos.y - this.viewframe.pos.y),
+          ]; //[scale*(this.pos.x - this.viewframe.pos.x), -scale*(this.pos.y - this.viewframe.pos.y)]
+          //console.log(t.i_shader.resources.shaderToyUniforms.uniforms.uTextureOffset[0])
+          //console.log(250-scale*(this.pos.y - this.viewframe.pos.y))
+          t.i_shader.resources.shaderToyUniforms.uniforms.uTextureScale = scale;
+        }
+      }
     }
   }
 }

@@ -143,7 +143,6 @@ relink(universe);
 
 let components = findConnectedComponents(universe);
 
-
 for (const sys of universe) {
   for (const nei in sys.neighbors) {
     if (parseInt(nei) > sys.id) {

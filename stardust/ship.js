@@ -27,16 +27,19 @@ class Flame extends Base1 {
   update(delta) {
     super.update(delta);
     super.move(delta.deltaTime);
-    if (!this.presentation) return;
-    if (this.presentation.destroyed) return;
-    this.presentation.rotation = this.r;
+
     this.e -= 0.3;
     const ne = Math.max(0, Math.min(1, this.e / 10));
     const red = Math.floor(255 * ne); // Red decreases from 255 to 0
     const green = Math.floor(255 * ne * ne); // Green decreases faster
     const blue = 0;
     const hexColor = (red << 16) | (green << 8) | blue;
-    this.presentation.tint = hexColor;
+    for (let presentation of this.presentations) {
+      if (!presentation) return;
+      if (presentation.destroyed) return;
+      presentation.rotation = this.r;
+      presentation.tint = hexColor;
+    }
   }
 }
 
@@ -141,7 +144,9 @@ class Ship extends Base1 {
   update(delta) {
     super.update(delta);
     super.move(delta.deltaTime);
-    this.presentation.rotation = this.r;
+    for (let presentation of this.presentations) {
+      presentation.rotation = this.r;
+    }
   }
 }
 

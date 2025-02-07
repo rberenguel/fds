@@ -2,6 +2,7 @@ import { set, get } from "../libs/3rdparty/idb-keyval.js";
 
 import { planet } from "./planet.js";
 import { Starfield } from "./parallax.js";
+import { renderGiant, giantTexture } from "./base.js";
 
 import {
   Application,
@@ -223,6 +224,9 @@ const other = new Lynx({
 
 other.generate();
 
+//const texture = giantTexture(app)
+const quad = await renderGiant(app);
+
 const starfield = new Starfield({
   width: app.renderer.width,
   height: app.renderer.height,
@@ -240,8 +244,10 @@ other.attach(viewframe);
 
 viewframe.vel = ship.vel;
 
-planet.generate();
-planet.attach(viewframe);
+const pln = planet(quad);
+
+pln.generate();
+pln.attach(viewframe);
 
 app.ticker.add((delta) => {
   const nv = sqnorm(ship.vel.x, ship.vel.y);
@@ -250,22 +256,21 @@ app.ticker.add((delta) => {
   viewframe.update();
   let scale = Math.min(1, 100 / (nv + 1));
   //if(nv > 1){
-  if (scale < 1e-5) {
-    scale = 1e-5;
-    // This should have a faster option at some point?
-  }
+  //if (scale < 1e-10) {
+  //  scale = 1e-10;
+  // This should have a faster option at some point?
+  //}
   viewframe.scale = scale;
   viewframe.pos.x = ship.pos.x - ((1 / scale) * app.screen.width) / 2;
   viewframe.pos.y = ship.pos.y - ((1 / scale) * app.screen.height) / 2;
   /*} else {
     viewframe.scale = scale
   }*/
-  if (ship.pos.x > 14500) {
-    console.log("past");
-  }
+
   //viewframe.scale = nv > 0.2 ? 0.2 * 10000 /nv : 0.2
+  pln.update(delta);
   controller();
-  planet.update(delta);
+
   ship.update(delta);
   other.update(delta);
   flameList = flameList.filter((f) => !f.presentation?.destroyed);

@@ -15,6 +15,7 @@ class Viewframe extends Base1 {
     const viewframe = new Container();
     this.presentation = viewframe;
     app.stage.addChild(viewframe);
+    this.app = app;
   }
   update() {
     //super.update()
