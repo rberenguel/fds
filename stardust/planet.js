@@ -12,6 +12,7 @@ import {
   RenderTexture,
   Container,
   Sprite,
+  BlurFilter,
 } from "../libs/3rdparty/pixi.mjs";
 
 import { rotate } from "./math.js";
@@ -27,16 +28,52 @@ const vertex = await Assets.load({
 
 const planet = () =>
   new GiantPlanet({
-    pos: { x: 200000, y: 2500 },
-    radius: 80000,
+    pos: { x: 50000, y: 0 },
+    radius: 20000,
     e: 100000,
-    colors: [
+    layers: [
+      {
+        colors: [
+          [0.6, 0.4, 0.25], // Rich brown
+          [0.55, 0.45, 0.3], // Earthy brown
+          [0.45, 0.35, 0.2], // Muted brown
+          [0.65, 0.5, 0.35], // Ochre/Golden brown
+          [0.45, 0.35, 0.2],
+        ],
+        skip: [0.45, 0.35, 0.2],
+        threshold: 0.0,
+      },
+      {
+        colors: [
+          [0.1, 0.3, 0.1],
+          [0.3, 0.6, 0.2],
+          [0.45, 0.35, 0.2],
+          [0.0, 0.0, 0.9],
+          [0.25, 0.45, 0.2],
+        ],
+        skip: [0.45, 0.35, 0.2],
+        threshold: 0.1 * Math.random(),
+      },
+      {
+        colors: [
+          [1.0, 1.0, 1.0],
+          [0.9, 0.9, 0.9],
+          [0.9, 0.9, 0.9],
+          [0.9, 0.9, 0.9],
+          [0.9, 0.9, 0.9],
+        ],
+        skip: [0.5, 0.5, 0.5],
+        color_shift: [0.5, 0.5, 0.5],
+        threshold: 0.32,
+      },
+    ],
+    /*colors: [
       [0.0, 0.0, 1.0], //mid3
       [0.0, 0.0, 1.0], //mid2
       [0.0, 1.0, 0.0], //mid1
       [0.0, 0.5, 0.0], //top
       [0.0, 1.0, 1.0], //bottom
-    ],
+    ],*/
     /*colors: [
       [1.0, 0.4, 0.2], //mid3
       [0.7, 0.4, 0.3], //mid2
@@ -62,11 +99,11 @@ class GiantPlanet extends Base1 {
       kind: Meshes.kPlanet,
       center: [0, 0],
       radius: props.radius,
-      fill: rgbToPixiFill(props.colors[0]),
+      fill: 0x222222, //rgbToPixiFill(props.colors[0]),
     });
     super({ ...props, meshes: [mesh] });
     // Required, list of RGB coordinates for the shader, 0-1 range.
-    this.colors = props.colors;
+    this.layers = props.layers;
   }
 
   generate(app) {
@@ -86,23 +123,46 @@ class GiantPlanet extends Base1 {
       p.fill(mesh.fill);
       q.fill(mesh.fill);
     }
-    let c = new Container();
     let cc = new Container();
     cc.mask = p;
     cc.addChild(p);
     cc.addChild(q);
-    cc.addChild(this.sprite);
-    c.addChild(cc);
-    cc.planetTexture = true;
-    const rad = mesh.radius;
-    this.sprite.anchor.x = 0.5;
-    this.sprite.anchor.y = 0.5;
-    this.sprite.x = mesh.center[0];
-    this.sprite.y = mesh.center[1];
-    // Scale ideally is proportional to size (max of height and width) and adjusted for planet radius…
-    this.sprite.scale = (2 * mesh.radius) / this.sprite._size;
+    //cc.planetTexture = true;
+    for (let sprite of this.sprites) {
+      cc.addChild(sprite);
+      sprite.anchor.x = 0.5;
+      sprite.anchor.y = 0.5;
+      sprite.x = mesh.center[0];
+      sprite.y = mesh.center[1];
+      // Scale ideally is proportional to size (max of height and width) and adjusted for planet radius…
+      sprite.scale = (2 * mesh.radius) / this.sprites._size;
+    }
+    //console.log(cc)
+
+    const _texture = RenderTexture.create({
+      width: 1000,
+      height: 1000,
+      resolution: 1,
+    });
+    cc.x = 500;
+    cc.y = 500;
+    app.renderer.render({
+      container: cc,
+      target: _texture,
+      clear: true,
+      backgroundAlpha: 0,
+    });
+    let sprite = new Sprite(_texture);
+    sprite.anchor.x = 0.5;
+    sprite.anchor.y = 0.5;
+    sprite.scale = 1.02;
+    const blur = new BlurFilter(80);
+    blur.blendMode = "subtract";
+    sprite.filters = [blur];
+    const c = new Container();
+    c.addChild(sprite);
     this.generated = true;
-    this.presentations = [cc];
+    this.presentations = [sprite, cc];
   }
 
   texture(app) {
@@ -119,7 +179,10 @@ class GiantPlanet extends Base1 {
           col_mid1: { value: [0, 0, 0], type: "vec3<f32>" },
           col_top: { value: [0, 0, 0], type: "vec3<f32>" },
           col_bot: { value: [0, 0, 0], type: "vec3<f32>" },
-          iTime: { value: 1, type: "f32" },
+          col_skip: { value: [0, 0, 0], type: "vec3<f32>" },
+          col_shift: { value: [0, 0, 0], type: "vec3<f32>" },
+          col_threshold: { value: 0.1, type: "f32" },
+          shifting: { value: 9, type: "f32" },
         },
       },
     });
@@ -152,32 +215,50 @@ class GiantPlanet extends Base1 {
   Represents the vertex and fragment shaders that processes the geometry and runs on the GPU. Can be shared between multiple Mesh objects.
     */
 
-    shader.resources.ufs.uniforms.col_mid3 = this.colors[0];
-    shader.resources.ufs.uniforms.col_mid2 = this.colors[1];
-    shader.resources.ufs.uniforms.col_mid1 = this.colors[2];
-    shader.resources.ufs.uniforms.col_top = this.colors[3];
-    shader.resources.ufs.uniforms.col_bot = this.colors[4];
+    this.sprites = [];
+    let counter = 0;
+    for (let layer of this.layers) {
+      console.log(layer);
+      const colors = layer.colors;
+      shader.resources.ufs.uniforms.col_mid3 = colors[0];
+      shader.resources.ufs.uniforms.col_mid2 = colors[1];
+      shader.resources.ufs.uniforms.col_mid1 = colors[2];
+      shader.resources.ufs.uniforms.col_top = colors[3];
+      shader.resources.ufs.uniforms.col_bot = colors[4];
+      shader.resources.ufs.uniforms.col_shift = layer.color_shift ?? [0, 0, 0];
+      shader.resources.ufs.uniforms.col_skip = layer.skip;
+      shader.resources.ufs.uniforms.col_threshold = layer.threshold;
+      counter++;
+      shader.resources.ufs.uniforms.shifting = counter + Math.random() * 3;
+      let quad = new Mesh({
+        geometry: quadGeometry,
+        shader: shader,
+      });
+      const size = Math.max(app.screen.width, app.screen.height);
+      quad.width = size;
+      quad.height = size;
+      quad.x = size / 2;
+      quad.y = size / 2;
+      console.log(colors);
 
-    let quad = new Mesh({
-      geometry: quadGeometry,
-      shader,
-    });
+      const _texture = RenderTexture.create({
+        width: size,
+        height: size,
+        resolution: 1,
+        alphaMode: "no-premultiply-alpha",
+      });
 
-    const size = Math.max(app.screen.width, app.screen.height);
-    quad.width = size;
-    quad.height = size;
-    quad.x = size / 2;
-    quad.y = size / 2;
-    console.log(this.colors);
-
-    const _texture = RenderTexture.create({
-      width: size,
-      height: size,
-      resolution: 1,
-    });
-    app.renderer.render({ container: quad, target: _texture, clear: true });
-    this.sprite = new Sprite(_texture);
-    this.sprite._size = size;
+      app.renderer.render({
+        container: quad,
+        target: _texture,
+        clear: true,
+        backgroundAlpha: 0,
+      });
+      let sprite = new Sprite(_texture);
+      //sprite.transparent = true
+      this.sprites.push(sprite);
+      this.sprites._size = size;
+    }
 
     // TODO: destroy everything not used
   }
