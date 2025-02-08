@@ -2,7 +2,6 @@ import { set, get } from "../libs/3rdparty/idb-keyval.js";
 
 import { planet } from "./planet.js";
 import { Starfield } from "./parallax.js";
-import { renderGiant, giantTexture } from "./base.js";
 
 import {
   Application,
@@ -225,7 +224,7 @@ const other = new Lynx({
 other.generate();
 
 //const texture = giantTexture(app)
-const quad = await renderGiant(app);
+//const quad = await renderGiant(app);
 
 const starfield = new Starfield({
   width: app.renderer.width,
@@ -244,9 +243,11 @@ other.attach(viewframe);
 
 viewframe.vel = ship.vel;
 
-const pln = planet(quad);
+const pln = planet();
 
-pln.generate();
+console.log(pln);
+
+pln.generate(app);
 pln.attach(viewframe);
 
 app.ticker.add((delta) => {

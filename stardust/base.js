@@ -1,10 +1,8 @@
-export { Base1, giantTexture, renderGiant };
+export { Base1 };
 
 import {
   Graphics,
-  Filter,
   Assets,
-  GlProgram,
   Mesh,
   Shader,
   Geometry,
@@ -15,6 +13,7 @@ import {
 
 import { Meshes } from "./mesh.js";
 
+/*
 const giantTexture = (app, size) =>
   RenderTexture.create({
     width: size,
@@ -22,7 +21,7 @@ const giantTexture = (app, size) =>
     resolution: 1,
   });
 
-const renderGiant = async (app, texture) => {
+const renderGiant = async (app) => {
   const fragment = await Assets.load({
     src: "./custom.frg",
     loadParser: "loadTxt",
@@ -31,9 +30,6 @@ const renderGiant = async (app, texture) => {
     src: "./custom.vrt",
     loadParser: "loadTxt",
   });
-
-  console.log(fragment);
-  //console.log(vertex);
 
   const shader = Shader.from({
     gl: {
@@ -67,18 +63,6 @@ const renderGiant = async (app, texture) => {
     indexBuffer: [0, 1, 2, 0, 3, 2],
   });
 
-  /*
-geometry 
-Includes vertex positions, face indices, colors, UVs, and custom attributes within buffers, reducing the cost of passing all this data to the GPU. Can be shared between multiple Mesh objects.
-
- material 
-Alias for shader.
-
- shader SHADER | null
-Represents the vertex and fragment shaders that processes the geometry and runs on the GPU. Can be shared between multiple Mesh objects.
-
-
-  */
 
   let quad = new Mesh({
     geometry: quadGeometry,
@@ -97,11 +81,9 @@ Represents the vertex and fragment shaders that processes the geometry and runs 
   app.renderer.render({ container: quad, target: _texture, clear: true });
   quad.sprite = new Sprite(_texture);
   quad.sprite._size = size;
-  //quad.destroy(true);
-  //quad = null;
   return quad;
 };
-
+*/
 class Base1 {
   constructor(props) {
     this.pos = {
@@ -122,11 +104,7 @@ class Base1 {
     for (const mesh of this.meshes) {
       if (mesh.kind === Meshes.kPoly) {
         p.poly(mesh.flatten());
-        console.log(mesh);
-        console.log(mesh.fill);
-        console.log(mesh.fill !== undefined);
         if (mesh.fill !== undefined) {
-          console.log("Setting fill");
           p.fill(mesh.fill);
         }
         if (mesh.width) {
@@ -142,7 +120,7 @@ class Base1 {
           p.fill(mesh.fill);
         }
       }
-      if (mesh.kind === Meshes.kPlanet) {
+      /*if (mesh.kind === Meshes.kPlanet) {
         let q = new Graphics();
         p.circle(mesh.center[0], mesh.center[1], mesh.radius);
         q.circle(mesh.center[0], mesh.center[1], mesh.radius);
@@ -173,7 +151,7 @@ class Base1 {
         this.generated = true;
         this.presentations = [cc];
         return;
-      }
+      }*/
     }
     this.presentations = [p];
     this.generated = true;
@@ -205,29 +183,6 @@ class Base1 {
       if (presentation != null && !presentation.destroyed) {
         presentation.x = this.pos.x - this.viewframe.pos.x;
         presentation.y = this.pos.y - this.viewframe.pos.y;
-        if (presentation.planetTexture) {
-          const app = this.viewframe.app;
-          const w = app.screen.width;
-          const h = app.screen.height;
-          const scale = this.viewframe.scale;
-          /*let t = this.meshes[0].texture;
-          //console.log(this.meshes[0].radius*scale)
-          const r = this.meshes[0].radius;
-          t.scale.x = r;
-          t.scale.y = r;
-          //t.x = this.pos.x// - this.viewframe.pos.x;
-          t.x = 0;
-          t.y = 0;
-          t.i_shader.resources.shaderToyUniforms.uniforms.uTextureOffset = [
-            (scale * (this.pos.x - this.viewframe.pos.x)) / 1000,
-            (-scale * (this.pos.y - this.viewframe.pos.y)) / 1000,
-          ];*/ //[scale*(this.pos.x - this.viewframe.pos.x), -scale*(this.pos.y - this.viewframe.pos.y)]
-          //console.log(scale*(this.pos.x - this.viewframe.pos.x)/1000)
-          //console.log(scale * (this.pos.x - this.viewframe.pos.x)/4000)
-          //console.log(t.i_shader.resources.shaderToyUniforms.uniforms.uTextureOffset[0])
-          //console.log(250-scale*(this.pos.y - this.viewframe.pos.y))
-          //t.i_shader.resources.shaderToyUniforms.uniforms.uTextureScale = scale;
-        }
       }
     }
   }

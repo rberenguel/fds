@@ -18,8 +18,11 @@
 // vec3 col_mid3 = vec3(0.0, 0.0, 1.0);
 
 uniform vec3      iResolution;
-uniform vec2 uTextureOffset;
-uniform float uTextureScale;
+uniform vec3 col_mid3;
+uniform vec3 col_mid2;
+uniform vec3 col_mid1;
+uniform vec3 col_top;
+uniform vec3 col_bot;
 // number of octaves of fbm
 #define NUM_NOISE_OCTAVES 20
 // size of the planet
@@ -96,8 +99,8 @@ vec3 getColorForCoord(vec2 fragCoord) {
     
 
     fragCoord.xy /= iResolution.xy;
-    fragCoord.y -= uTextureOffset.y;
-    fragCoord.x -= uTextureOffset.x;
+    //fragCoord.y -= uTextureOffset.y;
+    //fragCoord.x -= uTextureOffset.x;
 
     //fragCoord.y -= 0.5;
     //fragCoord.xy *= 2.0;
@@ -135,11 +138,11 @@ vec3 getColorForCoord(vec2 fragCoord) {
     
     // convert noise value into color
     // three colors: top - mid - bottom (mid being constructed by three colors)
-    vec3 col_top = vec3(0.8, 0.5, 0.8);
-    vec3 col_bot = vec3(0.0, 0.0, 0.0);
-    vec3 col_mid1 = vec3(0.1, 0.2, 0.0);
-    vec3 col_mid2 = vec3(0.7, 0.4, 0.3);
-    vec3 col_mid3 = vec3(1.0, 0.4, 0.2);
+    //vec3 col_top = vec3(0.8, 0.5, 0.8);
+    //vec3 col_bot = vec3(0.0, 0.0, 0.0);
+    //vec3 col_mid1 = vec3(0.1, 0.2, 0.0);
+    //vec3 col_mid2 = vec3(0.7, 0.4, 0.3);
+    //vec3 col_mid3 = vec3(1.0, 0.4, 0.2);
 
     // mix mid color based on intermediate results
     vec3 col_mid = mix(col_mid1, col_mid2, clamp(r, 0.0, 1.0));
