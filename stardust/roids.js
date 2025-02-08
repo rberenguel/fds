@@ -69,7 +69,7 @@ const gameActions = {
     const _vx = ship.vel.x - 0.1 * Math.cos(ship.r) * f;
     const _vy = ship.vel.y - 0.1 * Math.sin(ship.r) * f;
     const _nv = sqnorm(_vx, _vy);
-    if (_nv < 1500) {
+    if (_nv < 1e6) {
       ship.vel.x = _vx;
       ship.vel.y = _vy;
     }
@@ -83,7 +83,7 @@ const gameActions = {
     const _vx = ship.vel.x + 0.1 * Math.cos(ship.r) * f;
     const _vy = ship.vel.y + 0.1 * Math.sin(ship.r) * f;
     const _nv = sqnorm(_vx, _vy);
-    if (_nv < 1500) {
+    if (_nv < 1e6) {
       ship.vel.x = _vx;
       ship.vel.y = _vy;
     }

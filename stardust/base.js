@@ -10,14 +10,15 @@ import {
   Geometry,
   RenderTexture,
   Container,
+  Sprite,
 } from "../libs/3rdparty/pixi.mjs";
 
 import { Meshes } from "./mesh.js";
 
-const giantTexture = (app) =>
+const giantTexture = (app, size) =>
   RenderTexture.create({
-    width: app.screen.width,
-    height: app.screen.height,
+    width: size,
+    height: size,
     resolution: 1,
   });
 
@@ -85,14 +86,17 @@ Represents the vertex and fragment shaders that processes the geometry and runs 
   });
   quad.i_shader = shader;
 
-  quad.width = 1000;
-  quad.height = 1000;
-  quad.x = 0;
-  quad.y = 0;
+  const size = Math.max(app.screen.width, app.screen.height);
+  quad.width = size;
+  quad.height = size;
+  quad.x = size / 2;
+  quad.y = size / 2;
 
   //app.stage.addChild(quad);
-
-  //app.renderer.render({ container: quad, target: texture, clear: true });
+  const _texture = giantTexture(app, size);
+  app.renderer.render({ container: quad, target: _texture, clear: true });
+  quad.sprite = new Sprite(_texture);
+  quad.sprite._size = size;
   //quad.destroy(true);
   //quad = null;
   return quad;
@@ -155,12 +159,17 @@ class Base1 {
         cc.mask = p;
         cc.addChild(p);
         cc.addChild(q);
-        cc.addChild(mesh.texture);
+        cc.addChild(mesh.texture.sprite);
         c.addChild(cc);
         cc.planetTexture = true;
-        mesh.texture.x = mesh.center[0];
-        mesh.texture.y = mesh.center[1];
-        mesh.texture.scale = 1000;
+        const rad = mesh.radius;
+        mesh.texture.sprite.anchor.x = 0.5;
+        mesh.texture.sprite.anchor.y = 0.5;
+        mesh.texture.sprite.x = mesh.center[0];
+        mesh.texture.sprite.y = mesh.center[1];
+        // Scale ideally is proportional to size (max of height and width) and adjusted for planet radius…
+        mesh.texture.sprite.scale =
+          (2 * mesh.radius) / mesh.texture.sprite._size;
         this.generated = true;
         this.presentations = [cc];
         return;
@@ -201,7 +210,7 @@ class Base1 {
           const w = app.screen.width;
           const h = app.screen.height;
           const scale = this.viewframe.scale;
-          let t = this.meshes[0].texture;
+          /*let t = this.meshes[0].texture;
           //console.log(this.meshes[0].radius*scale)
           const r = this.meshes[0].radius;
           t.scale.x = r;
@@ -212,12 +221,12 @@ class Base1 {
           t.i_shader.resources.shaderToyUniforms.uniforms.uTextureOffset = [
             (scale * (this.pos.x - this.viewframe.pos.x)) / 1000,
             (-scale * (this.pos.y - this.viewframe.pos.y)) / 1000,
-          ]; //[scale*(this.pos.x - this.viewframe.pos.x), -scale*(this.pos.y - this.viewframe.pos.y)]
+          ];*/ //[scale*(this.pos.x - this.viewframe.pos.x), -scale*(this.pos.y - this.viewframe.pos.y)]
           //console.log(scale*(this.pos.x - this.viewframe.pos.x)/1000)
           //console.log(scale * (this.pos.x - this.viewframe.pos.x)/4000)
           //console.log(t.i_shader.resources.shaderToyUniforms.uniforms.uTextureOffset[0])
           //console.log(250-scale*(this.pos.y - this.viewframe.pos.y))
-          t.i_shader.resources.shaderToyUniforms.uniforms.uTextureScale = scale;
+          //t.i_shader.resources.shaderToyUniforms.uniforms.uTextureScale = scale;
         }
       }
     }

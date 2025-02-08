@@ -8,7 +8,7 @@ import { rotate } from "./math.js";
 const planet = (texture) =>
   new Base1({
     pos: {
-      x: 5000,
+      x: 200000,
       y: 2500,
     },
     e: 100000000000,
@@ -17,7 +17,7 @@ const planet = (texture) =>
       new Mesh({
         kind: Meshes.kPlanet,
         center: [0, 0],
-        radius: 2000,
+        radius: 80000,
         fill: 0x303030,
         texture: texture,
       }),

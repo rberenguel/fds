@@ -12,6 +12,7 @@ $CLOSE=len=0.5 color="$RED" penwidth="3" style=""
 $GREY=#cccccc
 $NOTE=shape=plaintext fontcolor="$YELLOW"
 $SUBTLE=; color="$GREY" style="dotted" arrowhead=none
+$CURRENT=; fillcolor="#b5890077" color="$YELLOW" penwidth=3
 
 $OBJ=; color="$GREY" fillcolor="#cccccc33" fontcolor="$GREY" fontname="inter" fontsize=30 len=0.5 arrowhead=none
 
@@ -50,11 +51,13 @@ Nebula Nebula in\nbackground $OBJ
 
 SunCorona [ ] Corona effect $OBJ margin=0.1
 Sun -> SunCorona $OBJ
-TexturesGG [ ] Textures $OBJ margin=0.1
-TexturesGGWip WIP, from shadertoy ; URL="https://www.shadertoy.com/view/tltXWM"
+TexturesGG [X] Textures $OBJ margin=0.1
+TexturesGGWip Based on shadertoy ; URL="https://www.shadertoy.com/view/tltXWM"
 TexturesGG -> TexturesGGWip
 note_textures_gg I'm having issues with the scaling, for some reason vertical movement of the viewframe affects the scaling applied to the texture ; $NOTE
+GGUniforms [ ] Add uniforms $CURRENT
 TexturesGGWip -> note_textures_gg $SUBTLE
+TexturesGGWip -> GGUniforms
 GasGiant -> TexturesGG $OBJ
 TexturesIG [ ] Textures $OBJ margin=0.1
 IceGiant -> TexturesIG $OBJ
@@ -80,7 +83,7 @@ System -> Nebula $OBJ
 
 PlanetProduction Planet production
 System -> PlanetProduction ; $CLOSE
-PlanetDemand Planet demand
+PlanetDemand Planet demand $CURRENT
 System -> PlanetDemand ; $CLOSE
 PlanetProduction -> PlanetDemand
 PlanetDemand -> PlanetProduction
