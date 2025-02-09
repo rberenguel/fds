@@ -1,6 +1,6 @@
 import { set, get } from "../libs/3rdparty/idb-keyval.js";
 
-import { planet } from "./planet.js";
+import { planets } from "./planet.js";
 import { Starfield } from "./parallax.js";
 
 import {
@@ -216,7 +216,7 @@ ship.generate();
 
 const other = new Lynx({
   pos: {
-    x: 500,
+    x: 1500,
     y: 200,
   },
 });
@@ -243,12 +243,12 @@ other.attach(viewframe);
 
 viewframe.vel = ship.vel;
 
-const pln = planet();
+const pln = planets();
 
 console.log(pln);
 
-pln.generate(app);
-pln.attach(viewframe);
+pln.map((p) => p.generate(app));
+pln.map((p) => p.attach(viewframe));
 
 app.ticker.add((delta) => {
   const nv = sqnorm(ship.vel.x, ship.vel.y);
@@ -269,7 +269,7 @@ app.ticker.add((delta) => {
   }*/
 
   //viewframe.scale = nv > 0.2 ? 0.2 * 10000 /nv : 0.2
-  pln.update(delta);
+  pln.map((p) => p.update(delta));
   controller();
 
   ship.update(delta);

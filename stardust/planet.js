@@ -1,4 +1,4 @@
-export { planet, GiantPlanet };
+export { planets };
 
 import { Mesh as SMesh, Meshes } from "./mesh.js";
 import { Base1 } from "./base.js";
@@ -17,7 +17,9 @@ import {
 
 import { rotate } from "./math.js";
 
-const fragment = await Assets.load({
+// Note: y coordinates are reversed… is it worth the fix internally?
+
+const fluidFragment = await Assets.load({
   src: "./giant_planet_1.frg",
   loadParser: "loadTxt",
 });
@@ -26,63 +28,93 @@ const vertex = await Assets.load({
   loadParser: "loadTxt",
 });
 
-const planet = () =>
-  new GiantPlanet({
-    pos: { x: 50000, y: 0 },
-    radius: 20000,
-    e: 100000,
-    layers: [
-      {
-        colors: [
-          [0.6, 0.4, 0.25], // Rich brown
-          [0.55, 0.45, 0.3], // Earthy brown
-          [0.45, 0.35, 0.2], // Muted brown
-          [0.65, 0.5, 0.35], // Ochre/Golden brown
-          [0.45, 0.35, 0.2],
-        ],
-        skip: [0.45, 0.35, 0.2],
-        threshold: 0.0,
-      },
-      {
-        colors: [
-          [0.1, 0.3, 0.1],
-          [0.3, 0.6, 0.2],
-          [0.45, 0.35, 0.2],
-          [0.0, 0.0, 0.9],
-          [0.25, 0.45, 0.2],
-        ],
-        skip: [0.45, 0.35, 0.2],
-        threshold: 0.1 * Math.random(),
-      },
-      {
-        colors: [
-          [1.0, 1.0, 1.0],
-          [0.9, 0.9, 0.9],
-          [0.9, 0.9, 0.9],
-          [0.9, 0.9, 0.9],
-          [0.9, 0.9, 0.9],
-        ],
-        skip: [0.5, 0.5, 0.5],
-        color_shift: [0.5, 0.5, 0.5],
-        threshold: 0.32,
-      },
-    ],
-    /*colors: [
+const averageColors = (...colors) => {
+  if (colors.length === 0) {
+    return [0, 0, 0]; // Return black (or any default) for an empty list
+  }
+
+  let sumR = 0;
+  let sumG = 0;
+  let sumB = 0;
+
+  for (const color of colors) {
+    sumR += color[0];
+    sumG += color[1];
+    sumB += color[2];
+  }
+
+  const numColors = colors.length;
+  return [sumR / numColors, sumG / numColors, sumB / numColors];
+};
+
+const planets = () => {
+  const rad = 100;
+  const ps = [
+    new EarthLikePlanet({
+      pos: { x: 500, y: -200 },
+      radius: rad,
+      e: 100000,
+    }),
+    new EarthLikePlanet({
+      pos: { x: 500, y: -200 },
+      radius: rad,
+      e: 100000,
+    }),
+    new AtmospherePlanet({
+      pos: { x: 500, y: 200 },
+      radius: rad,
+      e: 100000,
+    }),
+    new AtmospherePlanet({
+      pos: { x: 500, y: 200 },
+      radius: rad,
+      e: 100000,
+    }),
+    new GasGiantPlanet({
+      pos: { x: 500, y: 200 },
+      radius: rad,
+      e: 100000,
+    }),
+    new GasGiantPlanet({
+      pos: { x: 500, y: 200 },
+      radius: rad,
+      e: 100000,
+    }),
+    new IceGiantPlanet({
+      pos: { x: 200, y: 300 },
+      radius: rad,
+      e: 100000,
+    }),
+    new IceGiantPlanet({
+      pos: { x: 200, y: 300 },
+      radius: rad,
+      e: 100000,
+    }),
+  ];
+  for (let i = 0; i < ps.length; i++) {
+    const x = Math.cos((i * Math.PI * 2) / ps.length) * 400;
+    const y = Math.sin((i * Math.PI * 2) / ps.length) * 400;
+    let p = ps[i];
+    p.pos.x = x;
+    p.pos.y = y;
+  }
+  return ps;
+};
+
+/*colors: [
       [0.0, 0.0, 1.0], //mid3
       [0.0, 0.0, 1.0], //mid2
       [0.0, 1.0, 0.0], //mid1
       [0.0, 0.5, 0.0], //top
       [0.0, 1.0, 1.0], //bottom
     ],*/
-    /*colors: [
+/*colors: [
       [1.0, 0.4, 0.2], //mid3
       [0.7, 0.4, 0.3], //mid2
       [0.1, 0.2, 0.0], //mid1
       [0.8, 0.5, 0.8], //top
       [0]
     ],*/
-  });
-
 const rgbToPixiFill = (rgb) => {
   const [r, g, b] = rgb;
   return (
@@ -92,7 +124,7 @@ const rgbToPixiFill = (rgb) => {
   );
 };
 
-class GiantPlanet extends Base1 {
+class Planet extends Base1 {
   // This should cover gas and ice giants
   constructor(props) {
     const mesh = new SMesh({
@@ -109,24 +141,25 @@ class GiantPlanet extends Base1 {
   generate(app) {
     // Overrides completely the super, since it needs to generate the textures
     // Also, this needs app to be able to render
+    console.log(app);
     this.texture(app);
     let p = new Graphics();
     let q = new Graphics();
     const mesh = this.meshes[0];
     p.circle(mesh.center[0], mesh.center[1], mesh.radius);
-    q.circle(mesh.center[0], mesh.center[1], mesh.radius);
+    q.circle(mesh.center[0], mesh.center[1], 1.1 * mesh.radius);
     if (mesh.width) {
       p.stroke({ color: mesh.color, width: mesh.width ?? 0 });
       q.stroke({ color: mesh.color, width: mesh.width ?? 0 });
     }
     if (mesh.fill !== undefined) {
       p.fill(mesh.fill);
-      q.fill(mesh.fill);
+      //q.fill(mesh.fill);
     }
     let cc = new Container();
     cc.mask = p;
     cc.addChild(p);
-    cc.addChild(q);
+    //cc.addChild(q);
     //cc.planetTexture = true;
     for (let sprite of this.sprites) {
       cc.addChild(sprite);
@@ -136,6 +169,11 @@ class GiantPlanet extends Base1 {
       sprite.y = mesh.center[1];
       // Scale ideally is proportional to size (max of height and width) and adjusted for planet radius…
       sprite.scale = (2 * mesh.radius) / this.sprites._size;
+      if (sprite.fillGlow) {
+        console.log("fillglow:", sprite.fillGlow);
+        q.fill(sprite.fillGlow);
+        q.alpha = 0.4;
+      }
     }
     //console.log(cc)
 
@@ -156,20 +194,20 @@ class GiantPlanet extends Base1 {
     sprite.anchor.x = 0.5;
     sprite.anchor.y = 0.5;
     sprite.scale = 1.02;
-    const blur = new BlurFilter(80);
-    blur.blendMode = "subtract";
-    sprite.filters = [blur];
-    const c = new Container();
-    c.addChild(sprite);
+    //const blur = new BlurFilter(80);
+    //blur.blendMode = "subtract";
+    //sprite.filters = [blur];
+    //const c = new Container();
+    //c.addChild(sprite);
     this.generated = true;
-    this.presentations = [sprite, cc];
+    this.presentations = [q, cc];
   }
 
   texture(app) {
     const shader = Shader.from({
       gl: {
-        vertex,
-        fragment,
+        vertex: vertex,
+        fragment: fluidFragment,
       },
       resources: {
         ufs: {
@@ -181,8 +219,9 @@ class GiantPlanet extends Base1 {
           col_bot: { value: [0, 0, 0], type: "vec3<f32>" },
           col_skip: { value: [0, 0, 0], type: "vec3<f32>" },
           col_shift: { value: [0, 0, 0], type: "vec3<f32>" },
+          stretch: { value: [1, 1], type: "vec2<f32>" },
           col_threshold: { value: 0.1, type: "f32" },
-          shifting: { value: 9, type: "f32" },
+          shifting: { value: 3 * Math.random(), type: "f32" },
         },
       },
     });
@@ -228,6 +267,7 @@ class GiantPlanet extends Base1 {
       shader.resources.ufs.uniforms.col_shift = layer.color_shift ?? [0, 0, 0];
       shader.resources.ufs.uniforms.col_skip = layer.skip;
       shader.resources.ufs.uniforms.col_threshold = layer.threshold;
+      shader.resources.ufs.uniforms.stretch = layer.stretch ?? [1, 1];
       counter++;
       shader.resources.ufs.uniforms.shifting = counter + Math.random() * 3;
       let quad = new Mesh({
@@ -255,11 +295,167 @@ class GiantPlanet extends Base1 {
         backgroundAlpha: 0,
       });
       let sprite = new Sprite(_texture);
+      if (layer.fillGlow) {
+        console.log(averageColors(...colors));
+        sprite.fillGlow = averageColors(...colors);
+      }
       //sprite.transparent = true
       this.sprites.push(sprite);
       this.sprites._size = size;
     }
 
     // TODO: destroy everything not used
+  }
+}
+
+class EarthLikePlanet extends Planet {
+  constructor(props) {
+    const layers = [
+      {
+        colors: [
+          [0.6, 0.4, 0.25], // Rich brown
+          [0.55, 0.45, 0.3], // Earthy brown
+          [0.45, 0.35, 0.2], // Muted brown
+          [0.65, 0.5, 0.35], // Ochre/Golden brown
+          [0.45, 0.35, 0.2],
+        ],
+        skip: [0.45, 0.35, 0.2],
+        threshold: 0.0,
+      },
+      {
+        colors: [
+          [0.1, 0.3, 0.1],
+          [0.3, 0.6, 0.2],
+          [0.45, 0.35, 0.2],
+          [0.0, 0.0, 0.9],
+          [0.25, 0.45, 0.2],
+        ],
+        skip: [0.45, 0.35, 0.2],
+        threshold: 0.1 * Math.random(),
+        fillGlow: true,
+      },
+      {
+        colors: [
+          [1.0, 1.0, 1.0],
+          [0.9, 0.9, 0.9],
+          [0.9, 0.9, 0.9],
+          [0.9, 0.9, 0.9],
+          [0.9, 0.9, 0.9],
+        ],
+        skip: [0.5, 0.5, 0.5],
+        color_shift: [0.5, 0.5, 0.5],
+        threshold: 0.32,
+      },
+    ];
+    super({ ...props, layers: layers });
+  }
+}
+
+class GasGiantPlanet extends Planet {
+  constructor(props) {
+    // This should be yellow/orange dominant
+    const c1 = [
+      0.5 + 0.5 * Math.random(),
+      0.2 + 0.2 * Math.random(),
+      0.5 * Math.random(),
+    ];
+    const layers = [
+      {
+        colors: [
+          c1, //mid3
+          [0.7, 0.4, 0.3], //mid2
+          [0.1, 0.2, 0.0], //mid1
+          [1.0, 1.0, 1.0], //top
+          [0, 0, 0],
+        ],
+        skip: [0.45, 0.35, 0.2],
+        threshold: 0.0,
+        stretch: [3 + Math.random() * 2, 1],
+        fillGlow: true,
+      },
+    ];
+    super({ ...props, layers: layers });
+    console.log(this);
+  }
+}
+
+class IceGiantPlanet extends Planet {
+  constructor(props) {
+    // This should be blue/turquoise dominant
+    const c1 = [
+      0.2 * Math.random(),
+      0.2 + 0.7 * Math.random(),
+      0.5 + 0.5 * Math.random(),
+    ];
+    const layers = [
+      {
+        colors: [
+          c1, //[.2, 0.4, 1.0], //mid3
+          [0.3, 0.4, 0.7], //mid2
+          [0.0, 0.2, 0.1], //mid1
+          [1.0, 1.0, 1.0], //top
+          [0, 0, 0],
+        ],
+        skip: [0.45, 0.35, 0.2],
+        threshold: 0.0,
+        stretch: [5 + Math.random() * 2, 1],
+        fillGlow: true,
+      },
+    ];
+    super({ ...props, layers: layers });
+    console.log(this);
+  }
+}
+
+class AtmospherePlanet extends Planet {
+  constructor(props) {
+    const c1 = [
+      0.2 + 0.6 * Math.random(),
+      0.2 + 0.6 * Math.random(),
+      0.2 + 0.6 * Math.random(),
+    ];
+    const c2 = [
+      0.2 + 0.6 * Math.random(),
+      0.2 + 0.6 * Math.random(),
+      0.2 + 0.6 * Math.random(),
+    ];
+    const c3 = [
+      0.2 + 0.6 * Math.random(),
+      0.2 + 0.6 * Math.random(),
+      0.2 + 0.6 * Math.random(),
+    ];
+    const layers = [
+      {
+        colors: [
+          c1, // Rich brown
+          [0.55, 0.45, 0.3], // Earthy brown
+          [0.45, 0.35, 0.2], // Muted brown
+          [0.65, 0.5, 0.35], // Ochre/Golden brown
+          [0.45, 0.35, 0.2],
+        ],
+        skip: [0.45, 0.35, 0.2],
+        threshold: 0.0,
+        stretch: [0.5 + Math.random(), 0.5 + Math.random()],
+      },
+      {
+        colors: [
+          c2,
+          [0.3, 0.6, 0.2],
+          [0.45, 0.35, 0.2],
+          [0.0, 0.0, 0.9],
+          [0.25, 0.45, 0.2],
+        ],
+        skip: [0.45, 0.35, 0.2],
+        threshold: 0.8 * Math.random(),
+        stretch: [0.5 + Math.random(), 0.5 + Math.random()],
+        fillGlow: true,
+      },
+      {
+        colors: [c3, c2, c1, [0.9, 0.9, 0.9], [0.9, 0.9, 0.9]],
+        skip: [0.3, 0.3, 0.3],
+        threshold: 0.32,
+      },
+    ];
+    super({ ...props, layers: layers });
   }
 }

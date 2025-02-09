@@ -1,9 +1,10 @@
 #version 300 es
 
-// This is a minor modification of this shadertoy: https://www.shadertoy.com/view/tltXWM by kchnkrml, I found it on Reddit where he shared it: https://www.reddit.com/r/gamedev/comments/f0isdt/procedural_generation_simple_shaderbased_gas/
+// This is a modification of this shadertoy: https://www.shadertoy.com/view/tltXWM by kchnkrml, I found it on Reddit where he shared it: https://www.reddit.com/r/gamedev/comments/f0isdt/procedural_generation_simple_shaderbased_gas/
 
 uniform float shifting;
 uniform vec3 iResolution;
+uniform vec2 stretch;
 uniform vec3 col_mid3;
 uniform vec3 col_mid2;
 uniform vec3 col_mid1;
@@ -13,7 +14,7 @@ uniform vec3 col_skip;
 uniform vec3 col_shift;
 uniform float col_threshold;
 // number of octaves of fbm
-#define NUM_NOISE_OCTAVES 20
+#define NUM_NOISE_OCTAVES 10
 // size of the planet
 
 out vec4 fragColor;
@@ -91,6 +92,8 @@ vec4 getColorForCoord(vec2 fragCoord) {
     const float verticalFieldOfView = 30.0f * pi / 180.0f;
 
     fragCoord.xy /= iResolution.xy;
+    fragCoord.x /= stretch.x;
+    fragCoord.y /= stretch.y;
 
     // position of viewpoint (P) and ray of vision (w)
     vec3 P = vec3(0.0f, 0.0f, 5.0f);
