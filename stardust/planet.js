@@ -23,6 +23,12 @@ const fluidFragment = await Assets.load({
   src: "./giant_planet_1.frg",
   loadParser: "loadTxt",
 });
+
+const craterFragment = await Assets.load({
+  src: "./moon.glsl",
+  loadParser: "loadTxt",
+});
+
 const vertex = await Assets.load({
   src: "./giant_planet_1.vrt",
   loadParser: "loadTxt",
@@ -90,6 +96,16 @@ const planets = () => {
       radius: rad,
       e: 100000,
     }),
+    new RockyPlanet({
+      pos: { x: 200, y: 300 },
+      radius: rad,
+      e: 100000,
+    }),
+    new RockyPlanet({
+      pos: { x: 200, y: 300 },
+      radius: rad,
+      e: 100000,
+    }),
   ];
   for (let i = 0; i < ps.length; i++) {
     const x = Math.cos((i * Math.PI * 2) / ps.length) * 400;
@@ -141,26 +157,28 @@ class Planet extends Base1 {
   generate(app) {
     // Overrides completely the super, since it needs to generate the textures
     // Also, this needs app to be able to render
-    console.log(app);
-    this.texture(app);
+    if (this.atmospheric) {
+      this.textureAtmospheric(app);
+    }
+    if (this.rocky) {
+      this.textureRocky(app);
+    }
+
     let p = new Graphics();
     let q = new Graphics();
     const mesh = this.meshes[0];
     p.circle(mesh.center[0], mesh.center[1], mesh.radius);
-    q.circle(mesh.center[0], mesh.center[1], 1.1 * mesh.radius);
+
     if (mesh.width) {
       p.stroke({ color: mesh.color, width: mesh.width ?? 0 });
       q.stroke({ color: mesh.color, width: mesh.width ?? 0 });
     }
     if (mesh.fill !== undefined) {
       p.fill(mesh.fill);
-      //q.fill(mesh.fill);
     }
     let cc = new Container();
     cc.mask = p;
     cc.addChild(p);
-    //cc.addChild(q);
-    //cc.planetTexture = true;
     for (let sprite of this.sprites) {
       cc.addChild(sprite);
       sprite.anchor.x = 0.5;
@@ -170,40 +188,24 @@ class Planet extends Base1 {
       // Scale ideally is proportional to size (max of height and width) and adjusted for planet radius…
       sprite.scale = (2 * mesh.radius) / this.sprites._size;
       if (sprite.fillGlow) {
-        console.log("fillglow:", sprite.fillGlow);
-        q.fill(sprite.fillGlow);
+        console.log(sprite.fillGlow);
+        q.circle(
+          mesh.center[0],
+          mesh.center[1],
+          sprite.fillGlow.size * mesh.radius,
+        );
+        q.fill(sprite.fillGlow.color);
+
         q.alpha = 0.4;
+        cc.addChild(q);
       }
     }
-    //console.log(cc)
 
-    const _texture = RenderTexture.create({
-      width: 1000,
-      height: 1000,
-      resolution: 1,
-    });
-    cc.x = 500;
-    cc.y = 500;
-    app.renderer.render({
-      container: cc,
-      target: _texture,
-      clear: true,
-      backgroundAlpha: 0,
-    });
-    let sprite = new Sprite(_texture);
-    sprite.anchor.x = 0.5;
-    sprite.anchor.y = 0.5;
-    sprite.scale = 1.02;
-    //const blur = new BlurFilter(80);
-    //blur.blendMode = "subtract";
-    //sprite.filters = [blur];
-    //const c = new Container();
-    //c.addChild(sprite);
     this.generated = true;
     this.presentations = [q, cc];
   }
 
-  texture(app) {
+  textureAtmospheric(app) {
     const shader = Shader.from({
       gl: {
         vertex: vertex,
@@ -257,7 +259,6 @@ class Planet extends Base1 {
     this.sprites = [];
     let counter = 0;
     for (let layer of this.layers) {
-      console.log(layer);
       const colors = layer.colors;
       shader.resources.ufs.uniforms.col_mid3 = colors[0];
       shader.resources.ufs.uniforms.col_mid2 = colors[1];
@@ -279,7 +280,6 @@ class Planet extends Base1 {
       quad.height = size;
       quad.x = size / 2;
       quad.y = size / 2;
-      console.log(colors);
 
       const _texture = RenderTexture.create({
         width: size,
@@ -296,10 +296,85 @@ class Planet extends Base1 {
       });
       let sprite = new Sprite(_texture);
       if (layer.fillGlow) {
-        console.log(averageColors(...colors));
-        sprite.fillGlow = averageColors(...colors);
+        sprite.fillGlow = {};
+        sprite.fillGlow.color = averageColors(...colors);
+        sprite.fillGlow.size = layer.fillGlow;
       }
-      //sprite.transparent = true
+      this.sprites.push(sprite);
+      this.sprites._size = size;
+    }
+
+    // TODO: destroy everything not used
+  }
+
+  textureRocky(app) {
+    const shader = Shader.from({
+      gl: {
+        vertex: vertex,
+        fragment: craterFragment,
+      },
+      resources: {
+        ufs: {
+          iResolution: { value: [1000, 1000, 1], type: "vec3<f32>" },
+          in_color: { value: [0, 0, 0], type: "vec3<f32>" },
+          shifting: { value: 3 * Math.random(), type: "f32" },
+        },
+      },
+    });
+
+    const quadGeometry = new Geometry({
+      attributes: {
+        aPosition: [
+          -250,
+          -250, // x, y
+          250,
+          -250, // x, y
+          250,
+          250, // x, y,
+          -250,
+          250, // x, y,
+        ],
+      },
+      indexBuffer: [0, 1, 2, 0, 3, 2],
+    });
+
+    this.sprites = [];
+    let counter = 0;
+    for (let layer of this.layers) {
+      const colors = layer.colors;
+
+      shader.resources.ufs.uniforms.in_color = colors[0];
+      counter++;
+      shader.resources.ufs.uniforms.shifting = Math.random() * 3;
+      let quad = new Mesh({
+        geometry: quadGeometry,
+        shader: shader,
+      });
+      const size = Math.max(app.screen.width, app.screen.height);
+      quad.width = size;
+      quad.height = size;
+      quad.x = size / 2;
+      quad.y = size / 2;
+
+      const _texture = RenderTexture.create({
+        width: size,
+        height: size,
+        resolution: 1,
+        alphaMode: "no-premultiply-alpha",
+      });
+
+      app.renderer.render({
+        container: quad,
+        target: _texture,
+        clear: true,
+        backgroundAlpha: 0,
+      });
+      let sprite = new Sprite(_texture);
+      if (layer.fillGlow) {
+        sprite.fillGlow = {};
+        sprite.fillGlow.color = averageColors(...colors);
+        sprite.fillGlow.size = layer.fillGlow;
+      }
       this.sprites.push(sprite);
       this.sprites._size = size;
     }
@@ -332,7 +407,7 @@ class EarthLikePlanet extends Planet {
         ],
         skip: [0.45, 0.35, 0.2],
         threshold: 0.1 * Math.random(),
-        fillGlow: true,
+        fillGlow: 1.1,
       },
       {
         colors: [
@@ -348,6 +423,7 @@ class EarthLikePlanet extends Planet {
       },
     ];
     super({ ...props, layers: layers });
+    this.atmospheric = true;
   }
 }
 
@@ -371,11 +447,11 @@ class GasGiantPlanet extends Planet {
         skip: [0.45, 0.35, 0.2],
         threshold: 0.0,
         stretch: [3 + Math.random() * 2, 1],
-        fillGlow: true,
+        fillGlow: 1.1,
       },
     ];
     super({ ...props, layers: layers });
-    console.log(this);
+    this.atmospheric = true;
   }
 }
 
@@ -399,11 +475,11 @@ class IceGiantPlanet extends Planet {
         skip: [0.45, 0.35, 0.2],
         threshold: 0.0,
         stretch: [5 + Math.random() * 2, 1],
-        fillGlow: true,
+        fillGlow: 1.1,
       },
     ];
     super({ ...props, layers: layers });
-    console.log(this);
+    this.atmospheric = true;
   }
 }
 
@@ -448,7 +524,7 @@ class AtmospherePlanet extends Planet {
         skip: [0.45, 0.35, 0.2],
         threshold: 0.8 * Math.random(),
         stretch: [0.5 + Math.random(), 0.5 + Math.random()],
-        fillGlow: true,
+        fillGlow: 1.1,
       },
       {
         colors: [c3, c2, c1, [0.9, 0.9, 0.9], [0.9, 0.9, 0.9]],
@@ -457,5 +533,27 @@ class AtmospherePlanet extends Planet {
       },
     ];
     super({ ...props, layers: layers });
+    this.atmospheric = true;
+  }
+}
+
+class RockyPlanet extends Planet {
+  constructor(props) {
+    // This should be blue/turquoise dominant
+    const c1 = [
+      0.5 + 0.2 * Math.random(),
+      0.5 + 0.2 * Math.random(),
+      0.5 + 0.2 * Math.random(),
+    ];
+    const layers = [
+      {
+        colors: [
+          c1, //[.2, 0.4, 1.0], //mid3
+        ],
+        fillGlow: 1.05,
+      },
+    ];
+    super({ ...props, layers: layers });
+    this.rocky = true;
   }
 }

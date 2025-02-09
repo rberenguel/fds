@@ -1,7 +1,16 @@
+#version 300 es
+
+uniform vec3 iResolution;
+uniform vec3 in_color;
+uniform float shifting;
+
+out vec4 fragColor;
+
 const float PI = 3.14159265358;
 
-// --- Add a uniform float for the random seed ---
-const float u_randomSeed = 0.3;
+// I got the basin / ridge from here https://www.shadertoy.com/view/wljcRd but
+// tweaked everything to not need any additional textures, and added a random
+// amount of craters of different sizes
 
 // --- Hash Functions  ---
 float hash12(vec2 p, float seed) {
@@ -108,15 +117,19 @@ vec3 normal(vec2 uv, float seed) {
 
 // --- mainImage ---
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    float scale = 4.2;
+    float scale = 5.2;
     vec2 uv = scale * (fragCoord - .5 * iResolution.xy) / iResolution.y;
 
-    vec3 n = normal(uv, u_randomSeed);
+    vec3 n = normal(uv, shifting);
     vec3 light_dir = normalize(vec3(0.3535, 0.3535, 0.866));
 
     float diffuse = 0.8 * max(0.0, dot(n, light_dir));
     float ambient = 0.3;
-    vec3 color = vec3(0.8, 0.6, 0.6) * (ambient + diffuse) + vec3(0.0) * height(uv, u_randomSeed);
+    vec3 color = in_color * (ambient + diffuse) + vec3(0.0) * height(uv, shifting);
 
     fragColor = vec4(color * color, 1.0);
+}
+
+void main() {
+    mainImage(fragColor, gl_FragCoord.xy);
 }
