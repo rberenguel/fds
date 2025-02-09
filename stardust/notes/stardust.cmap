@@ -54,21 +54,12 @@ Sun -> SunCorona $OBJ
 TexturesGG [X] Textures $OBJ margin=0.1
 TexturesGGWip Based on shadertoy ; URL="https://www.shadertoy.com/view/tltXWM"
 TexturesGG -> TexturesGGWip
-note_textures_gg I'm having issues with the scaling, for some reason vertical movement of the viewframe affects the scaling applied to the texture ; $NOTE
-GGUniforms [ ] Add uniforms $CURRENT
-TexturesGGWip -> note_textures_gg $SUBTLE
-TexturesGGWip -> GGUniforms
-GasGiant -> TexturesGG $OBJ
-TexturesIG [ ] Textures $OBJ margin=0.1
-IceGiant -> TexturesIG $OBJ
-TexturesEL [ ] Textures $OBJ margin=0.1
-EarthLike -> TexturesEL $OBJ
-AtmosphereEL [ ] Atmosphere $OBJ margin=0.1
-EarthLike -> AtmosphereEL $OBJ
-TexturesMoon [ ] Textures $OBJ margin=0.1
-Moons -> TexturesMoon $OBJ
-Rocky -> TexturesMoon $OBJ
 
+GGUniforms [X] Add uniforms
+
+
+Rings [ ] Rings $OBJ margin=0.1
+GasGiant -> Rings
 
 Planets -> Moons $OBJ
 Planets -> EarthLike $OBJ
