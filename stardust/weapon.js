@@ -4,6 +4,10 @@ import { Base1 } from "./base.js";
 import { Mesh, Meshes } from "./mesh.js";
 import { dist, sqnorm, rotate } from "./math.js";
 
+import { seededRnd } from "./rnd.js";
+
+const rnd = seededRnd(performance.now());
+
 class Gun {
   constructor(props) {
     // Still need to find out how to change the angle for spreads.
@@ -60,7 +64,7 @@ class PlasmaGun extends Gun {
   fire(shooter, bulletList) {
     // Shooter is a reference to whoever is shooting, so we can take
     // direction and velocity vector.
-    const rf = Math.random();
+    const rf = rnd();
     const spread = 0; //-0.01 + 0.02 * rf;
     const ivx = Math.cos(shooter.r + spread);
     const ivy = Math.sin(shooter.r + spread);

@@ -27,6 +27,10 @@ import { Bullet } from "./bullet.js";
 import { Asteroid } from "./asteroid.js";
 import { Flame } from "./flame.js";
 
+import { seededRnd } from "./rnd.js";
+
+const rnd = seededRnd(performance.now());
+
 bindGamepadHandlers();
 bindKeyHandlers();
 
@@ -39,6 +43,8 @@ if (keyMap === undefined) {
     ArrowLeft: "moveLeft",
     ArrowRight: "moveRight",
     Space: "shoot",
+    Comma: "zoomOut",
+    Period: "zoomIn",
   };
 }
 
@@ -57,8 +63,15 @@ if (buttonMap === undefined) {
 
 let prevshot = -1;
 let ship;
+let viewframe;
 
 const gameActions = {
+  zoomOut: () => {
+    viewframe.scale *= 0.9;
+  },
+  zoomIn: () => {
+    viewframe.scale *= 1.1;
+  },
   moveUp: (f = 1) => {
     if (ship.e < 10) {
       return;
@@ -88,10 +101,10 @@ const gameActions = {
     }
   },
   moveRight: (f = 1) => {
-    ship.r += 0.05 * f;
+    ship.r += 0.03 * f;
   },
   moveLeft: (f = 1) => {
-    ship.r -= 0.05 * f;
+    ship.r -= 0.03 * f;
   },
   shoot: () => {
     if (ship.e < 10) {
@@ -122,13 +135,13 @@ document.body.appendChild(app.canvas);
 
 const addRandomAsteroids = (n) => {
   for (let i = 0; i < n; i++) {
-    const x = Math.random() * window.innerWidth,
-      y = Math.random() * window.innerHeight;
-    const vx = Math.random(),
-      vy = Math.random();
-    const sides = Math.floor(5 + Math.random() * 6);
-    const size = 12 + Math.random() * 40;
-    const spin = Math.random() * 0.1;
+    const x = rnd() * window.innerWidth,
+      y = rnd() * window.innerHeight;
+    const vx = rnd(),
+      vy = rnd();
+    const sides = Math.floor(5 + rnd() * 6);
+    const size = 12 + rnd() * 40;
+    const spin = rnd() * 0.1;
     const ast = new Asteroid(
       { x: x, y: y },
       { x: vx, y: vy },
@@ -200,14 +213,17 @@ focusTrap.focus(); // Set focus to the hidden input
 
 const controller = handleControls(gameActions, keyMap, buttonMap);
 const logg = document.getElementById("logg");
+const planetTarget = document.getElementById("planet-target");
+const planetDistance = document.getElementById("planet-distance");
+const planetIdx = document.getElementById("planet-idx");
 const log = (f) => {
   logg.innerHTML = f;
 };
-const viewframe = new Viewframe(); //Container();
+viewframe = new Viewframe(); //Container();
 
 ship = new Bobcat({
   pos: {
-    x: 0,
+    x: 150000,
     y: 0,
   },
 });
@@ -216,7 +232,7 @@ ship.generate();
 
 const other = new Lynx({
   pos: {
-    x: 1500,
+    x: 150200,
     y: 200,
   },
 });
@@ -250,12 +266,22 @@ console.log(pln);
 pln.map((p) => p.generate(app));
 pln.map((p) => p.attach(viewframe));
 
+const niceDistance = (dist) => {
+  if (dist < 1000) {
+    return String(Math.round(dist));
+  }
+  if (dist < 1000000) {
+    return (dist / 1000).toFixed(2) + "k";
+  }
+  return (dist / 1000000).toFixed(2) + "M";
+};
+
 app.ticker.add((delta) => {
   const nv = sqnorm(ship.vel.x, ship.vel.y);
   starfield.update(ship.vel);
   viewframe.move(delta.deltaTime);
   viewframe.update();
-  let scale = Math.min(1, 100 / (nv + 1));
+  let scale = Math.min(viewframe.scale, 100 / (nv + 1)); // This prevents manual zooming
   //if(nv > 1){
   //if (scale < 1e-10) {
   //  scale = 1e-10;
@@ -267,6 +293,34 @@ app.ticker.add((delta) => {
   /*} else {
     viewframe.scale = scale
   }*/
+  let targetted = false;
+  for (let pl of pln) {
+    const dx = pl.pos.x - ship.pos.x;
+    const dy = pl.pos.y - ship.pos.y;
+    const angle = -Math.atan2(dy, dx);
+    const diff = Math.cos(angle + ship.r) - 1;
+
+    if (diff * diff < 1e-4) {
+      targetted = true;
+      //log(`${pl.kind} ${pl.p.idx}`)
+      planetIdx.innerHTML = pl.p.idx;
+      planetTarget.innerHTML = pl.kind;
+      planetTarget.style.color = `rgb(${pl.averagedColor[0] * 255},${pl.averagedColor[1] * 255},${pl.averagedColor[2] * 255})`;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      planetDistance.innerHTML = niceDistance(dist);
+      break;
+      //console.log(pl.averagedColor)
+      //console.log(diff)
+      //console.log()
+      //console.log(pl.kind)
+      //console.log(pl.p.idx)
+    }
+  }
+  if (!targetted) {
+    planetIdx.innerHTML = "";
+    planetTarget.innerHTML = "";
+    planetDistance.innerHTML = "";
+  }
 
   //viewframe.scale = nv > 0.2 ? 0.2 * 10000 /nv : 0.2
   pln.map((p) => p.update(delta));

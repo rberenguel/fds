@@ -3,10 +3,14 @@ export { Flame };
 import { rotate } from "./math.js";
 import { Graphics } from "../libs/3rdparty/pixi.mjs";
 
+import { seededRnd } from "./rnd.js";
+
+const rnd = seededRnd(performance.now());
+
 class Flame {
   constructor(props = {}) {
     const accel = 0.3;
-    const rf = Math.random();
+    const rf = rnd();
     const r = 0.3 - 0.6 * rf;
     this.x = props.x;
     this.y = props.y;

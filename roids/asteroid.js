@@ -4,6 +4,8 @@ import { Graphics } from "../libs/3rdparty/pixi.mjs";
 
 import { dist, sqnorm, rotate } from "./math.js";
 
+import { seededRnd } from "../stardust/rnd.js";
+
 class Asteroid {
   constructor(center, velocity, sides, size, spin) {
     this.x = center.x; // Assuming center has x and y properties
@@ -18,7 +20,7 @@ class Asteroid {
     this.size = size;
     this.spin = spin;
     this.e = Math.floor(0.1 * sides * size); // Use Math.floor() for integer
-
+    this.rnd = seededRnd(performance.now());
     // Create the graphical representation using PIXI.Graphics
     const ast = new Graphics();
     this.vertices = this.getVertices();
@@ -33,7 +35,7 @@ class Asteroid {
     if (this.e <= 0) {
       return false;
     }
-    if (Math.random() > from.e) {
+    if (this.rnd() > from.e) {
       return false;
     }
     let vx = this.x - from.x,
@@ -44,7 +46,7 @@ class Asteroid {
     }
     vx /= nsq;
     vy /= nsq;
-    const s = 0.4 * this.size * Math.random();
+    const s = 0.4 * this.size * this.rnd();
     const p0x = from.x - this.x,
       p0y = from.y - this.y;
     const q0x = from.x - this.x + s * vx,
@@ -53,7 +55,7 @@ class Asteroid {
     const [q1x, q1y] = rotate(q0x, q0y, -this.pres.rotation);
     const verts = [p1x, p1y, q1x, q1y];
     this.pres.poly(verts);
-    const red = Math.floor(10 + 80 * Math.random());
+    const red = Math.floor(10 + 80 * this.rnd());
     const hexColor = red << 16;
     this.pres.stroke({ color: hexColor });
     console.log(from.e);
@@ -97,8 +99,8 @@ class Asteroid {
     let path = [];
     const a = (Math.PI * 2) / this.sides;
     for (let i = 0; i < this.sides; i++) {
-      const wiggled = i * a + 0.3 * a + 0.6 * a * Math.random();
-      const radius = this.size + this.size * 0.1 * Math.random();
+      const wiggled = i * a + 0.3 * a + 0.6 * a * this.rnd();
+      const radius = this.size + this.size * 0.1 * this.rnd();
       const x = radius * Math.cos(wiggled);
       const y = radius * Math.sin(wiggled);
       path.push(x, y);

@@ -1,5 +1,9 @@
 export { plot };
 
+import { seededRnd } from "../rnd.js";
+import { System } from "./system.js";
+const rnd = seededRnd(performance.now());
+
 let highlightingLinks = d3.selectAll();
 let tick = 0;
 
@@ -19,7 +23,7 @@ function drawStar(ctx, radius, color) {
   ctx.fill();
 
   for (let k = 0; k < 20; k++) {
-    const a = smoothStep(0, 10 + Math.random() * 10, k);
+    const a = smoothStep(0, 10 + rnd() * 10, k);
     const r = smoothStep(0, 10, k);
     ctx.globalAlpha = a;
     ctx.fillStyle = color;
@@ -63,11 +67,11 @@ const plot = (nodes, links) => {
     .force("collide", d3.forceCollide(30))
     .force(
       "x",
-      d3.forceX(() => Math.abs(Math.sin(Math.random()))),
+      d3.forceX(() => Math.abs(Math.sin(rnd()))),
     )
     .force(
       "y",
-      d3.forceY().strength(() => 4 + Math.random()),
+      d3.forceY().strength(() => 4 + rnd()),
     )
     .randomSource(myRandom);
 
@@ -110,7 +114,11 @@ const plot = (nodes, links) => {
   const nodeImg = node.classed("sun", true).each(function (d) {
     const dis = d3.select(this);
 
-    drawStar(ctx, d.system.starSize(), d.system.starColor());
+    drawStar(
+      ctx,
+      d.system.starSize / System.STARSIZEFACTOR,
+      d.system.starColor,
+    );
 
     dis
       .append("svg:image")
@@ -121,8 +129,8 @@ const plot = (nodes, links) => {
       .attr("xlink:href", canvas.toDataURL())
       .classed("sun", true);
 
-    if (d.system.stations() > 0) {
-      for (let i = 0; i < d.system.stations(); i++) {
+    if (d.system.stations > 0) {
+      for (let i = 0; i < d.system.stations; i++) {
         dis
           .append("circle")
           .attr("cx", (d) => d.x + 2 + i * 2)
@@ -232,7 +240,7 @@ const plot = (nodes, links) => {
   });
 
   universe.parentElement.addEventListener("wheel", panzoom.zoomWithWheel, {
-    passive: true,
+    passive: false,
   });
 
   universe.parentElement.addEventListener(
@@ -245,4 +253,5 @@ const plot = (nodes, links) => {
     { passive: true },
   );
   setTimeout(() => panzoom.pan(-cx / 2, -cy / 2, { animate: true }), 100);
+  return { suns: nodeImg, routes: link };
 };

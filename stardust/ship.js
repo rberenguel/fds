@@ -6,6 +6,10 @@ import { PlasmaGun } from "./weapon.js";
 
 import { rotate } from "./math.js";
 
+import { seededRnd } from "./rnd.js";
+
+const rnd = seededRnd(performance.now());
+
 class Flame extends Base1 {
   static ACCEL = 0.4;
   constructor(props) {
@@ -79,12 +83,12 @@ class Ship extends Base1 {
   }
 
   _backThrust(flameList) {
-    const rf = Math.random();
+    const rf = rnd();
     const spread = 0.3 - 0.6 * rf;
     const ivx = -Math.cos(this.r + spread);
     const ivy = -Math.sin(this.r + spread);
-    const vx = Flame.ACCEL * ivx + this.vel.x * Math.sqrt(Math.random());
-    const vy = Flame.ACCEL * ivy + this.vel.y * Math.sqrt(Math.random());
+    const vx = Flame.ACCEL * ivx + this.vel.x * Math.sqrt(rnd());
+    const vy = Flame.ACCEL * ivy + this.vel.y * Math.sqrt(rnd());
     const [rvx, rvy] = rotate(vx, vy, spread);
     const [rpx, rpy] = rotate(-60, 0, this.r);
     const fl = new Flame({
@@ -110,12 +114,12 @@ class Ship extends Base1 {
   }
 
   _forwardThrust(flameList) {
-    const rf = Math.random();
+    const rf = rnd();
     const spread = 0.15 - 0.3 * rf;
     const ivx = -Math.cos(this.r + spread);
     const ivy = -Math.sin(this.r + spread);
-    const vx = Flame.ACCEL * ivx + this.vel.x * Math.sqrt(Math.random());
-    const vy = Flame.ACCEL * ivy + this.vel.y * Math.sqrt(Math.random());
+    const vx = Flame.ACCEL * ivx + this.vel.x * Math.sqrt(rnd());
+    const vy = Flame.ACCEL * ivy + this.vel.y * Math.sqrt(rnd());
     const [rvx, rvy] = rotate(vx, vy, spread);
     const [rpx, rpy] = rotate(90, 0, this.r);
     const fl = new Flame({

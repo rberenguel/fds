@@ -17,6 +17,9 @@ import {
 
 import { rotate } from "./math.js";
 
+import { seededRnd } from "./rnd.js";
+import { System } from "./tinker/system.js";
+
 // Note: y coordinates are reversed… is it worth the fix internally?
 
 const fluidFragment = await Assets.load({
@@ -54,6 +57,79 @@ const averageColors = (...colors) => {
 };
 
 const planets = () => {
+  const system = new System({ id: 0 });
+  const nplanets = system.planets.length;
+  const rnd = seededRnd(42);
+  let objs = [];
+  const sun = new Sun({
+    seed: 0,
+    radius: system.starSize,
+    e: 100000,
+    p: { idx: -1 },
+  });
+  objs.push(sun);
+  let angles = [];
+  for (let i = 0; i < nplanets; i++) {
+    angles.push((i * 2 * Math.PI) / nplanets);
+  }
+  const shuffledAngles = angles.slice().sort(() => Math.random() - 0.5);
+  const angleShift = Math.random() * 2 * Math.PI;
+  for (let i = 0; i < nplanets; i++) {
+    const p = system.planets[i];
+    let planet;
+    const a = shuffledAngles[i] + angleShift;
+    console.log(a);
+    if (p.kind === "kEarthLikePlanet") {
+      planet = new EarthLikePlanet({
+        seed: i,
+        pos: { x: p.distance * Math.cos(a), y: p.distance * Math.sin(a) },
+        radius: p.radius,
+        e: 100000,
+        p: p,
+      });
+    }
+    if (p.kind === "kRocky") {
+      planet = new RockyPlanet({
+        seed: i,
+        pos: { x: p.distance * Math.cos(a), y: p.distance * Math.sin(a) },
+        radius: p.radius,
+        e: 100000,
+        p: p,
+      });
+    }
+    if (p.kind === "kAtmosphere") {
+      planet = new AtmospherePlanet({
+        seed: i,
+        pos: { x: p.distance * Math.cos(a), y: p.distance * Math.sin(a) },
+        radius: p.radius,
+        e: 100000,
+        p: p,
+      });
+    }
+    if (p.kind === "kGasGiant") {
+      planet = new GasGiantPlanet({
+        seed: i,
+        pos: { x: p.distance * Math.cos(a), y: p.distance * Math.sin(a) },
+        radius: p.radius,
+        e: 100000,
+        p: p,
+      });
+    }
+    if (p.kind === "kIceGiant") {
+      planet = new IceGiantPlanet({
+        seed: i,
+        pos: { x: p.distance * Math.cos(a), y: p.distance * Math.sin(a) },
+        radius: p.radius,
+        e: 100000,
+        p: p,
+      });
+    }
+    objs.push(planet);
+  }
+  return objs;
+};
+
+const planets_ = () => {
   const rad = 100;
   const ps = [
     new EarthLikePlanet({
@@ -152,6 +228,10 @@ class Planet extends Base1 {
     super({ ...props, meshes: [mesh] });
     // Required, list of RGB coordinates for the shader, 0-1 range.
     this.layers = props.layers;
+    this.rnd = props.seed
+      ? seededRnd(props.seed)
+      : seededRnd(performance.now());
+    this.p = props.p;
   }
 
   generate(app) {
@@ -223,7 +303,7 @@ class Planet extends Base1 {
           col_shift: { value: [0, 0, 0], type: "vec3<f32>" },
           stretch: { value: [1, 1], type: "vec2<f32>" },
           col_threshold: { value: 0.1, type: "f32" },
-          shifting: { value: 3 * Math.random(), type: "f32" },
+          shifting: { value: 3 * this.rnd(), type: "f32" },
         },
       },
     });
@@ -270,7 +350,7 @@ class Planet extends Base1 {
       shader.resources.ufs.uniforms.col_threshold = layer.threshold;
       shader.resources.ufs.uniforms.stretch = layer.stretch ?? [1, 1];
       counter++;
-      shader.resources.ufs.uniforms.shifting = counter + Math.random() * 3;
+      shader.resources.ufs.uniforms.shifting = counter + this.rnd() * 3;
       let quad = new Mesh({
         geometry: quadGeometry,
         shader: shader,
@@ -298,6 +378,7 @@ class Planet extends Base1 {
       if (layer.fillGlow) {
         sprite.fillGlow = {};
         sprite.fillGlow.color = averageColors(...colors);
+        this.averagedColor = sprite.fillGlow.color;
         sprite.fillGlow.size = layer.fillGlow;
       }
       this.sprites.push(sprite);
@@ -317,7 +398,7 @@ class Planet extends Base1 {
         ufs: {
           iResolution: { value: [1000, 1000, 1], type: "vec3<f32>" },
           in_color: { value: [0, 0, 0], type: "vec3<f32>" },
-          shifting: { value: 3 * Math.random(), type: "f32" },
+          shifting: { value: 3 * this.rnd(), type: "f32" },
         },
       },
     });
@@ -345,7 +426,7 @@ class Planet extends Base1 {
 
       shader.resources.ufs.uniforms.in_color = colors[0];
       counter++;
-      shader.resources.ufs.uniforms.shifting = Math.random() * 3;
+      shader.resources.ufs.uniforms.shifting = this.rnd() * 3;
       let quad = new Mesh({
         geometry: quadGeometry,
         shader: shader,
@@ -385,6 +466,9 @@ class Planet extends Base1 {
 
 class EarthLikePlanet extends Planet {
   constructor(props) {
+    const rnd = props.seed
+      ? seededRnd(props.seed)
+      : seededRnd(performance.now());
     const layers = [
       {
         colors: [
@@ -406,7 +490,7 @@ class EarthLikePlanet extends Planet {
           [0.25, 0.45, 0.2],
         ],
         skip: [0.45, 0.35, 0.2],
-        threshold: 0.1 * Math.random(),
+        threshold: 0.1 * rnd(),
         fillGlow: 1.1,
       },
       {
@@ -424,17 +508,18 @@ class EarthLikePlanet extends Planet {
     ];
     super({ ...props, layers: layers });
     this.atmospheric = true;
+    this.rnd = rnd;
+    this.kind = "EarthLike";
   }
 }
 
 class GasGiantPlanet extends Planet {
   constructor(props) {
     // This should be yellow/orange dominant
-    const c1 = [
-      0.5 + 0.5 * Math.random(),
-      0.2 + 0.2 * Math.random(),
-      0.5 * Math.random(),
-    ];
+    const rnd = props.seed
+      ? seededRnd(props.seed)
+      : seededRnd(performance.now());
+    const c1 = [0.5 + 0.5 * rnd(), 0.2 + 0.2 * rnd(), 0.5 * rnd()];
     const layers = [
       {
         colors: [
@@ -446,23 +531,24 @@ class GasGiantPlanet extends Planet {
         ],
         skip: [0.45, 0.35, 0.2],
         threshold: 0.0,
-        stretch: [3 + Math.random() * 2, 1],
+        stretch: [3 + rnd() * 2, 1],
         fillGlow: 1.1,
       },
     ];
     super({ ...props, layers: layers });
     this.atmospheric = true;
+    this.rnd = rnd;
+    this.kind = "GasGiant";
   }
 }
 
 class IceGiantPlanet extends Planet {
   constructor(props) {
     // This should be blue/turquoise dominant
-    const c1 = [
-      0.2 * Math.random(),
-      0.2 + 0.7 * Math.random(),
-      0.5 + 0.5 * Math.random(),
-    ];
+    const rnd = props.seed
+      ? seededRnd(props.seed)
+      : seededRnd(performance.now());
+    const c1 = [0.2 * rnd(), 0.2 + 0.7 * rnd(), 0.5 + 0.5 * rnd()];
     const layers = [
       {
         colors: [
@@ -474,32 +560,25 @@ class IceGiantPlanet extends Planet {
         ],
         skip: [0.45, 0.35, 0.2],
         threshold: 0.0,
-        stretch: [5 + Math.random() * 2, 1],
+        stretch: [5 + rnd() * 2, 1],
         fillGlow: 1.1,
       },
     ];
     super({ ...props, layers: layers });
     this.atmospheric = true;
+    this.rnd = rnd;
+    this.kind = "IceGiant";
   }
 }
 
 class AtmospherePlanet extends Planet {
   constructor(props) {
-    const c1 = [
-      0.2 + 0.6 * Math.random(),
-      0.2 + 0.6 * Math.random(),
-      0.2 + 0.6 * Math.random(),
-    ];
-    const c2 = [
-      0.2 + 0.6 * Math.random(),
-      0.2 + 0.6 * Math.random(),
-      0.2 + 0.6 * Math.random(),
-    ];
-    const c3 = [
-      0.2 + 0.6 * Math.random(),
-      0.2 + 0.6 * Math.random(),
-      0.2 + 0.6 * Math.random(),
-    ];
+    const rnd = props.seed
+      ? seededRnd(props.seed)
+      : seededRnd(performance.now());
+    const c1 = [0.2 + 0.6 * rnd(), 0.2 + 0.6 * rnd(), 0.2 + 0.6 * rnd()];
+    const c2 = [0.2 + 0.6 * rnd(), 0.2 + 0.6 * rnd(), 0.2 + 0.6 * rnd()];
+    const c3 = [0.2 + 0.6 * rnd(), 0.2 + 0.6 * rnd(), 0.2 + 0.6 * rnd()];
     const layers = [
       {
         colors: [
@@ -511,7 +590,7 @@ class AtmospherePlanet extends Planet {
         ],
         skip: [0.45, 0.35, 0.2],
         threshold: 0.0,
-        stretch: [0.5 + Math.random(), 0.5 + Math.random()],
+        stretch: [0.5 + rnd(), 0.5 + rnd()],
       },
       {
         colors: [
@@ -522,8 +601,8 @@ class AtmospherePlanet extends Planet {
           [0.25, 0.45, 0.2],
         ],
         skip: [0.45, 0.35, 0.2],
-        threshold: 0.8 * Math.random(),
-        stretch: [0.5 + Math.random(), 0.5 + Math.random()],
+        threshold: 0.8 * rnd(),
+        stretch: [0.5 + rnd(), 0.5 + rnd()],
         fillGlow: 1.1,
       },
       {
@@ -534,17 +613,17 @@ class AtmospherePlanet extends Planet {
     ];
     super({ ...props, layers: layers });
     this.atmospheric = true;
+    this.rnd = rnd;
+    this.kind = "AtmospherePlanet";
   }
 }
 
 class RockyPlanet extends Planet {
   constructor(props) {
-    // This should be blue/turquoise dominant
-    const c1 = [
-      0.5 + 0.2 * Math.random(),
-      0.5 + 0.2 * Math.random(),
-      0.5 + 0.2 * Math.random(),
-    ];
+    const rnd = props.seed
+      ? seededRnd(props.seed)
+      : seededRnd(performance.now());
+    const c1 = [0.5 + 0.2 * rnd(), 0.5 + 0.2 * rnd(), 0.5 + 0.2 * rnd()];
     const layers = [
       {
         colors: [
@@ -555,5 +634,42 @@ class RockyPlanet extends Planet {
     ];
     super({ ...props, layers: layers });
     this.rocky = true;
+    this.rnd = rnd;
+    this.kind = "RockyPlanet";
+  }
+}
+
+class Sun extends Planet {
+  constructor(props) {
+    // This should be pretty uniform
+    // TODO tint very subtly via the sun shade
+    const rnd = props.seed
+      ? seededRnd(props.seed)
+      : seededRnd(performance.now());
+    const c1 = [
+      0.999 + 0.05 * rnd(),
+      0.999 + 0.05 * rnd(),
+      0.999 + 0.05 * rnd(),
+    ];
+    const layers = [
+      {
+        colors: [
+          c1, //[.2, 0.4, 1.0], //mid3
+          c1,
+          c1,
+          c1,
+          c1,
+        ],
+        skip: [0.0, 0.0, 0.0],
+        stretch: [-5 + rnd() * 10, -5 + rnd() * 10],
+        color_shift: [0.8, 0.8, 0.1],
+        threshold: 0.0,
+        fillGlow: 1.2,
+      },
+    ];
+    super({ ...props, layers: layers });
+    this.atmospheric = true;
+    this.rnd = rnd;
+    this.kind = "Sun";
   }
 }

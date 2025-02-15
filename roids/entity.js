@@ -2,6 +2,11 @@ export { Entity, explode };
 import { Graphics } from "../libs/3rdparty/pixi.mjs";
 
 import { dist, sqnorm, rotate } from "./math.js";
+
+import { seededRnd } from "../stardust/rnd.js";
+
+const rnd = seededRnd(performance.now());
+
 // TODO: converted from C++ by Gemini, needs fixes
 class Entity {
   constructor(
@@ -87,7 +92,7 @@ function explode(entity) {
       entity.y,
       [p, q], // Vertices for the segment
       { x: entity.v.x + vx, y: entity.v.y + vy }, // Use entity's velocity
-      0.02 * Math.random(), // Spin
+      0.02 * rnd(), // Spin
       entity.r,
     );
     segment.e = 20; // Set energy for the segment

@@ -1,20 +1,24 @@
 # Stardust
 
+// zoom: 0.36258262395858765 pan: -478.7340352797351 -315.17235873489324
+
+
 // https://mostlymaths.net/garbuix/?view=https://raw.githubusercontent.com/rberenguel/fds/refs/heads/gh-pages/wip/notes/stardust.cmap
 
-$DARK
+- dark
 
-$MAIN=fontsize=50 color="$RED" penwidth="5" fillcolor="#cc660033" fontname="inter-italic"
+- HEADER: fontsize=50 color="sdred" penwidth="5" fillcolor="#cc660033" fontname="inter-italic"
 
-$INDIRECT=style="dashed" color="$YELLOW" penwidth="3"
-$CLOSE=len=0.5 color="$RED" penwidth="3" style=""
+- INDIRECT: style="dashed" color="sdyellow" penwidth="3"
+- CLOSE: len=0.5 color="sdred" penwidth="3" style=""
 
-$GREY=#cccccc
-$NOTE=shape=plaintext fontcolor="$YELLOW"
-$SUBTLE=; color="$GREY" style="dotted" arrowhead=none
-$CURRENT=; fillcolor="#b5890077" color="$YELLOW" penwidth=3
+- grey: #cccccc
+- NOTE: shape=plaintext fontcolor="sdyellow"
+- SUBTLE: ; color="grey" style="dotted" arrowhead=none
+- CURRENT: ; fillcolor="#b5890077" color="sdyellow" penwidth=3
+- RESOURCE: fontsize=20 style="dotted,rounded"
 
-$OBJ=; color="$GREY" fillcolor="#cccccc33" fontcolor="$GREY" fontname="inter" fontsize=30 len=0.5 arrowhead=none
+- OBJ: ; color="grey" fillcolor="#cccccc33" fontcolor="grey" fontname="inter" fontsize=30 len=0.5 arrowhead=none
 
 layout="dot"
 sep=0.3
@@ -23,139 +27,147 @@ start=1
 
 fontsize=80
 fontname="inter-bolditalic"
-fontcolor="$ORANGE"
+fontcolor="sdorange"
 
 // System
 
 
-stardust_note Ideas, links, and missing elements for the implementation of Stardust. This is where I braindump some stuff ; $NOTE
+stardust_note Ideas, links, and missing elements for the implementation of Stardust. This is where I braindump some stuff ; NOTE
 
 
-System System ; $MAIN
+System System ; HEADER
 
 
 stardust_note -> System !
 
 
-Sun Sun $OBJ
-Planets Planets $OBJ
-EarthLike Earth-like $OBJ
-Rocky Rocky $OBJ
-GasGiant Gas giant $OBJ
-IceGiant Ice giant $OBJ
-Moons Moons $OBJ
-StarDensity Background\nstar density $OBJ
-DustDensity Background\ndust density $OBJ
-Nebula Nebula in\nbackground $OBJ
+Sun Sun OBJ
+Planets Planets OBJ
+EarthLike Earth-like OBJ
+WithAtmosphere With\natmosphere OBJ
+Rocky Rocky OBJ
+GasGiant Gas giant OBJ
+IceGiant Ice giant OBJ
+Moons Moons OBJ
+StarDensity Background\nstar density OBJ
+DustDensity Background\ndust density OBJ
+Nebula Nebula in\nbackground OBJ
 
 
-SunCorona [ ] Corona effect $OBJ margin=0.1
-Sun -> SunCorona $OBJ
-TexturesGG [X] Textures $OBJ margin=0.1
-TexturesGGWip Based on shadertoy ; URL="https://www.shadertoy.com/view/tltXWM"
-TexturesGG -> TexturesGGWip
+SunCorona [ ] Corona effect OBJ margin=0.1
+Sun -> SunCorona OBJ
 
-GGUniforms [X] Add uniforms
+ShadertoyAtmo Based on shadertoy ; URL="https://www.shadertoy.com/view/tltXWM" RESOURCE
+ShadertoyCrater Based on shadertoy ; URL="https://www.shadertoy.com/view/wljcRd" RESOURCE
+
+GasGiant -> ShadertoyAtmo
+
+IceGiant -> ShadertoyAtmo
+EarthLike -> ShadertoyAtmo
+WithAtmosphere -> ShadertoyAtmo
+Rocky -> ShadertoyCrater
+Moons -> ShadertoyCrater
 
 
-Rings [ ] Rings $OBJ margin=0.1
+Rings [ ] Rings OBJ margin=0.1
 GasGiant -> Rings
 
-Planets -> Moons $OBJ
-Planets -> EarthLike $OBJ
-Planets -> Rocky $OBJ
-Planets -> GasGiant $OBJ
-Planets -> IceGiant $OBJ
-System -> Sun $OBJ
-System -> Planets $OBJ
-System -> StarDensity $OBJ
-System -> DustDensity $OBJ
-System -> Nebula $OBJ
+Planets -> Moons OBJ
+Planets -> EarthLike OBJ
+Planets -> WithAtmosphere OBJ
+Planets -> Rocky OBJ
+Planets -> GasGiant OBJ
+Planets -> IceGiant OBJ
+System -> Sun OBJ
+System -> Planets OBJ
+System -> StarDensity OBJ
+System -> DustDensity OBJ
+System -> Nebula OBJ
 
 PlanetProduction Planet production
-System -> PlanetProduction ; $CLOSE
-PlanetDemand Planet demand $CURRENT
-System -> PlanetDemand ; $CLOSE
+System -> PlanetProduction ; CLOSE
+PlanetDemand Planet demand CURRENT
+System -> PlanetDemand ; CLOSE
 PlanetProduction -> PlanetDemand
 PlanetDemand -> PlanetProduction
 
 
-Planets -> PlanetDemand $OBJ
-Planets -> PlanetProduction $OBJ
+Planets -> PlanetDemand OBJ
+Planets -> PlanetProduction OBJ
 
 Price Commodity prices
-System -> Price ; $CLOSE
+System -> Price ; CLOSE
 PlanetDemand -> Price
 PlanetProduction -> Price
 EconomyScale Economy scale
-System -> EconomyScale ; $CLOSE
-PlanetProduction -> EconomyScale ; $INDIRECT
-PlanetDemand -> EconomyScale ; $INDIRECT
+System -> EconomyScale ; CLOSE
+PlanetProduction -> EconomyScale ; INDIRECT
+PlanetDemand -> EconomyScale ; INDIRECT
 TechLevel Tech level
-System -> TechLevel ; $CLOSE
+System -> TechLevel ; CLOSE
 TechLevel -> PlanetProduction
 NumberShips Number\nof ships
-System -> NumberShips ; $CLOSE
-TechLevel -> NumberShips ; $INDIRECT
-EconomyScale -> NumberShips ; $INDIRECT
-Asteroids Asteroid fields $OBJ
-System -> Asteroids $OBJ
+System -> NumberShips ; CLOSE
+TechLevel -> NumberShips ; INDIRECT
+EconomyScale -> NumberShips ; INDIRECT
+Asteroids Asteroid fields OBJ
+System -> Asteroids OBJ
 Asteroids -> PlanetProduction
-Asteroids -> PlanetDemand ; $INDIRECT
+Asteroids -> PlanetDemand ; INDIRECT
 Stations System stations
-System -> Stations ; $CLOSE
-TechLevel -> Stations ; $INDIRECT
-EconomyScale -> Stations ; $INDIRECT
+System -> Stations ; CLOSE
+TechLevel -> Stations ; INDIRECT
+EconomyScale -> Stations ; INDIRECT
 Government Government\ntype
-System -> Government ; $CLOSE
+System -> Government ; CLOSE
 
 // NPCs
-NPCs NPCs ; $MAIN
+NPCs NPCs ; HEADER
 Faction Faction
-NPCs -> Faction ; $CLOSE
+NPCs -> Faction ; CLOSE
 Activity Activity:\n  Trade\nPiracy\nPolice\nGov\nMil\nMining
-NPCs -> Activity ; $CLOSE
+NPCs -> Activity ; CLOSE
 Faction -> Activity with ratio per system?
 
 // Links NPCs/System
 PlanetDemand -> Activity
-NumberShips -> Faction ; $INDIRECT
-NumberShips -> Activity ; $INDIRECT
-Asteroids -> Activity ; $INDIRECT
+NumberShips -> Faction ; INDIRECT
+NumberShips -> Activity ; INDIRECT
+Asteroids -> Activity ; INDIRECT
 Government -> Activity
 Faction -> Stations
 Activity -> Stations
 
 // Activity and events
-Events 📚 Events ; $MAIN
+Events 📚 Events ; HEADER
 
 
 Activity -> Events triggers list of
 
 
 AttackSoS Attack:\nShip-on-ship
-Events -> AttackSoS ; $CLOSE
-Events -> Trading ; $CLOSE
-Events -> Mining ; $CLOSE
+Events -> AttackSoS ; CLOSE
+Events -> Trading ; CLOSE
+Events -> Mining ; CLOSE
 NewStation New station
-Events -> NewStation ; $CLOSE
+Events -> NewStation ; CLOSE
 GovernmentSwitch Government\nSwitch
-Events -> GovernmentSwitch ; $CLOSE
+Events -> GovernmentSwitch ; CLOSE
 GovernmentSwitch -> Government
 MilitaryAction Military\naction
-Events -> MilitaryAction ; $CLOSE
-MilitaryAction -> Government ; $INDIRECT
+Events -> MilitaryAction ; CLOSE
+MilitaryAction -> Government ; INDIRECT
 Government -> MilitaryAction likelihood\ndepends on type
 
 
-GovernmentSwitch -> note_gvt $SUBTLE
-MilitaryAction -> note_mil_act $SUBTLE
-NewStation -> note_new_sta $SUBTLE
+GovernmentSwitch -> note_gvt SUBTLE
+MilitaryAction -> note_mil_act SUBTLE
+NewStation -> note_new_sta SUBTLE
 
-note_gvt Government type will switch depending on, for example, the amount of military ships. If that is too low, the government can flip from A to B (with not all options present, and some more likely depending on A); $NOTE
-
-
-note_mil_act Military actions will be more/less likely depending on source and target government, and number of military ships locally ; $NOTE
+note_gvt Government type will switch depending on, for example, the amount of military ships. If that is too low, the government can flip from A to B (with not all options present, and some more likely depending on A); NOTE
 
 
-note_new_sta A new station may appear depending on system thresholds (economy, piracy, military) ; $NOTE
+note_mil_act Military actions will be more/less likely depending on source and target government, and number of military ships locally ; NOTE
+
+
+note_new_sta A new station may appear depending on system thresholds (economy, piracy, military) ; NOTE

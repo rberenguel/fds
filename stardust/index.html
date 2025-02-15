@@ -14,7 +14,23 @@
     </style>
   </head>
   <body>
-    <div id="logg" style="z-index: 1000; width: 3em"></div>
+    <div
+      id="logg"
+      style="
+        z-index: 1000;
+        width: 20em;
+        position: absolute;
+        top: 0.2em;
+        color: yellow;
+        font-size: 2vh;
+        display: flex;
+        column-gap: 2em;
+      "
+    >
+      <span id="planet-idx"></span>
+      <span id="planet-target"></span>
+      <span id="planet-distance"></span>
+    </div>
     <input
       type="text"
       id="focus-trap"

@@ -2,11 +2,13 @@ export { Bullet };
 
 import { rotate } from "./math.js";
 import { Graphics } from "../libs/3rdparty/pixi.mjs";
+import { seededRnd } from "./rnd.js";
 
+const rnd = seededRnd(performance.now());
 class Bullet {
   constructor(props = {}) {
     const accel = 5;
-    const rf = Math.random();
+    const rf = rnd();
     const r = -0.01 + 0.02 * rf;
     this.x = props.x;
     this.y = props.y;

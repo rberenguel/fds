@@ -9,6 +9,8 @@ import {
 
 import { sqnorm, wrap } from "./math.js";
 
+import { seededRnd } from "./rnd.js";
+
 function hsvToHex(h, s, v) {
   // h = 0-360, s = 0-100, v = 0-100
   let r, g, b, i, f, p, q, t;
@@ -82,21 +84,28 @@ class Starfield {
     this.dDustfield = props.dDustfield ?? 80000;
     this.starfieldPts = [];
     this.dustfieldPts = [];
+    this.rnd = props.seed
+      ? seededRnd(props.seed)
+      : seededRnd(performance.now());
+    console.log(this.rnd);
+    console.log(this.rnd());
+    console.log(this.rnd());
     for (let i = 0; i < this.width; i++) {
       for (let j = 0; j < this.height; j++) {
-        const n = Math.random();
+        const n = this.rnd();
+
         const f = Math.floor(n * this.dStarfield);
         const ff = Math.floor(n * this.dDustfield);
         if (f == 1 || f == 42 || (f > 90 && f < 100)) {
-          let rh = Math.floor(Math.random() * 360); // Random number between 0 and 359
-          let rs = Math.floor(Math.random() * 20); // Random number between 0 and 19
-          let rv = Math.floor(Math.random() * 52); // Random number between 0 and 51
+          let rh = Math.floor(this.rnd() * 360); // Random number between 0 and 359
+          let rs = Math.floor(this.rnd() * 20); // Random number between 0 and 19
+          let rv = Math.floor(this.rnd() * 52); // Random number between 0 and 51
 
           let h = rh; // Hue: 0.0 to 1.0
           let s = 10 + rs;
           let v = 50 + rv;
 
-          let r = Math.random() < 0.3 ? 2 : 1;
+          let r = this.rnd() < 0.3 ? 2 : 1;
           this.starfieldPts.push({
             x: i,
             y: j,
@@ -105,9 +114,9 @@ class Starfield {
           });
         }
         if (ff == 1 || ff == 42 || (ff > 90 && ff < 100)) {
-          let rh = Math.floor(Math.random() * 360); // Random number between 0 and 359
-          let rs = Math.floor(Math.random() * 5); // Random number between 0 and 19
-          let rv = Math.floor(Math.random() * 20); // Random number between 0 and 51
+          let rh = Math.floor(this.rnd() * 360); // Random number between 0 and 359
+          let rs = Math.floor(this.rnd() * 5); // Random number between 0 and 19
+          let rv = Math.floor(this.rnd() * 20); // Random number between 0 and 51
 
           let h = rh; // Hue: 0.0 to 1.0
           let s = 10 + rs;
@@ -175,6 +184,8 @@ class Starfield {
 
   attach(app) {
     this.app = app;
+    console.log(this.stars);
+    console.log(this.dust);
     app.stage.addChild(...this.stars);
     app.stage.addChild(...this.dust);
   }

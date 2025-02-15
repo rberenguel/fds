@@ -23,6 +23,10 @@ import { Asteroid } from "./asteroid.js";
 import { Flame } from "./flame.js";
 import { Entity, explode } from "./entity.js";
 
+import { seededRnd } from "../stardust/rnd.js";
+
+const rnd = seededRnd(performance.now());
+
 bindGamepadHandlers();
 bindKeyHandlers();
 
@@ -120,13 +124,13 @@ document.body.appendChild(app.canvas);
 
 const addRandomAsteroids = (n) => {
   for (let i = 0; i < n; i++) {
-    const x = Math.random() * window.innerWidth,
-      y = Math.random() * window.innerHeight;
-    const vx = Math.random(),
-      vy = Math.random();
-    const sides = Math.floor(5 + Math.random() * 6);
-    const size = 12 + Math.random() * 40;
-    const spin = Math.random() * 0.1;
+    const x = rnd() * window.innerWidth,
+      y = rnd() * window.innerHeight;
+    const vx = rnd(),
+      vy = rnd();
+    const sides = Math.floor(5 + rnd() * 6);
+    const size = 12 + rnd() * 40;
+    const spin = rnd() * 0.1;
     const ast = new Asteroid(
       { x: x, y: y },
       { x: vx, y: vy },
@@ -271,7 +275,7 @@ app.ticker.add((delta) => {
     }
     for (let a of asteroids) {
       if (a.collision(fl)) {
-        const r = 0.15 - 0.3 * Math.random();
+        const r = 0.15 - 0.3 * rnd();
         const e = 0.15 * fl.e;
         console.log(e);
         const [vx, vy] = rotate(-fl.v.x * e, -fl.v.y * e, r);
@@ -288,7 +292,7 @@ app.ticker.add((delta) => {
         }
         if (fl.kind() == "kShip" && fl.e > 0) {
           for (let ff = 0; ff < 3; ff++) {
-            const zz = () => -0.1 + 0.2 * Math.random();
+            const zz = () => -0.1 + 0.2 * rnd();
             addFlames(ship.x + zz(), ship.y + zz(), -ship.v.x, -ship.v.y, 0);
           }
           gameOverCountdown = performance.now();
