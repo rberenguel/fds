@@ -18,7 +18,7 @@ import {
 import { rotate } from "./math.js";
 
 import { seededRnd } from "./rnd.js";
-import { System } from "./tinker/system.js";
+import { System, PlanetKinds } from "./tinker/system.js";
 
 // Note: y coordinates are reversed… is it worth the fix internally?
 
@@ -56,6 +56,8 @@ const averageColors = (...colors) => {
   return [sumR / numColors, sumG / numColors, sumB / numColors];
 };
 
+// TODO: This should be a renderer in System
+
 const planets = () => {
   const system = new System({ id: 0 });
   const nplanets = system.planets.length;
@@ -66,6 +68,8 @@ const planets = () => {
     radius: system.starSize,
     e: 100000,
     p: { idx: -1 },
+    name: system.name,
+    color: system.starColor,
   });
   objs.push(sun);
   let angles = [];
@@ -79,7 +83,7 @@ const planets = () => {
     let planet;
     const a = shuffledAngles[i] + angleShift;
     console.log(a);
-    if (p.kind === "kEarthLikePlanet") {
+    if (p.kind === PlanetKinds.EarthLike) {
       planet = new EarthLikePlanet({
         seed: i,
         pos: { x: p.distance * Math.cos(a), y: p.distance * Math.sin(a) },
@@ -88,7 +92,7 @@ const planets = () => {
         p: p,
       });
     }
-    if (p.kind === "kRocky") {
+    if (p.kind === PlanetKinds.Rocky) {
       planet = new RockyPlanet({
         seed: i,
         pos: { x: p.distance * Math.cos(a), y: p.distance * Math.sin(a) },
@@ -97,7 +101,7 @@ const planets = () => {
         p: p,
       });
     }
-    if (p.kind === "kAtmosphere") {
+    if (p.kind === PlanetKinds.Atmosphere) {
       planet = new AtmospherePlanet({
         seed: i,
         pos: { x: p.distance * Math.cos(a), y: p.distance * Math.sin(a) },
@@ -106,7 +110,7 @@ const planets = () => {
         p: p,
       });
     }
-    if (p.kind === "kGasGiant") {
+    if (p.kind === PlanetKinds.GasGiant) {
       planet = new GasGiantPlanet({
         seed: i,
         pos: { x: p.distance * Math.cos(a), y: p.distance * Math.sin(a) },
@@ -115,7 +119,7 @@ const planets = () => {
         p: p,
       });
     }
-    if (p.kind === "kIceGiant") {
+    if (p.kind === PlanetKinds.IceGiant) {
       planet = new IceGiantPlanet({
         seed: i,
         pos: { x: p.distance * Math.cos(a), y: p.distance * Math.sin(a) },
@@ -268,7 +272,6 @@ class Planet extends Base1 {
       // Scale ideally is proportional to size (max of height and width) and adjusted for planet radius…
       sprite.scale = (2 * mesh.radius) / this.sprites._size;
       if (sprite.fillGlow) {
-        console.log(sprite.fillGlow);
         q.circle(
           mesh.center[0],
           mesh.center[1],
@@ -381,10 +384,16 @@ class Planet extends Base1 {
         this.averagedColor = sprite.fillGlow.color;
         sprite.fillGlow.size = layer.fillGlow;
       }
+      if (layer.tint) {
+        sprite.tint = layer.tint;
+      }
       this.sprites.push(sprite);
       this.sprites._size = size;
     }
-
+    if (!this.averagedColor) {
+      this.averagedColor = averageColors(...this.layers[0].colors);
+    }
+    console.log(this.averagedColor);
     // TODO: destroy everything not used
   }
 
@@ -454,7 +463,11 @@ class Planet extends Base1 {
       if (layer.fillGlow) {
         sprite.fillGlow = {};
         sprite.fillGlow.color = averageColors(...colors);
+        this.averagedColor = sprite.fillGlow.color;
         sprite.fillGlow.size = layer.fillGlow;
+      }
+      if (!this.averagedColor) {
+        this.averagedColor = averageColors(...this.layers[0].colors);
       }
       this.sprites.push(sprite);
       this.sprites._size = size;
@@ -509,7 +522,7 @@ class EarthLikePlanet extends Planet {
     super({ ...props, layers: layers });
     this.atmospheric = true;
     this.rnd = rnd;
-    this.kind = "EarthLike";
+    this.kind = PlanetKinds.EarthLike;
   }
 }
 
@@ -538,7 +551,7 @@ class GasGiantPlanet extends Planet {
     super({ ...props, layers: layers });
     this.atmospheric = true;
     this.rnd = rnd;
-    this.kind = "GasGiant";
+    this.kind = PlanetKinds.GasGiant;
   }
 }
 
@@ -567,7 +580,7 @@ class IceGiantPlanet extends Planet {
     super({ ...props, layers: layers });
     this.atmospheric = true;
     this.rnd = rnd;
-    this.kind = "IceGiant";
+    this.kind = PlanetKinds.IceGiant;
   }
 }
 
@@ -614,7 +627,7 @@ class AtmospherePlanet extends Planet {
     super({ ...props, layers: layers });
     this.atmospheric = true;
     this.rnd = rnd;
-    this.kind = "AtmospherePlanet";
+    this.kind = PlanetKinds.Atmosphere;
   }
 }
 
@@ -635,7 +648,7 @@ class RockyPlanet extends Planet {
     super({ ...props, layers: layers });
     this.rocky = true;
     this.rnd = rnd;
-    this.kind = "RockyPlanet";
+    this.kind = PlanetKinds.Rocky;
   }
 }
 
@@ -665,11 +678,15 @@ class Sun extends Planet {
         color_shift: [0.8, 0.8, 0.1],
         threshold: 0.0,
         fillGlow: 1.2,
+        tint: props.color,
       },
     ];
     super({ ...props, layers: layers });
     this.atmospheric = true;
     this.rnd = rnd;
-    this.kind = "Sun";
+    this.color = props.color;
+    console.log(props.color);
+    this.kind = PlanetKinds.Sun;
+    this.name = props.name ?? PlanetKinds.Sun;
   }
 }

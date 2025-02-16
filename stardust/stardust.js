@@ -19,6 +19,8 @@ import {
   VirtualPad,
 } from "../libs/controlHandling.js";
 
+import { PlanetKinds } from "./tinker/system.js";
+
 import { rotate, sqnorm, easeInSq } from "./math.js";
 
 import { Viewframe } from "./viewframe.js";
@@ -304,16 +306,14 @@ app.ticker.add((delta) => {
       targetted = true;
       //log(`${pl.kind} ${pl.p.idx}`)
       planetIdx.innerHTML = pl.p.idx;
-      planetTarget.innerHTML = pl.kind;
+      planetTarget.innerHTML = pl.kind.slice(1);
+      if (pl.kind === PlanetKinds.Sun) {
+        planetTarget.innerHTML = pl.name;
+      }
       planetTarget.style.color = `rgb(${pl.averagedColor[0] * 255},${pl.averagedColor[1] * 255},${pl.averagedColor[2] * 255})`;
       const dist = Math.sqrt(dx * dx + dy * dy);
       planetDistance.innerHTML = niceDistance(dist);
       break;
-      //console.log(pl.averagedColor)
-      //console.log(diff)
-      //console.log()
-      //console.log(pl.kind)
-      //console.log(pl.p.idx)
     }
   }
   if (!targetted) {

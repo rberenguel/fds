@@ -1,4 +1,4 @@
-export { System, generateEliteName };
+export { System, generateEliteName, PlanetKinds };
 
 import { seededRnd } from "../rnd.js";
 import { DEBUG } from "../flags.js";
@@ -8,6 +8,190 @@ const humanizePopulation = (n) => {
   }
   return `${n} million`;
 };
+
+import {
+  commodityRegistry,
+  GovernmentTypes,
+  SystemCategories,
+} from "./systemEconomy.js";
+
+const PlanetKinds = {
+  EarthLike: "kEarthLike",
+  Rocky: "kRocky",
+  Atmosphere: "kAtmosphere",
+  GasGiant: "kGasGiant",
+  IceGiant: "kIceGiant",
+  Sun: "kSun",
+};
+
+class System {
+  static STARSIZEFACTOR = 10000;
+  static EARTH_LIKE_LIMIT = 500000;
+  static JUPITER_LIKE_LIMIT = 750000;
+
+  constructor(props) {
+    this.id = props.id;
+    this.neighbors = {}; // Just to have a set
+    this.rnd = seededRnd(props.id + 42);
+    this.name = generateEliteName(seededRnd(this.id + 69673865));
+    this.starSize = (1.0 + this.rnd() * 10.0) * System.STARSIZEFACTOR;
+    this.rnd = seededRnd(props.id + 9); // Refresh and fix seeding again so planets are fixed from this point
+    // Magic number that makes Lave have a bit of everything
+    this.numPlanets = Math.floor(5 + this.rnd() * 6);
+    this.planets = this._planets();
+    this.category = SystemCategories.getOne(this.rnd() * 100);
+    this.subCategory = SystemCategories.getRandomSubType(
+      this.category,
+      this.rnd() * 100,
+    );
+    this.government = GovernmentTypes.getOne(this.rnd() * 100);
+    this.population = Math.floor(500 + this.rnd() * 5000);
+    this.starColor = this._starColor();
+    this.stations = this._stations();
+  }
+  info() {
+    return `System ID: ${this.id} <br> Neighbors: ${Object.keys(
+      this.neighbors,
+    ).join(", ")}`;
+  }
+  extendedinfo() {
+    let planetInfo = `${this.numPlanets} total, `;
+    if (this.numEarthLike > 0) {
+      planetInfo += `${this.numEarthLike} 🌍 `;
+    }
+    if (this.numGasGiants > 0) {
+      planetInfo += `/ ${this.numGasGiants} 🪐`;
+    }
+    const governmentStr = `${GovernmentTypes.repr(this.government).name}`;
+    const categoryStr = `${SystemCategories.subRepr(this.subCategory).name}`;
+    const producedBySubtype = commodityRegistry.getProducedCommodities(
+      this.subCategory,
+    );
+    const consumedBySubtype = commodityRegistry.getConsumedCommodities(
+      this.subCategory,
+    );
+    const producedHTML = producedBySubtype
+      .map(
+        (item) => `
+      <span class="commodity-name">${item.commodity.name}:</span>
+      <span class="commodity-weight">${item.weight}</span>
+  `,
+      )
+      .join("<br>");
+    const consumedHTML = consumedBySubtype
+      .map(
+        (item) => `
+    <span class="commodity-name">${item.commodity.name}:</span>
+    <span class="commodity-weight">${item.weight}</span>
+`,
+      )
+      .join("<br>");
+    return `
+      <h2>System ${this.name} (${this.id})</h2>
+      <p>Population: ${humanizePopulation(this.population)}</p>
+      <p>Planets: ${planetInfo}</p>
+      <p>Government: ${governmentStr}</p>
+      <p>Category: ${categoryStr}</p>
+      <hr/>
+      <p>Produces:</p>
+      ${producedHTML}
+      <hr/>
+      <p>Consumes:</p>
+      ${consumedHTML}
+      `;
+  }
+  r() {
+    return 0;
+  }
+  _planets() {
+    this.numEarthLike = Math.abs(
+      Math.min(
+        Math.floor(2 + this.rnd() * this.numPlanets),
+        this.numPlanets - 4,
+      ),
+    );
+    this.numGasGiants = Math.max(0, this.numPlanets - this.numEarthLike);
+    let planets = [];
+    const habitableDistance = Math.floor(7 * this.starSize);
+    const habitabilityStrip = this.starSize * (2 + this.rnd());
+    if (DEBUG.system) {
+      console.log("Habitability parameters");
+      console.log(habitableDistance, habitabilityStrip);
+    }
+
+    // The habitability band is 7 stars far and N stars deep
+    const firstGap = this.starSize + this.starSize;
+    let prev = firstGap;
+    for (let i = 0; i < this.numEarthLike; i++) {
+      // Earth-like radius is from 10k to 40k
+      const gap = Math.floor(
+        (System.EARTH_LIKE_LIMIT - prev) / (this.numEarthLike - i),
+      );
+      const distance = prev + this.rnd() * gap;
+      const radius =
+        10000 +
+        0.2 * (i + 1) * Math.min(this.rnd() * 30000, this.rnd() * gap * 0.25);
+      prev = distance + radius;
+      const inHabitableRadius =
+        Math.abs(habitableDistance - distance) < habitabilityStrip;
+      const hasAtmosphere = inHabitableRadius
+        ? this.rnd() * 15 > 1
+        : this.rnd() * 10 > 3;
+      const habitable = hasAtmosphere && inHabitableRadius;
+      const density = habitable ? 1 : this.rnd() * 2;
+      let kind;
+      if (habitable) {
+        kind = "kEarthLike";
+      } else {
+        if (density < 1) {
+          kind = "kRocky";
+        } else {
+          kind = "kAtmosphere";
+        }
+      }
+      const planet = {
+        kind: kind,
+        distance: distance,
+        radius: radius,
+        atmosphere: hasAtmosphere,
+        habitable: habitable,
+        idx: i,
+      };
+      planets.push(planet);
+    }
+    prev = System.EARTH_LIKE_LIMIT + System.EARTH_LIKE_LIMIT * 0.5;
+    for (let i = 0; i < this.numGasGiants; i++) {
+      // Earth-like radius is from 10k to 40k
+      const factor = this.numGasGiants - i;
+      const gap = prev / factor;
+      const distance = prev + gap + this.rnd() * gap;
+      const radius = 50000 + this.rnd() * 5000 * factor;
+      prev = distance + radius;
+      const kind = this.rnd() < 0.15 * factor ? "kGasGiant" : "kIceGiant";
+      const planet = {
+        kind: kind,
+        distance: distance,
+        radius: radius,
+        idx: i + this.numEarthLike,
+      };
+      planets.push(planet);
+    }
+    return planets;
+    // TODO moon count
+    // TODO rings
+  }
+
+  _starColor() {
+    const hue = this.rnd() * 360;
+    const saturation = 40 + this.rnd() * 30;
+    const lightness = 80 + this.rnd() * 5;
+    const color = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+    return color;
+  }
+  _stations() {
+    return Math.floor(this.rnd() * this.rnd() * 6);
+  }
+}
 
 function generateEliteName(rnd) {
   const vowels = "AEIOU";
@@ -92,124 +276,21 @@ function generateEliteName(rnd) {
   }
 }
 
-class System {
-  static STARSIZEFACTOR = 10000;
-  static EARTH_LIKE_LIMIT = 500000;
-  static JUPITER_LIKE_LIMIT = 750000;
-
-  constructor(props) {
-    this.id = props.id;
-    this.neighbors = {}; // Just to have a set
-    this.rnd = seededRnd(props.id + 44);
-    this.name = generateEliteName(seededRnd(this.id + 69673865));
-    this.numPlanets = Math.floor(5 + this.rnd() * 6);
-    this.government = "Democracy";
-    this.population = Math.floor(500 + this.rnd() * 5000);
-    this.starSize = (1.0 + this.rnd() * 10.0) * System.STARSIZEFACTOR;
-    this.starColor = this._starColor();
-    this.stations = this._stations();
-    this.planets = this._planets();
-  }
-  info() {
-    return `System ID: ${this.id} <br> Neighbors: ${Object.keys(
-      this.neighbors,
-    ).join(", ")}`;
-  }
-  extendedinfo() {
-    return `
-      <h2>System ${this.name} (${this.id})</h2>
-      <p>Population: ${humanizePopulation(this.population)}</p>
-      <p>Planets: ${this.numPlanets}</p>
-      <p>Government: ${this.government}</p>
-      `;
-  }
-  r() {
-    return 0;
-  }
-  _planets() {
-    const numEarthLike = Math.floor(2 + this.rnd() * this.numPlanets);
-    const numGasGiants = this.numPlanets - numEarthLike;
-    console.log(numEarthLike);
-    console.log(numGasGiants);
-    console.log(this.starSize);
-    let planets = [];
-    const habitableDistance = Math.floor(7 * this.starSize);
-    // The habitability band is 7 stars far and N stars deep
-    const firstGap = this.starSize + this.starSize;
-    let prev = firstGap;
-    for (let i = 0; i < numEarthLike; i++) {
-      // Earth-like radius is from 10k to 40k
-      const gap = Math.floor(
-        (System.EARTH_LIKE_LIMIT - prev) / (numEarthLike - i),
-      );
-      const distance = prev + this.rnd() * gap;
-      const radius =
-        10000 +
-        0.2 * (i + 1) * Math.min(this.rnd() * 30000, this.rnd() * gap * 0.25);
-      prev = distance + radius;
-      const inHabitableRadius =
-        Math.abs(habitableDistance - distance) < this.starSize * 2;
-      const hasAtmosphere = inHabitableRadius
-        ? this.rnd() * 15 > 1
-        : this.rnd() * 10 > 3;
-      const habitable = hasAtmosphere && inHabitableRadius;
-      const density = habitable ? 1 : this.rnd() * 2;
-      let kind;
-      if (habitable) {
-        kind = "kEarthLikePlanet";
-      } else {
-        if (density < 1) {
-          kind = "kRocky";
-        } else {
-          kind = "kAtmosphere";
-        }
-      }
-      console.log(distance);
-      const planet = {
-        kind: kind,
-        distance: distance,
-        radius: radius,
-        atmosphere: hasAtmosphere,
-        habitable: habitable,
-        idx: i,
-      };
-      planets.push(planet);
-    }
-    prev = System.EARTH_LIKE_LIMIT + System.EARTH_LIKE_LIMIT * 0.5;
-    for (let i = 0; i < numGasGiants; i++) {
-      // Earth-like radius is from 10k to 40k
-      const factor = numGasGiants - i;
-      const gap = prev / factor;
-      const distance = prev + gap + this.rnd() * gap;
-      console.log(distance);
-      const radius = 50000 + this.rnd() * 5000 * factor;
-      prev = distance + radius;
-      const kind = this.rnd() < 0.15 * factor ? "kGasGiant" : "kIceGiant";
-      const planet = {
-        kind: kind,
-        distance: distance,
-        radius: radius,
-        idx: i + numEarthLike,
-      };
-      planets.push(planet);
-    }
-    return planets;
-    // TODO moon count
-    // TODO rings
-  }
-
-  _starColor() {
-    const hue = this.rnd() * 360;
-    const saturation = 40 + this.rnd() * 30;
-    const lightness = 80 + this.rnd() * 5;
-    const color = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-    return color;
-  }
-  _stations() {
-    return Math.floor(this.rnd() * this.rnd() * 6);
-  }
-}
-
 if (window.DEVMODE) {
   window.System = System;
+  window.SystemCategories = SystemCategories;
+
+  for (let i = 0; i < 0; i++) {
+    const s = new System({ id: 0, _id: i });
+    const ps = s.planets;
+    const el = ps.filter((p) => p.kind === PlanetKinds.EarthLike).length > 0;
+    const r = ps.filter((p) => p.kind === PlanetKinds.Rocky).length > 0;
+    const a = ps.filter((p) => p.kind === PlanetKinds.Atmosphere).length > 0;
+    const gg = ps.filter((p) => p.kind === PlanetKinds.GasGiant).length > 0;
+    const ig = ps.filter((p) => p.kind === PlanetKinds.IceGiant).length > 0;
+    if (el && r && a && gg && ig) {
+      console.log(i);
+      break;
+    }
+  }
 }

@@ -87,9 +87,6 @@ class Starfield {
     this.rnd = props.seed
       ? seededRnd(props.seed)
       : seededRnd(performance.now());
-    console.log(this.rnd);
-    console.log(this.rnd());
-    console.log(this.rnd());
     for (let i = 0; i < this.width; i++) {
       for (let j = 0; j < this.height; j++) {
         const n = this.rnd();
@@ -184,8 +181,6 @@ class Starfield {
 
   attach(app) {
     this.app = app;
-    console.log(this.stars);
-    console.log(this.dust);
     app.stage.addChild(...this.stars);
     app.stage.addChild(...this.dust);
   }
