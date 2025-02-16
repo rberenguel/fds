@@ -14,6 +14,10 @@ import {
   GovernmentTypes,
   SystemCategories,
 } from "./systemEconomy.js";
+import {
+  getInitialShipDistribution,
+  distributionToHTML,
+} from "./systemShips.js";
 
 const PlanetKinds = {
   EarthLike: "kEarthLike",
@@ -40,14 +44,21 @@ class System {
     this.numPlanets = Math.floor(5 + this.rnd() * 6);
     this.planets = this._planets();
     this.category = SystemCategories.getOne(this.rnd() * 100);
+    this.government = GovernmentTypes.getOne(this.rnd() * 100);
     this.subCategory = SystemCategories.getRandomSubType(
       this.category,
       this.rnd() * 100,
     );
-    this.government = GovernmentTypes.getOne(this.rnd() * 100);
     this.population = Math.floor(500 + this.rnd() * 5000);
     this.starColor = this._starColor();
+    this.shipDistribution = getInitialShipDistribution(
+      this.category,
+      this.subCategory,
+      this.government,
+      this.rnd,
+    );
     this.stations = this._stations();
+    this.currentProduction = {};
   }
   info() {
     return `System ID: ${this.id} <br> Neighbors: ${Object.keys(
@@ -86,6 +97,7 @@ class System {
 `,
       )
       .join("<br>");
+    const shipDist = distributionToHTML(this.shipDistribution);
     return `
       <h2>System ${this.name} (${this.id})</h2>
       <p>Population: ${humanizePopulation(this.population)}</p>
@@ -98,11 +110,23 @@ class System {
       <hr/>
       <p>Consumes:</p>
       ${consumedHTML}
+      <hr/>
+      ${shipDist}
       `;
   }
   r() {
     return 0;
   }
+  getProducedCommodities() {
+    // Use the registry to get produced commodities based on subCategory
+    return commodityRegistry.getProducedCommodities(this.subCategory);
+  }
+
+  getConsumedCommodities() {
+    // Use the registry to get consumed commodities based on subCategory
+    return commodityRegistry.getConsumedCommodities(this.subCategory);
+  }
+
   _planets() {
     this.numEarthLike = Math.abs(
       Math.min(

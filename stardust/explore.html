@@ -2,4 +2,48 @@
   window.DEVMODE = true; // Enable dev mode
 </script>
 <script type="module" src="./tinker/system.js"></script>
-<body style="background-color: black"></body>
+<script type="module" src="./tinker/universe.js"></script>
+<script type="module" src="./tinker/trade.js"></script>
+<style>
+  .ship-chart {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    height: 200px;
+    border-bottom: 1px solid black;
+    overflow-x: auto;
+  }
+
+  .system-bar {
+    width: 5px;
+    margin-right: 1px;
+    background-color: steelblue;
+    position: relative;
+  }
+  .system-bar:hover {
+    background-color: darkblue;
+  }
+
+  .tooltip {
+    display: none;
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 5px;
+    border-radius: 3px;
+    white-space: nowrap;
+    z-index: 1;
+  }
+  .system-bar:hover .tooltip {
+    display: block;
+  }
+  #tradeLog {
+    font-family: monospace;
+  }
+</style>
+<body style="background-color: black; color: grey"></body>
+<div id="chart-container"></div>
+<div id="tradeLog"></div>
