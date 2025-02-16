@@ -7,17 +7,16 @@ import { ShipTypes, getInitialShipDistribution } from "./systemShips.js";
 
 class TradeSimulator {
   constructor(universe) {
-    this.universe = universe; // Now an array of System objects
+    this.universe = universe;
+    this.pendingTransactions = [];
   }
 
-  // Helper function to simulate price fluctuations (remains the same)
   _applyPriceFluctuation(basePrice, system, commodityId, isBuy) {
     let price = basePrice;
     const fluctuationFactor = 0.05; //  5% fluctuation
 
-    // Apply demand/supply
-    const produced = system.getProducedCommodities(); // Get from system
-    const consumed = system.getConsumedCommodities(); // Get from system
+    const produced = system.getProducedCommodities();
+    const consumed = system.getConsumedCommodities();
 
     let demandWeight = 0;
     let supplyWeight = 0;
@@ -48,12 +47,12 @@ class TradeSimulator {
 
     return Math.max(0, price); // Ensure price is not negative
   }
-  // Calculates the profit for a given trade route (remains the same)
+
   calculateProfit(sourceSystem, destinationSystem, commodityId, quantity) {
     const commodity = commodityRegistry.getCommodity(commodityId);
     if (!commodity) {
       console.warn(`Commodity with ID ${commodityId} not found.`);
-      return 0; // Or throw an error
+      return 0;
     }
     const buyPrice = this._applyPriceFluctuation(
       commodity.basePrice,
@@ -67,17 +66,15 @@ class TradeSimulator {
       commodityId,
       false,
     );
-    const profit = (sellPrice - buyPrice) * quantity;
-    return profit;
+    return (sellPrice - buyPrice) * quantity;
   }
 
-  // Finds the best trade route (remains the same)
   findBestTradeRoute(sourceSystem, commodityId, quantity) {
     let bestDestination = null;
     let bestProfit = 0;
 
     for (const neighborId in sourceSystem.neighbors) {
-      const destinationSystem = this.universe[neighborId]; // Access by index!
+      const destinationSystem = this.universe[neighborId];
       if (!destinationSystem) {
         console.warn(`Neighbor system with ID ${neighborId} not found.`);
         continue;
@@ -98,11 +95,12 @@ class TradeSimulator {
     return { destination: bestDestination, profit: bestProfit };
   }
 
-  simulateTradeStep() {
-    const transactions = [];
+  planTradeStep() {
+    this.pendingTransactions = []; // Clear previous transactions
+    const systemProductions = new Map();
 
     for (const system of this.universe) {
-      // 1. Generate Current Production/Consumption State - Remains the same
+      // 1. Generate *Potential* Production/Consumption (but don't apply yet)
       const production = {};
       const consumption = {};
 
@@ -125,14 +123,29 @@ class TradeSimulator {
           consumption[consumed.commodity.id] = 0;
         }
       }
+      // Apply consumption to production.  This is "potential" production.
+      for (const commodityId in consumption) {
+        if (production[commodityId]) {
+          const consumedAmount = Math.min(
+            consumption[commodityId],
+            production[commodityId],
+          );
+          production[commodityId] -= consumedAmount; //Consume
+        }
+      }
+      systemProductions.set(system, production); //Store the system production
+    }
 
-      // 2. Simulate Trader Decisions - *KEY CHANGES HERE*
+    // 2. Simulate Trader Decisions (but only *plan* the trades)
+    for (const system of this.universe) {
+      //Iterate again for the trades
       let traders = system.shipDistribution[ShipTypes.TRADER];
       if (traders <= 0) {
         continue;
       }
 
-      const availableCommodities = { ...production };
+      // Get availableCommodities from precalculated production
+      const availableCommodities = { ...systemProductions.get(system) };
 
       for (let i = 0; i < traders; i++) {
         let bestCommodityId = null;
@@ -149,7 +162,7 @@ class TradeSimulator {
             continue;
           }
 
-          const MINIMUM_QUANTITY = 5; // Minimum quantity to trade
+          const MINIMUM_QUANTITY = 5;
           const quantityToTrade = Math.min(
             Math.floor(availableCommodities[commodityId] * 0.5),
             50,
@@ -172,17 +185,16 @@ class TradeSimulator {
           }
         }
 
-        const MINIMUM_PROFIT_THRESHOLD = 5; // Minimum profit to make a trade
-        const RELOCATION_CHANCE = 0.2; // 20% chance to relocate even if no profit
+        const MINIMUM_PROFIT_THRESHOLD = 5;
+        const RELOCATION_CHANCE = 0.2;
 
-        // --- FORCED RELOCATION LOGIC (Modified) ---
         if (
           bestCommodityId &&
           bestDestination &&
           bestProfit > MINIMUM_PROFIT_THRESHOLD
         ) {
-          // Profitable trade found: Execute the trade
-          transactions.push({
+          // *PLAN* the trade (add to pendingTransactions)
+          this.pendingTransactions.push({
             sourceSystemId: system.id,
             destinationSystemId: bestDestination.id,
             commodityId: bestCommodityId,
@@ -191,49 +203,171 @@ class TradeSimulator {
             shipType: ShipTypes.TRADER,
           });
 
-          availableCommodities[bestCommodityId] -= bestQuantity;
-          system.shipDistribution[ShipTypes.TRADER] -= 1;
-          bestDestination.shipDistribution[ShipTypes.TRADER] += 1;
+          availableCommodities[bestCommodityId] -= bestQuantity; //Reduce from available
         } else if (Math.random() < RELOCATION_CHANCE) {
-          // Random relocation
-          // No profitable trade found, but relocate with a certain probability
           const neighborIds = Object.keys(system.neighbors);
           if (neighborIds.length > 0) {
             const randomNeighborId =
               neighborIds[Math.floor(Math.random() * neighborIds.length)];
             const destinationSystem = this.universe[randomNeighborId];
             if (destinationSystem) {
-              transactions.push({
+              this.pendingTransactions.push({
                 sourceSystemId: system.id,
                 destinationSystemId: destinationSystem.id,
-                commodityId: null, // No commodity traded
+                commodityId: null,
                 quantity: 0,
-                profit: 0, // No profit
-                shipType: ShipTypes.TRADER, // Still a trader move
-                notes: "Forced relocation", // Add a note for clarity
+                profit: 0,
+                shipType: ShipTypes.TRADER,
+                notes: "Forced relocation",
               });
-
-              system.shipDistribution[ShipTypes.TRADER] -= 1;
-              destinationSystem.shipDistribution[ShipTypes.TRADER] += 1;
             }
           }
-        } // else: Trader stays in the current system (no transaction added)
-      }
-      // Apply consumption.
-      for (const commodityId in consumption) {
-        if (production[commodityId]) {
-          const consumedAmount = Math.min(
-            consumption[commodityId],
-            production[commodityId],
-          );
-          production[commodityId] -= consumedAmount; //Consume
         }
       }
-      // Store the current available
-      system.currentProduction = production;
+    }
+    // Return the *planned* transactions, do NOT execute yet
+    return this.pendingTransactions;
+  }
+
+  executeTradeStep() {
+    const executedTransactions = [];
+    for (const transaction of this.pendingTransactions) {
+      const {
+        sourceSystemId,
+        destinationSystemId,
+        commodityId,
+        quantity,
+        shipType,
+      } = transaction;
+      const sourceSystem = this.universe[sourceSystemId];
+      const destinationSystem = this.universe[destinationSystemId];
+
+      if (!sourceSystem || !destinationSystem) {
+        console.warn(
+          `Invalid transaction: Source or destination system not found.`,
+          transaction,
+        );
+        continue; // Skip invalid transactions
+      }
+
+      if (shipType === ShipTypes.TRADER) {
+        // 1. Move the trader
+        const traderIndex = sourceSystem.shipDistribution[ShipTypes.TRADER];
+        if (traderIndex > 0) {
+          // Check for enough traders
+          sourceSystem.shipDistribution[ShipTypes.TRADER] -= 1;
+          destinationSystem.shipDistribution[ShipTypes.TRADER] += 1;
+        } else {
+          console.warn(
+            "Inconsistency detected: trying to move trader that does not exist",
+          );
+          continue; //Critical to avoid
+        }
+
+        // 2. Update inventories (if it's a trade, not a relocation)
+        if (commodityId && quantity > 0) {
+          sourceSystem.removeFromInventory(commodityId, quantity);
+          destinationSystem.addToInventory(commodityId, quantity);
+        }
+        executedTransactions.push(transaction); // Store it after correct processing
+      } // else if (/* other ship types */) { ... }  Handle other ship types later
     }
 
-    return transactions;
+    this.pendingTransactions = []; // Clear pending transactions *after* execution
+    return executedTransactions;
+  }
+  // Player interaction with the trading system
+  getBuyPrice(system, commodityId) {
+    const commodity = commodityRegistry.getCommodity(commodityId);
+    if (!commodity) {
+      return null; // Or handle the error
+    }
+    return this._applyPriceFluctuation(
+      commodity.basePrice,
+      system,
+      commodityId,
+      true,
+    );
+  }
+
+  getSellPrice(system, commodityId) {
+    const commodity = commodityRegistry.getCommodity(commodityId);
+    if (!commodity) {
+      return null;
+    }
+    return this._applyPriceFluctuation(
+      commodity.basePrice,
+      system,
+      commodityId,
+      false,
+    );
+  }
+
+  playerBuy(player, commodityId, quantity) {
+    // Placeholders by Gemini
+    const system = player.currentSystem;
+    const price = this.getBuyPrice(system, commodityId);
+    if (!price) {
+      console.error("Commodity not found or price unavailable.");
+      return false;
+    }
+    const totalCost = price * quantity;
+
+    if (player.credits < totalCost) {
+      // Placeholder
+      console.log("Not enough credits!");
+      return false;
+    }
+
+    if (player.currentSystem.getInventory(commodityId) < quantity) {
+      // Placeholder
+      console.log("Not enough available in the system!");
+      return false;
+    }
+
+    // Update player inventory and credits
+    if (!player.inventory[commodityId]) {
+      player.inventory[commodityId] = 0;
+    }
+    player.inventory[commodityId] += quantity;
+    player.credits -= totalCost;
+
+    // Update system inventory
+    player.currentSystem.removeFromInventory(commodityId, quantity);
+
+    console.log(
+      `Bought ${quantity} of ${commodityRegistry.getCommodity(commodityId).name} for ${totalCost.toFixed(2)} credits.`,
+    );
+    return true; // Indicate success
+  }
+
+  playerSell(player, commodityId, quantity) {
+    const system = player.currentSystem;
+    const price = this.getSellPrice(system, commodityId);
+    if (!price) {
+      console.error("Commodity not found, or price unavailable");
+      return false;
+    }
+
+    if (
+      !player.inventory[commodityId] ||
+      player.inventory[commodityId] < quantity
+    ) {
+      console.log("Not enough in player inventory!");
+      return false;
+    }
+    const totalRevenue = price * quantity;
+
+    //Update player inventory and credits
+    player.inventory[commodityId] -= quantity;
+    player.credits += totalRevenue;
+
+    // Update system inventory.
+    player.currentSystem.addToInventory(commodityId, quantity);
+    console.log(
+      `Sold ${quantity} of ${commodityRegistry.getCommodity(commodityId).name} for ${totalRevenue.toFixed(2)} credits`,
+    );
+    return true; // Indicate success
   }
 }
 
@@ -269,7 +403,7 @@ function renderTradeMove(transaction) {
   }
 
   if (tradeLogDiv) {
-    tradeLogDiv.insertAdjacentHTML("beforeend", html); // Add to the end of the body, or a specific container
+    tradeLogDiv.insertAdjacentHTML("beforeend", html);
   }
 }
 
@@ -278,12 +412,19 @@ function renderShipChart(universe) {
   //chartContainer.innerHTML = ''; // Clear previous chart
   const e = document.createElement("DIV");
   e.classList.add("ship-chart");
-  for (const system of universe) {
+  const f = document.createElement("DIV");
+  f.classList.add("ship-chart");
+  f.classList.add("upside-chart");
+  for (let i = 0; i < universe.length; i++) {
+    const system = universe[i];
     const shipCount = system.shipDistribution[ShipTypes.TRADER];
     const barHeight = shipCount * 2; // Scale the height (e.g., 2px per ship)
 
     const bar = document.createElement("div");
     bar.classList.add("system-bar");
+    if (i >= universe.length / 2) {
+      bar.classList.add("upside-bar");
+    }
     bar.style.height = `${barHeight}px`;
     bar.title = `${system.name} (ID: ${system.id}): ${shipCount} traders`; //Basic Tooltip
 
@@ -292,10 +433,14 @@ function renderShipChart(universe) {
     tooltip.classList.add("tooltip");
     tooltip.textContent = `${system.name} (ID: ${system.id}): ${shipCount} traders`;
     bar.appendChild(tooltip);
-
-    e.appendChild(bar);
+    if (i < universe.length / 2) {
+      e.appendChild(bar);
+    } else {
+      f.appendChild(bar);
+    }
   }
   chartContainer.appendChild(e);
+  chartContainer.appendChild(f);
 }
 
 if (window.DEVMODE) {
@@ -308,9 +453,10 @@ if (window.DEVMODE) {
   window.simTrade = (N = 2) => {
     const s = new window.TradeSimulator(window.universe);
     const sim = () => {
-      const trans = s.simulateTradeStep();
+      const trans = s.planTradeStep();
       document.body.insertAdjacentHTML("beforeend", "<hr/>");
       window.renderTransactions(trans);
+      s.executeTradeStep();
     };
     for (let i = 0; i < N; i++) {
       sim();
@@ -319,7 +465,8 @@ if (window.DEVMODE) {
   window.simMove = (N = 20, skip = 0) => {
     const s = new window.TradeSimulator(window.universe);
     const sim = (render = true) => {
-      s.simulateTradeStep();
+      s.planTradeStep();
+      s.executeTradeStep();
       if (render) renderShipChart(window.universe);
     };
     for (let i = 0; i < N; i++) {

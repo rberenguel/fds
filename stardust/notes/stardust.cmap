@@ -1,6 +1,6 @@
 # Stardust
 
-// zoom: 0.36258262395858765 pan: -478.7340352797351 -315.17235873489324
+// zoom: 0.25902506709098816 pan: -243.87364816644254 -203.24942436823838
 
 
 // https://mostlymaths.net/garbuix/?view=https://raw.githubusercontent.com/rberenguel/fds/refs/heads/gh-pages/wip/notes/stardust.cmap
@@ -17,6 +17,7 @@
 - SUBTLE: ; color="grey" style="dotted" arrowhead=none
 - CURRENT: ; fillcolor="#b5890077" color="sdyellow" penwidth=3
 - RESOURCE: fontsize=20 style="dotted,rounded"
+- MARKBIG: fontsize=50 fillcolor="grey" fontcolor="black"
 
 - OBJ: ; color="grey" fillcolor="#cccccc33" fontcolor="grey" fontname="inter" fontsize=30 len=0.5 arrowhead=none
 
@@ -84,7 +85,7 @@ System -> StarDensity OBJ
 System -> DustDensity OBJ
 System -> Nebula OBJ
 
-PlanetProduction Planet production
+PlanetProduction Planet production ; MARKBIG
 System -> PlanetProduction ; CLOSE
 PlanetDemand Planet demand CURRENT
 System -> PlanetDemand ; CLOSE
@@ -95,7 +96,9 @@ PlanetDemand -> PlanetProduction
 Planets -> PlanetDemand OBJ
 Planets -> PlanetProduction OBJ
 
-Price Commodity prices
+NumberShips ; MARKBIG
+
+Price Commodity prices ; MARKBIG
 System -> Price ; CLOSE
 PlanetDemand -> Price
 PlanetProduction -> Price
@@ -103,7 +106,7 @@ EconomyScale Economy scale
 System -> EconomyScale ; CLOSE
 PlanetProduction -> EconomyScale ; INDIRECT
 PlanetDemand -> EconomyScale ; INDIRECT
-TechLevel Tech level
+TechLevel Tech level ; MARKBIG
 System -> TechLevel ; CLOSE
 TechLevel -> PlanetProduction
 NumberShips Number\nof ships
@@ -123,7 +126,7 @@ System -> Government ; CLOSE
 
 // NPCs
 NPCs NPCs ; HEADER
-Faction Faction
+Faction ; MARKBIG
 NPCs -> Faction ; CLOSE
 Activity Activity:\n  Trade\nPiracy\nPolice\nGov\nMil\nMining
 NPCs -> Activity ; CLOSE
@@ -144,6 +147,7 @@ Events 📚 Events ; HEADER
 
 Activity -> Events triggers list of
 
+Trading ; MARKBIG
 
 AttackSoS Attack:\nShip-on-ship
 Events -> AttackSoS ; CLOSE

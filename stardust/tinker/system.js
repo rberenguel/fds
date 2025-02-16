@@ -58,7 +58,8 @@ class System {
       this.rnd,
     );
     this.stations = this._stations();
-    this.currentProduction = {};
+    this.currentProduction = {}; // TODO deprecated?
+    this.inventory = {};
   }
   info() {
     return `System ID: ${this.id} <br> Neighbors: ${Object.keys(
@@ -125,6 +126,27 @@ class System {
   getConsumedCommodities() {
     // Use the registry to get consumed commodities based on subCategory
     return commodityRegistry.getConsumedCommodities(this.subCategory);
+  }
+
+  addToInventory(commodityId, quantity) {
+    if (!this.inventory[commodityId]) {
+      this.inventory[commodityId] = 0;
+    }
+    this.inventory[commodityId] += quantity;
+  }
+
+  // New method to remove from inventory
+  removeFromInventory(commodityId, quantity) {
+    if (this.inventory[commodityId]) {
+      this.inventory[commodityId] -= quantity;
+      if (this.inventory[commodityId] < 0) {
+        this.inventory[commodityId] = 0; // Prevent negative inventory
+      }
+    }
+  }
+  getInventory(commodityId) {
+    //Helper
+    return this.inventory[commodityId] || 0;
   }
 
   _planets() {
