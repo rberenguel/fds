@@ -1,6 +1,6 @@
 # Stardust
 
-// zoom: 0.25902506709098816 pan: -243.87364816644254 -203.24942436823838
+// zoom: 0.25902506709098816 pan: -797.8738532599064 -913.2496398789639
 
 
 // https://mostlymaths.net/garbuix/?view=https://raw.githubusercontent.com/rberenguel/fds/refs/heads/gh-pages/wip/notes/stardust.cmap
@@ -53,7 +53,8 @@ Moons Moons OBJ
 StarDensity Background\nstar density OBJ
 DustDensity Background\ndust density OBJ
 Nebula Nebula in\nbackground OBJ
-
+Moons -> MoonsInPlanets
+MoonsInPlanets [ ] Add moons ; margin=0.1
 
 SunCorona [ ] Corona effect OBJ margin=0.1
 Sun -> SunCorona OBJ
@@ -117,7 +118,6 @@ Asteroids Asteroid fields OBJ
 System -> Asteroids OBJ
 Asteroids -> PlanetProduction
 Asteroids -> PlanetDemand ; INDIRECT
-Stations System stations
 System -> Stations ; CLOSE
 TechLevel -> Stations ; INDIRECT
 EconomyScale -> Stations ; INDIRECT
@@ -175,3 +175,18 @@ note_mil_act Military actions will be more/less likely depending on source and t
 
 
 note_new_sta A new station may appear depending on system thresholds (economy, piracy, military) ; NOTE
+
+## Stations
+
+Stations Stations ; HEADER
+StationDesign Station design
+Stations -> StationD
+
+StationD -> MainStation
+StationD -> MiningStation
+StationD -> MilitaryStation
+StationD -> PirateStation
+
+
+
+
