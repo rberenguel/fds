@@ -50,8 +50,14 @@ class PlasmaBullet extends Base1 {
     const blue = Math.floor(255 * ne * ne);
     const hexColor = (red << 16) | (green << 8) | blue;
     for (let presentation of this.presentations) {
-      if (!presentation) return;
-      if (presentation.destroyed) return;
+      if (!presentation) {
+        this.presentation = { destroyed: true };
+        return;
+      }
+      if (presentation.destroyed) {
+        this.presentation = { destroyed: true };
+        return;
+      }
       presentation.rotation = this.r;
       presentation.tint = hexColor;
     }

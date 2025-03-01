@@ -2,14 +2,13 @@ export { Starfield };
 
 import {
   Graphics,
+  Container,
   Sprite,
   RenderTexture,
   Matrix,
 } from "../libs/3rdparty/pixi.mjs";
 
 import { sqnorm, wrap } from "./math.js";
-
-import { seededRnd } from "./rnd.js";
 
 function hsvToHex(h, s, v) {
   // h = 0-360, s = 0-100, v = 0-100
@@ -78,31 +77,27 @@ class Starfield {
   static starfieldParallaxFactor = 0.005;
 
   constructor(props = {}) {
-    this.width = props.width ?? 800;
-    this.height = props.height ?? 600;
+    this.width = 2 * (props.width ?? 800);
+    this.height = 2 * (props.height ?? 600);
     this.dStarfield = props.dStarfield ?? 20000;
     this.dDustfield = props.dDustfield ?? 80000;
     this.starfieldPts = [];
     this.dustfieldPts = [];
-    this.rnd = props.seed
-      ? seededRnd(props.seed)
-      : seededRnd(performance.now());
     for (let i = 0; i < this.width; i++) {
       for (let j = 0; j < this.height; j++) {
-        const n = this.rnd();
-
+        const n = Math.random();
         const f = Math.floor(n * this.dStarfield);
         const ff = Math.floor(n * this.dDustfield);
         if (f == 1 || f == 42 || (f > 90 && f < 100)) {
-          let rh = Math.floor(this.rnd() * 360); // Random number between 0 and 359
-          let rs = Math.floor(this.rnd() * 20); // Random number between 0 and 19
-          let rv = Math.floor(this.rnd() * 52); // Random number between 0 and 51
+          let rh = Math.floor(Math.random() * 360); // Random number between 0 and 359
+          let rs = Math.floor(Math.random() * 20); // Random number between 0 and 19
+          let rv = Math.floor(Math.random() * 52); // Random number between 0 and 51
 
           let h = rh; // Hue: 0.0 to 1.0
           let s = 10 + rs;
           let v = 50 + rv;
 
-          let r = this.rnd() < 0.3 ? 2 : 1;
+          let r = Math.random() < 0.3 ? 2 : 1;
           this.starfieldPts.push({
             x: i,
             y: j,
@@ -111,9 +106,9 @@ class Starfield {
           });
         }
         if (ff == 1 || ff == 42 || (ff > 90 && ff < 100)) {
-          let rh = Math.floor(this.rnd() * 360); // Random number between 0 and 359
-          let rs = Math.floor(this.rnd() * 5); // Random number between 0 and 19
-          let rv = Math.floor(this.rnd() * 20); // Random number between 0 and 51
+          let rh = Math.floor(Math.random() * 360); // Random number between 0 and 359
+          let rs = Math.floor(Math.random() * 5); // Random number between 0 and 19
+          let rv = Math.floor(Math.random() * 20); // Random number between 0 and 51
 
           let h = rh; // Hue: 0.0 to 1.0
           let s = 10 + rs;
@@ -181,8 +176,20 @@ class Starfield {
 
   attach(app) {
     this.app = app;
-    app.stage.addChild(...this.stars);
-    app.stage.addChild(...this.dust);
+    const starContainer = new Container();
+    const dustContainer = new Container();
+    starContainer.pivot.x = this.width / 2;
+    starContainer.pivot.y = this.height / 2;
+    starContainer.x = this.width / 4;
+    starContainer.y = this.height / 4;
+    starContainer.width = this.width;
+    starContainer.height = this.height;
+    app.stage.addChild(dustContainer);
+    app.stage.addChild(starContainer);
+    starContainer.addChild(...this.stars);
+    dustContainer.addChild(...this.dust);
+    this.starContainer = starContainer;
+    this.dustContainer = dustContainer;
   }
 
   update(vel) {
@@ -194,7 +201,7 @@ class Starfield {
     for (const star of this.stars) {
       star.x -= (vel.x ?? 0) * Starfield.starfieldParallaxFactor;
       star.y -= (vel.y ?? 0) * Starfield.starfieldParallaxFactor;
-      wrap(star, this.app);
+      wrap(star, { w: this.width, h: this.height });
       star.skew.x = skew / 2;
       star.scale = 1 + skew / (nv + 1);
       star.rotation = angle;
@@ -202,26 +209,10 @@ class Starfield {
     for (const dust of this.dust) {
       dust.x -= (vel.x ?? 0) * Starfield.dustfieldParallaxFactor;
       dust.y -= (vel.y ?? 0) * Starfield.dustfieldParallaxFactor;
-      wrap(dust, this.app);
+      wrap(dust, { w: this.width, h: this.height });
       dust.skew.x = skew;
       dust.scale = 1 + skew;
       dust.rotation = angle;
     }
-
-    /*
-    this.dustfieldSprite.x -= (vel.x ?? 0) * Starfield.dustfieldParallaxFactor;
-    this.dustfieldSprite.y -= (vel.y ?? 0) * Starfield.dustfieldParallaxFactor;
-    if (this.dustfieldSprite.x > 0) {
-      this.dustfieldSprite.x -= this.width * 2;
-  } else if (this.dustfieldSprite.x < -this.width * 2) {
-      this.dustfieldSprite.x += this.width * 2;
-  }
-
-  // Wrap vertically for dustfield
-  if (this.dustfieldSprite.y > 0) {
-      this.dustfieldSprite.y -= this.height * 2;
-  } else if (this.dustfieldSprite.y < -this.height * 2) {
-      this.dustfieldSprite.y += this.height * 2;
-  }*/
   }
 }

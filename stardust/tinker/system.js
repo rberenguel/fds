@@ -60,6 +60,7 @@ class System {
     this.stations = this._stations();
     this.currentProduction = {}; // TODO deprecated?
     this.inventory = {};
+    this.hasNebula = true;
   }
   info() {
     return `System ID: ${this.id} <br> Neighbors: ${Object.keys(

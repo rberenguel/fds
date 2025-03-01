@@ -54,7 +54,7 @@ function normalizeAngle(angle) {
   return angle;
 }
 
-const otherControl = (other, target, deltaTime) => {
+const otherControl = (other, ship, target, deltaTime, bulletList) => {
   const dt = deltaTime / 1000; // Assuming 60 FPS
 
   // --- Yaw Control (PID) ---
@@ -158,9 +158,9 @@ const otherControl = (other, target, deltaTime) => {
   );
   //console.log(thrust)
   if (thrust > 0.01) {
-    other.backThrust(flameList);
+    other.backThrust();
   } else if (thrust < -0.01) {
-    other.forwardThrust(flameList);
+    other.forwardThrust();
   }
   //document.querySelector("#pid-dt").innerHTML = deltaTime.toFixed(3)
   document.querySelector("#pid-p").innerHTML =

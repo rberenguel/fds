@@ -1,3 +1,5 @@
+import { metaP } from "./metap/metap.js";
+
 import { set, get } from "../libs/3rdparty/idb-keyval.js";
 
 import {
@@ -16,17 +18,8 @@ import {
   VirtualPad,
 } from "../libs/controlHandling.js";
 
-import { PlanetKinds } from "./tinker/system.js";
-
-import { PIDController } from "./pid.js";
-
-import { rotate, sqnorm, easeInSq, sqdist } from "./math.js";
-
-import { Viewframe } from "./viewframe.js";
 import { Bobcat, Lynx } from "./ship.js";
-import { Bullet } from "./bullet.js";
 import { Asteroid } from "./asteroid.js";
-import { Flame } from "./flame.js";
 
 import { SpaceScene } from "./scene.js";
 
@@ -65,8 +58,6 @@ if (buttonMap === undefined) {
 }
 
 let prevshot = -1;
-let ship;
-let viewframe;
 
 const gameActions = {
   zoomOut: () => {
@@ -109,10 +100,6 @@ const gameActions = {
     player.weapons[1].fire(player, player.bulletList);
   },
 };
-
-let bulletList = [];
-let asteroids = [];
-let transients = [];
 
 const app = new Application();
 await app.init({ width: window.innerWidth, height: window.innerHeight });
@@ -199,35 +186,60 @@ focusTrap.focus(); // Set focus to the hidden input
 
 const controller = handleControls(gameActions, keyMap, buttonMap);
 
+let flameList = [];
+let bulletList = [];
+
 const player = new Bobcat({
   pos: {
     x: 150000,
     y: 0,
   },
-  flameList: [],
-  bulletList: [], // This is a bit wonky, the scene will re-reference these
 });
 
 player.generate();
 
-const spaceScene = new SpaceScene({
+let spaceScene = new SpaceScene({
   app: app,
   player: player,
   controller: controller,
   id: 0,
 });
 
-/*const other = new Lynx({
-  pos: {
-    x: 150200,
-    y: 200,
-  },
-});
+const commands = [
+  {
+    title: "Add PID controlled ship",
+    lambda: () => {
+      const other = new Lynx({
+        pos: {
+          x: player.pos.x + 1000,
+          y: player.pos.y + 500,
+        },
+      });
 
-other.prevShot = -1
-other.generate();
-other.attach(viewframe);*/
+      other.prevShot = -1;
+      other.action = () => "kChase";
+      other.generate();
+      other.attach(spaceScene.viewframe);
+      spaceScene.otherShips.push(other);
+    },
+  },
+  {
+    title: "Go to system",
+    inputType: "number",
+    lambda: (number) => {
+      app.stage.removeChildren();
+      spaceScene = new SpaceScene({
+        app: app,
+        player: player,
+        controller: controller,
+        id: number,
+      });
+    },
+  },
+];
+metaP.bind(commands);
 
 app.ticker.add((delta) => {
   spaceScene.update(delta);
+  //console.log(flameList)
 });

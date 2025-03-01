@@ -9,6 +9,8 @@ import {
   AtmospherePlanet,
   Sun,
 } from "../planet.js";
+import { NebulaGenerator } from "./nebula.js";
+import { Sprite } from "../../libs/3rdparty/pixi.mjs";
 
 class RenderedSystem extends System {
   constructor(props = {}) {
@@ -18,6 +20,18 @@ class RenderedSystem extends System {
     this.planetObjects = this._planetObjects();
     this.planetObjects.map((p) => p.generate(this.app));
     this.planetObjects.map((p) => p.attach(this.viewframe));
+    if (this.hasNebula) {
+      const nebula = new NebulaGenerator(
+        2 * this.app.renderer.width,
+        2 * this.app.renderer.height,
+      );
+      this.nebulaSprite = new Sprite(nebula.nebulaTexture);
+      this.nebulaSprite.pivot.x = nebula.width / 2;
+      this.nebulaSprite.pivot.y = nebula.height / 2;
+      this.nebulaSprite.x = nebula.width / 4;
+      this.nebulaSprite.y = nebula.height / 4;
+      this.app.stage.addChild(this.nebulaSprite);
+    }
   }
 
   update(delta) {

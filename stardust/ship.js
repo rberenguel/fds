@@ -38,8 +38,14 @@ class Flame extends Base1 {
     const blue = 0;
     const hexColor = (red << 16) | (green << 8) | blue;
     for (let presentation of this.presentations) {
-      if (!presentation) return;
-      if (presentation.destroyed) return;
+      if (!presentation) {
+        this.presentation = { destroyed: true };
+        return;
+      }
+      if (presentation.destroyed) {
+        this.presentation = { destroyed: true };
+        return;
+      }
       presentation.rotation = this.r;
       presentation.tint = hexColor;
     }
@@ -55,8 +61,12 @@ class Ship extends Base1 {
     //this.scale = props.scale ?? 1
     this.weapons = props.weapons ?? [];
     this.actions = [];
-    this.flameList = props.flameList; // TODO: careful with this as a dangling reference
-    this.bulletList = props.bulletList;
+    this.flameList = []; // TODO: careful with this as a dangling reference
+    this.bulletList = [];
+  }
+
+  action() {
+    return;
   }
 
   annotateMountPoints() {

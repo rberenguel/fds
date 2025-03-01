@@ -21,18 +21,18 @@ const easeInSq = (x) => {
   return 1 - Math.sqrt(1 - x * x);
 };
 
-const wrap = (thing, app) => {
-  if (thing.x > app.renderer.width) {
+const wrap = (thing, a) => {
+  if (thing.x > a.width) {
     thing.x = 0;
   }
-  if (thing.y > app.renderer.height) {
+  if (thing.y > a.height) {
     thing.y = 0;
   }
   if (thing.x < 0) {
-    thing.x = app.renderer.width;
+    thing.x = a.width;
   }
   if (thing.y < 0) {
-    thing.y = app.renderer.height;
+    thing.y = a.height;
   }
 };
 

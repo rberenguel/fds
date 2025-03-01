@@ -1,0 +1,50 @@
+@font-face {
+  font-family: "monoidregular";
+  src: url("./monoid-regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "monoidregular";
+  src: url("./monoid-bold.woff2") format("woff2");
+  font-weight: bold;
+  font-style: normal;
+}
+@font-face {
+  font-family: "monoidregular";
+  src: url("./monoid-italic.woff2") format("woff2");
+  font-weight: normal;
+  font-style: italic;
+}
+
+#metap-modal {
+  position: fixed;
+  font-family: "monoidregular";
+  top: 60vh;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.2rem;
+  color: white;
+  background-color: rgba(0, 0, 0, 0.7);
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  z-index: 1001;
+  display: none;
+  border: 1px solid #ccc;
+}
+
+.metap-modal-row {
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  border-radius: 0.2rem;
+}
+
+.metap-modal-row:hover {
+  cursor: pointer;
+  background-color: rgba(50, 50, 50, 0.8);
+}
+
+.metap-inputs {
+  padding: 0.5rem 1rem;
+  border-radius: 0.2rem;
+  border-bottom: 1px solid #555;
+  color: #888;
+}

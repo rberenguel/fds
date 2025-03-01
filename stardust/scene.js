@@ -5,7 +5,7 @@ import { Starfield } from "./parallax.js";
 import { RenderedSystem } from "./tinker/renderedSystem.js";
 import { sqnorm } from "./math.js";
 import { PlanetKinds } from "./tinker/system.js";
-
+import { otherControl } from "./pid.js";
 class Scene {
   constructor() {}
 }
@@ -28,6 +28,24 @@ const planetIdx = document.getElementById("planet-idx");
 const logg = document.getElementById("logg");
 const log = (f) => {
   logg.innerHTML = f;
+};
+
+const linScale = (scale) => {
+  const minScale = 1e-5;
+  const maxScale = 1;
+  const minOutput = 0.5;
+  const maxOutput = 1;
+
+  // Clamp the scale factor to the valid range
+  const clampedScale = Math.max(minScale, Math.min(maxScale, scale));
+
+  // Perform linear interpolation
+  const output =
+    maxOutput +
+    ((clampedScale - maxScale) * (minOutput - maxOutput)) /
+      (minScale - maxScale);
+
+  return output;
 };
 
 class SpaceScene extends Scene {
@@ -63,16 +81,22 @@ class SpaceScene extends Scene {
     });
     this.objectList = this.renderedSystem.planetObjects; // This has to have more stuff
     this.waypoints = this.renderedSystem.planetObjects; // TODO this will have more stuff
-    this.bulletList = [];
-    this.flameList = [];
+    this.bulletList = props.bulletList;
+    this.flameList = props.flameList;
+    this.otherShips = [];
   }
   // TODO: will need a destructor for all the created objects
   update(delta) {
     const nv = sqnorm(this.player.vel.x, this.player.vel.y);
     this.starfield.update(this.player.vel);
+
     this.viewframe.move(delta.deltaTime);
     this.viewframe.update();
-    let scale = Math.min(this.viewframe.scale, 100 / (nv + 1)); // This prevents manual zooming
+    let scale = Math.min(this.viewframe.scale, 100 / (nv + 1)); // TODO This prevents/screws with manual zooming
+    this.starfield.starContainer.scale = linScale(scale);
+    if (this.renderedSystem.nebulaSprite) {
+      this.renderedSystem.nebulaSprite.scale = linScale(scale);
+    }
     //if(nv > 1){
     //if (scale < 1e-10) {
     //  scale = 1e-10;
@@ -88,7 +112,18 @@ class SpaceScene extends Scene {
         y: this.player.vel.y,
       },
     };
-    //otherControl(target, delta.deltaTime);
+    for (let otherShip of this.otherShips) {
+      if (otherShip.action() === "kChase") {
+        otherControl(
+          otherShip,
+          this.player,
+          target,
+          delta.deltaTime,
+          this.player.bulletList,
+        ); // TODO: Too many arguments, and the last one…
+      }
+      otherShip.update(delta);
+    }
     this.viewframe.scale = scale;
     this.viewframe.pos.x =
       this.player.pos.x - ((1 / scale) * this.app.screen.width) / 2;
@@ -131,27 +166,41 @@ class SpaceScene extends Scene {
     this.controller();
 
     this.player.update(delta);
-    //other.update(delta);
-    this.player.flameList = this.player.flameList.filter(
-      (f) => !f.presentation?.destroyed,
-    );
-    this.player.bulletList = this.player.bulletList.filter(
-      (b) => !b.presentation?.destroyed,
-    );
-    for (let b of this.player.bulletList) {
-      if (!b.drawn) {
-        b.generate();
-        b.attach(this.viewframe);
+    //
+    for (let flammable of [this.player, ...this.otherShips]) {
+      // Remove destroyed flames (in-place)
+      for (let i = flammable.flameList.length - 1; i >= 0; i--) {
+        if (flammable.flameList[i].presentation?.destroyed) {
+          flammable.flameList.splice(i, 1);
+        }
       }
-      b.update(delta);
-    }
-    for (let f of this.player.flameList) {
-      if (!f.drawn) {
-        f.generate();
-        f.attach(this.viewframe);
+
+      // Remove destroyed bullets (in-place)
+      for (let i = flammable.bulletList.length - 1; i >= 0; i--) {
+        if (flammable.bulletList[i].presentation?.destroyed) {
+          flammable.bulletList.splice(i, 1);
+        }
       }
-      f.update(delta);
+
+      // Render and update bullets
+      for (let b of flammable.bulletList) {
+        if (!b.drawn) {
+          b.generate();
+          b.attach(this.viewframe);
+        }
+        b.update(delta);
+      }
+
+      // Render and update flames
+      for (let f of flammable.flameList) {
+        if (!f.drawn) {
+          f.generate();
+          f.attach(this.viewframe);
+        }
+        f.update(delta);
+      }
     }
+
     this.renderedSystem.update(delta);
   }
 }
