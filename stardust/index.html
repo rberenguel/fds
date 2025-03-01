@@ -24,7 +24,7 @@
         display: flex;
         column-gap: 2em;
       }
-      #logg {
+      #info {
         z-index: 1000;
         width: 20em;
         position: absolute;
@@ -37,10 +37,15 @@
     </style>
   </head>
   <body>
-    <div id="logg">
-      <span id="planet-idx"></span>
-      <span id="planet-target"></span>
-      <span id="planet-distance"></span>
+    <div id="info">
+      <div id="logg">
+        <span id="planet-idx"></span>
+        <span id="planet-target"></span>
+        <span id="planet-distance"></span>
+      </div>
+      <div id="player-info">
+        <span id="player-vel"></span>
+      </div>
     </div>
     <div id="pid">
       <span style="width: 4em" id="pid-dt"></span>

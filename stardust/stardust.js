@@ -35,6 +35,8 @@ let keyMap = await get("keyMap");
 if (keyMap === undefined) {
   keyMap = {
     ArrowUp: "moveUp",
+    KeyD: "fastDown", // I don't like that this uses keycodes, this is technically S
+    KeyW: "fastUp",
     ArrowDown: "moveDown",
     ArrowLeft: "moveLeft",
     ArrowRight: "moveRight",
@@ -72,11 +74,23 @@ const gameActions = {
     }
     player.forwardThrust();
   },
+  fastUp: () => {
+    if (player.e < 10) {
+      return;
+    }
+    player.forwardThrust(5);
+  },
   moveDown: (f = 1) => {
     if (player.e < 10) {
       return;
     }
     player.backThrust();
+  },
+  fastDown: () => {
+    if (player.e < 10) {
+      return;
+    }
+    player.backThrust(5);
   },
   moveRight: (f = 1) => {
     player.yawRight();
@@ -241,5 +255,4 @@ metaP.bind(commands);
 
 app.ticker.add((delta) => {
   spaceScene.update(delta);
-  //console.log(flameList)
 });

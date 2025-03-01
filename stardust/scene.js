@@ -24,6 +24,7 @@ const niceDistance = (dist) => {
 const planetTarget = document.getElementById("planet-target");
 const planetDistance = document.getElementById("planet-distance");
 const planetIdx = document.getElementById("planet-idx");
+const playerv = document.getElementById("player-vel");
 
 const logg = document.getElementById("logg");
 const log = (f) => {
@@ -47,6 +48,8 @@ const linScale = (
 
   return output;
 };
+
+const MAXSCALE = 0.2;
 
 class SpaceScene extends Scene {
   constructor(props = {}) {
@@ -80,7 +83,7 @@ class SpaceScene extends Scene {
     this.renderedSystem.attachNebula();
 
     this.viewframe.attach(this.app);
-    this.viewframe.scale = 1;
+    this.viewframe.scale = MAXSCALE;
     this.player.attach(this.viewframe);
     this.renderedSystem.attachPlanets();
 
@@ -107,7 +110,10 @@ class SpaceScene extends Scene {
 
     this.viewframe.move(delta.deltaTime);
     this.viewframe.update();
-    let scale = Math.min(this.viewframe.scale, 100 / (nv + 1)); // TODO This prevents/screws with manual zooming
+    let scale = Math.min(
+      MAXSCALE,
+      Math.min(this.viewframe.scale, 100 / (nv + 1)),
+    ); // TODO This prevents/screws with manual zooming
     //console.log(scale)
     this.starfield.starContainer.scale = linScale(scale);
     this.starfield.dustContainer.scale = linScale(scale);
@@ -143,9 +149,9 @@ class SpaceScene extends Scene {
     }
     scale = linScale(scale, {
       minScale: 1e-15,
-      maxScale: 1,
-      minOutput: 1e-3,
-      maxOutput: 1,
+      maxScale: MAXSCALE,
+      minOutput: 1e-2,
+      maxOutput: MAXSCALE,
     });
     this.viewframe.scale = scale;
     this.viewframe.pos.x =
@@ -183,6 +189,7 @@ class SpaceScene extends Scene {
       planetTarget.innerHTML = "";
       planetDistance.innerHTML = "";
     }
+    playerv.innerHTML = Math.sqrt(nv).toFixed(2);
 
     //viewframe.scale = nv > 0.2 ? 0.2 * 10000 /nv : 0.2
     this.objectList.map((p) => p.update(delta));
