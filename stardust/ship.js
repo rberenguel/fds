@@ -3,8 +3,7 @@ export { Bobcat, Lynx };
 import { Mesh, Meshes } from "./mesh.js";
 import { Base1 } from "./base.js";
 import { PlasmaGun } from "./weapon.js";
-
-import { rotate } from "./math.js";
+import { rotate, sqnorm } from "./math.js";
 
 import { seededRnd } from "./rnd.js";
 
@@ -55,6 +54,9 @@ class Ship extends Base1 {
     this.e = 1000;
     //this.scale = props.scale ?? 1
     this.weapons = props.weapons ?? [];
+    this.actions = [];
+    this.flameList = props.flameList; // TODO: careful with this as a dangling reference
+    this.bulletList = props.bulletList;
   }
 
   annotateMountPoints() {
@@ -76,13 +78,21 @@ class Ship extends Base1 {
     this.presentation.fill(0xff8800);
   }
 
-  backThrust(flameList) {
+  backThrust(f = 1) {
+    this.actions.push("backThrust");
+    const _vx = this.vel.x + 0.1 * Math.cos(this.r) * f;
+    const _vy = this.vel.y + 0.1 * Math.sin(this.r) * f;
+    const _nv = sqnorm(_vx, _vy);
+    if (_nv < 1e6) {
+      this.vel.x = _vx;
+      this.vel.y = _vy;
+    }
     for (let i = 0; i < 3; i++) {
-      this._backThrust(flameList);
+      this._backThrust();
     }
   }
 
-  _backThrust(flameList) {
+  _backThrust() {
     const rf = rnd();
     const spread = 0.3 - 0.6 * rf;
     const ivx = -Math.cos(this.r + spread);
@@ -104,16 +114,24 @@ class Ship extends Base1 {
       e: 12,
       //scale: this.scale
     });
-    flameList.push(fl);
+    this.flameList.push(fl);
   }
 
-  forwardThrust(flameList) {
+  forwardThrust(f = 1) {
+    this.actions.push("forwardThrust");
+    const _vx = this.vel.x - 0.1 * Math.cos(this.r) * f;
+    const _vy = this.vel.y - 0.1 * Math.sin(this.r) * f;
+    const _nv = sqnorm(_vx, _vy);
+    if (_nv < 1e6) {
+      this.vel.x = _vx;
+      this.vel.y = _vy;
+    }
     for (let i = 0; i < 3; i++) {
-      this._forwardThrust(flameList);
+      this._forwardThrust();
     }
   }
 
-  _forwardThrust(flameList) {
+  _forwardThrust() {
     const rf = rnd();
     const spread = 0.15 - 0.3 * rf;
     const ivx = -Math.cos(this.r + spread);
@@ -135,7 +153,15 @@ class Ship extends Base1 {
       e: 12,
       //scale: this.scale
     });
-    flameList.push(fl);
+    this.flameList.push(fl);
+  }
+
+  yawRight(f = 1) {
+    this.r += 0.03 * f;
+  }
+
+  yawLeft(f = 1) {
+    this.r -= 0.03 * f;
   }
 
   generate() {
@@ -146,6 +172,7 @@ class Ship extends Base1 {
   /* pos would be universe coordinates, then here I need to use screen coordinates */
 
   update(delta) {
+    this.actions = this.actions.slice(-2);
     super.update(delta);
     super.move(delta.deltaTime);
     for (let presentation of this.presentations) {

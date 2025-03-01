@@ -1,8 +1,5 @@
 import { set, get } from "../libs/3rdparty/idb-keyval.js";
 
-import { planets } from "./planet.js";
-import { Starfield } from "./parallax.js";
-
 import {
   Application,
   Graphics,
@@ -21,13 +18,17 @@ import {
 
 import { PlanetKinds } from "./tinker/system.js";
 
-import { rotate, sqnorm, easeInSq } from "./math.js";
+import { PIDController } from "./pid.js";
+
+import { rotate, sqnorm, easeInSq, sqdist } from "./math.js";
 
 import { Viewframe } from "./viewframe.js";
 import { Bobcat, Lynx } from "./ship.js";
 import { Bullet } from "./bullet.js";
 import { Asteroid } from "./asteroid.js";
 import { Flame } from "./flame.js";
+
+import { SpaceScene } from "./scene.js";
 
 import { seededRnd } from "./rnd.js";
 
@@ -69,47 +70,31 @@ let viewframe;
 
 const gameActions = {
   zoomOut: () => {
-    viewframe.scale *= 0.9;
+    player.viewframe.scale *= 0.9;
   },
   zoomIn: () => {
-    viewframe.scale *= 1.1;
+    player.viewframe.scale *= 1.1;
   },
   moveUp: (f = 1) => {
-    if (ship.e < 10) {
+    if (player.e < 10) {
       return;
     }
-    const nv = sqnorm(ship.vel.x, ship.vel.y);
-    ship.forwardThrust(flameList);
-    const _vx = ship.vel.x - 0.1 * Math.cos(ship.r) * f;
-    const _vy = ship.vel.y - 0.1 * Math.sin(ship.r) * f;
-    const _nv = sqnorm(_vx, _vy);
-    if (_nv < 1e6) {
-      ship.vel.x = _vx;
-      ship.vel.y = _vy;
-    }
+    player.forwardThrust();
   },
   moveDown: (f = 1) => {
-    if (ship.e < 10) {
+    if (player.e < 10) {
       return;
     }
-    const nv = sqnorm(ship.vel.x, ship.vel.y);
-    ship.backThrust(flameList);
-    const _vx = ship.vel.x + 0.1 * Math.cos(ship.r) * f;
-    const _vy = ship.vel.y + 0.1 * Math.sin(ship.r) * f;
-    const _nv = sqnorm(_vx, _vy);
-    if (_nv < 1e6) {
-      ship.vel.x = _vx;
-      ship.vel.y = _vy;
-    }
+    player.backThrust();
   },
   moveRight: (f = 1) => {
-    ship.r += 0.03 * f;
+    player.yawRight();
   },
   moveLeft: (f = 1) => {
-    ship.r -= 0.03 * f;
+    player.yawLeft();
   },
   shoot: () => {
-    if (ship.e < 10) {
+    if (player.e < 10) {
       return;
     }
     const now = performance.now();
@@ -120,12 +105,11 @@ const gameActions = {
     //const [sx, sy] = rotate(15, 0, ship.r);
     //const [vx, vy] = rotate(2, 0, ship.r);
     //addBullets(ship.pos.x + sx, ship.pos.y + sy, ship.vel.x + vx, ship.vel.y + vy, ship.r)
-    ship.weapons[0].fire(ship, bulletList);
-    ship.weapons[1].fire(ship, bulletList);
+    player.weapons[0].fire(player, player.bulletList);
+    player.weapons[1].fire(player, player.bulletList);
   },
 };
 
-let flameList = [];
 let bulletList = [];
 let asteroids = [];
 let transients = [];
@@ -214,134 +198,36 @@ const focusTrap = document.getElementById("focus-trap");
 focusTrap.focus(); // Set focus to the hidden input
 
 const controller = handleControls(gameActions, keyMap, buttonMap);
-const logg = document.getElementById("logg");
-const planetTarget = document.getElementById("planet-target");
-const planetDistance = document.getElementById("planet-distance");
-const planetIdx = document.getElementById("planet-idx");
-const log = (f) => {
-  logg.innerHTML = f;
-};
-viewframe = new Viewframe(); //Container();
 
-ship = new Bobcat({
+const player = new Bobcat({
   pos: {
     x: 150000,
     y: 0,
   },
+  flameList: [],
+  bulletList: [], // This is a bit wonky, the scene will re-reference these
 });
 
-ship.generate();
+player.generate();
 
-const other = new Lynx({
+const spaceScene = new SpaceScene({
+  app: app,
+  player: player,
+  controller: controller,
+  id: 0,
+});
+
+/*const other = new Lynx({
   pos: {
     x: 150200,
     y: 200,
   },
 });
 
+other.prevShot = -1
 other.generate();
-
-//const texture = giantTexture(app)
-//const quad = await renderGiant(app);
-
-const starfield = new Starfield({
-  width: app.renderer.width,
-  height: app.renderer.height,
-});
-starfield.generate(app);
-starfield.attach(app);
-
-viewframe.attach(app);
-viewframe.scale = 1;
-
-viewframe.pos.x = ((-1 / viewframe.scale) * app.screen.width) / 2;
-viewframe.pos.y = ((-1 / viewframe.scale) * app.screen.height) / 2;
-ship.attach(viewframe);
-other.attach(viewframe);
-
-viewframe.vel = ship.vel;
-
-const pln = planets();
-
-console.log(pln);
-
-pln.map((p) => p.generate(app));
-pln.map((p) => p.attach(viewframe));
-
-const niceDistance = (dist) => {
-  if (dist < 1000) {
-    return String(Math.round(dist));
-  }
-  if (dist < 1000000) {
-    return (dist / 1000).toFixed(2) + "k";
-  }
-  return (dist / 1000000).toFixed(2) + "M";
-};
+other.attach(viewframe);*/
 
 app.ticker.add((delta) => {
-  const nv = sqnorm(ship.vel.x, ship.vel.y);
-  starfield.update(ship.vel);
-  viewframe.move(delta.deltaTime);
-  viewframe.update();
-  let scale = Math.min(viewframe.scale, 100 / (nv + 1)); // This prevents manual zooming
-  //if(nv > 1){
-  //if (scale < 1e-10) {
-  //  scale = 1e-10;
-  // This should have a faster option at some point?
-  //}
-  viewframe.scale = scale;
-  viewframe.pos.x = ship.pos.x - ((1 / scale) * app.screen.width) / 2;
-  viewframe.pos.y = ship.pos.y - ((1 / scale) * app.screen.height) / 2;
-  /*} else {
-    viewframe.scale = scale
-  }*/
-  let targetted = false;
-  for (let pl of pln) {
-    const dx = pl.pos.x - ship.pos.x;
-    const dy = pl.pos.y - ship.pos.y;
-    const angle = -Math.atan2(dy, dx);
-    const diff = Math.cos(angle + ship.r) - 1;
-
-    if (diff * diff < 1e-4) {
-      targetted = true;
-      //log(`${pl.kind} ${pl.p.idx}`)
-      planetIdx.innerHTML = pl.p.idx;
-      planetTarget.innerHTML = pl.kind.slice(1);
-      if (pl.kind === PlanetKinds.Sun) {
-        planetTarget.innerHTML = pl.name;
-      }
-      planetTarget.style.color = `rgb(${pl.averagedColor[0] * 255},${pl.averagedColor[1] * 255},${pl.averagedColor[2] * 255})`;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      planetDistance.innerHTML = niceDistance(dist);
-      break;
-    }
-  }
-  if (!targetted) {
-    planetIdx.innerHTML = "";
-    planetTarget.innerHTML = "";
-    planetDistance.innerHTML = "";
-  }
-
-  //viewframe.scale = nv > 0.2 ? 0.2 * 10000 /nv : 0.2
-  pln.map((p) => p.update(delta));
-  controller();
-
-  ship.update(delta);
-  other.update(delta);
-  flameList = flameList.filter((f) => !f.presentation?.destroyed);
-  bulletList = bulletList.filter((b) => !b.presentation?.destroyed);
-  for (let b of bulletList) {
-    if (!b.drawn) {
-      b.generate();
-      b.attach(viewframe);
-    }
-    b.update(delta);
-  }
-  for (let f of flameList) {
-    if (!f.drawn) {
-      f.generate();
-      f.attach(viewframe);
-    }
-    f.update(delta);
-  }
+  spaceScene.update(delta);
 });

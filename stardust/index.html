@@ -11,12 +11,18 @@
       body {
         margin: 0;
       }
-    </style>
-  </head>
-  <body>
-    <div
-      id="logg"
-      style="
+      #pid {
+        z-index: 1000;
+        width: 20em;
+        position: absolute;
+        top: 0.2em;
+        right: 2em;
+        color: yellow;
+        font-size: 2vh;
+        display: flex;
+        column-gap: 2em;
+      }
+      #logg {
         z-index: 1000;
         width: 20em;
         position: absolute;
@@ -25,11 +31,20 @@
         font-size: 2vh;
         display: flex;
         column-gap: 2em;
-      "
-    >
+      }
+    </style>
+  </head>
+  <body>
+    <div id="logg">
       <span id="planet-idx"></span>
       <span id="planet-target"></span>
       <span id="planet-distance"></span>
+    </div>
+    <div id="pid">
+      <span style="width: 4em" id="pid-dt"></span>
+      <span style="width: 4em" id="pid-p"></span>
+      <span style="width: 4em" id="pid-i"></span>
+      <span style="width: 4em" id="pid-d"></span>
     </div>
     <input
       type="text"

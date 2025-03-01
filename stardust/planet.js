@@ -1,4 +1,11 @@
-export { planets };
+export {
+  EarthLikePlanet,
+  GasGiantPlanet,
+  IceGiantPlanet,
+  RockyPlanet,
+  AtmospherePlanet,
+  Sun,
+};
 
 import { Mesh as SMesh, Meshes } from "./mesh.js";
 import { Base1 } from "./base.js";
@@ -57,81 +64,6 @@ const averageColors = (...colors) => {
 };
 
 // TODO: This should be a renderer in System
-
-const planets = () => {
-  const system = new System({ id: 0 });
-  const nplanets = system.planets.length;
-  const rnd = seededRnd(42);
-  let objs = [];
-  const sun = new Sun({
-    seed: 0,
-    radius: system.starSize,
-    e: 100000,
-    p: { idx: -1 },
-    name: system.name,
-    color: system.starColor,
-  });
-  objs.push(sun);
-  let angles = [];
-  for (let i = 0; i < nplanets; i++) {
-    angles.push((i * 2 * Math.PI) / nplanets);
-  }
-  const shuffledAngles = angles.slice().sort(() => Math.random() - 0.5);
-  const angleShift = Math.random() * 2 * Math.PI;
-  for (let i = 0; i < nplanets; i++) {
-    const p = system.planets[i];
-    let planet;
-    const a = shuffledAngles[i] + angleShift;
-    console.log(a);
-    if (p.kind === PlanetKinds.EarthLike) {
-      planet = new EarthLikePlanet({
-        seed: i,
-        pos: { x: p.distance * Math.cos(a), y: p.distance * Math.sin(a) },
-        radius: p.radius,
-        e: 100000,
-        p: p,
-      });
-    }
-    if (p.kind === PlanetKinds.Rocky) {
-      planet = new RockyPlanet({
-        seed: i,
-        pos: { x: p.distance * Math.cos(a), y: p.distance * Math.sin(a) },
-        radius: p.radius,
-        e: 100000,
-        p: p,
-      });
-    }
-    if (p.kind === PlanetKinds.Atmosphere) {
-      planet = new AtmospherePlanet({
-        seed: i,
-        pos: { x: p.distance * Math.cos(a), y: p.distance * Math.sin(a) },
-        radius: p.radius,
-        e: 100000,
-        p: p,
-      });
-    }
-    if (p.kind === PlanetKinds.GasGiant) {
-      planet = new GasGiantPlanet({
-        seed: i,
-        pos: { x: p.distance * Math.cos(a), y: p.distance * Math.sin(a) },
-        radius: p.radius,
-        e: 100000,
-        p: p,
-      });
-    }
-    if (p.kind === PlanetKinds.IceGiant) {
-      planet = new IceGiantPlanet({
-        seed: i,
-        pos: { x: p.distance * Math.cos(a), y: p.distance * Math.sin(a) },
-        radius: p.radius,
-        e: 100000,
-        p: p,
-      });
-    }
-    objs.push(planet);
-  }
-  return objs;
-};
 
 const planets_ = () => {
   const rad = 100;

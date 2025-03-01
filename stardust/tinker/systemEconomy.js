@@ -330,7 +330,7 @@ const firearmsId = registry.registerCommodity(
   "Weapons.",
   120,
   true,
-); // Contraband status except for Anarchy systems
+);
 const alienItemsId = registry.registerCommodity(
   "Alien Items",
   "Rare and unusual items.",

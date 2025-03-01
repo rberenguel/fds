@@ -32,6 +32,7 @@ class PlasmaBullet extends Base1 {
       fill: 0x00ffff,
     });
     super({ ...props, meshes: [mesh] });
+    this.e = props.e ?? 10;
   }
 
   generate() {
@@ -42,16 +43,18 @@ class PlasmaBullet extends Base1 {
   update(delta) {
     super.update(delta);
     super.move(delta.deltaTime);
-    if (!this.presentation) return;
-    if (this.presentation.destroyed) return;
-    this.presentation.rotation = this.r;
-    this.e -= 0.1;
+    this.e -= Math.random() * 0.15 + 0.1;
     const ne = Math.max(0, Math.min(1, this.e / 10));
-    const red = 0;
+    const red = Math.floor(255 * (1 - ne)); // Cools to red
     const green = Math.floor(255 * ne);
-    const blue = Math.floor(255 * ne);
+    const blue = Math.floor(255 * ne * ne);
     const hexColor = (red << 16) | (green << 8) | blue;
-    this.presentation.tint = hexColor;
+    for (let presentation of this.presentations) {
+      if (!presentation) return;
+      if (presentation.destroyed) return;
+      presentation.rotation = this.r;
+      presentation.tint = hexColor;
+    }
   }
 }
 
@@ -65,7 +68,7 @@ class PlasmaGun extends Gun {
     // Shooter is a reference to whoever is shooting, so we can take
     // direction and velocity vector.
     const rf = rnd();
-    const spread = 0; //-0.01 + 0.02 * rf;
+    const spread = -0.01 + 0.02 * rf;
     const ivx = Math.cos(shooter.r + spread);
     const ivy = Math.sin(shooter.r + spread);
     const vx = PlasmaGun.ACCEL * ivx + shooter.vel.x;
@@ -82,7 +85,7 @@ class PlasmaGun extends Gun {
         y: vy,
       },
       r: shooter.r,
-      e: 12,
+      e: 10,
       scale: shooter.scale,
     });
     bulletList.push(b);
