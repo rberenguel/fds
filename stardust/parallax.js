@@ -80,7 +80,7 @@ class Starfield {
     this.width = 2 * (props.width ?? 800);
     this.height = 2 * (props.height ?? 600);
     this.dStarfield = props.dStarfield ?? 20000;
-    this.dDustfield = props.dDustfield ?? 80000;
+    this.dDustfield = props.dDustfield ?? 800000;
     this.starfieldPts = [];
     this.dustfieldPts = [];
     for (let i = 0; i < this.width; i++) {
@@ -201,7 +201,7 @@ class Starfield {
     for (const star of this.stars) {
       star.x -= (vel.x ?? 0) * Starfield.starfieldParallaxFactor;
       star.y -= (vel.y ?? 0) * Starfield.starfieldParallaxFactor;
-      wrap(star, { w: this.width, h: this.height });
+      wrap(star, { wmin: 0, wmax: this.width, hmin: 0, hmax: this.height });
       star.skew.x = skew / 2;
       star.scale = 1 + skew / (nv + 1);
       star.rotation = angle;
@@ -209,10 +209,17 @@ class Starfield {
     for (const dust of this.dust) {
       dust.x -= (vel.x ?? 0) * Starfield.dustfieldParallaxFactor;
       dust.y -= (vel.y ?? 0) * Starfield.dustfieldParallaxFactor;
-      wrap(dust, { w: this.width, h: this.height });
+      const x = dust.x;
+      const y = dust.y;
+      wrap(dust, { wmin: 0, wmax: this.width, hmin: 0, hmax: this.height });
+      if (dust.x != x || dust.y != y) {
+        //console.log(dust)
+      }
       dust.skew.x = skew;
       dust.scale = 1 + skew;
       dust.rotation = angle;
     }
+    //this.starContainer.x += 0.01;
+    //this.starContainer.y = this.height / 4;
   }
 }

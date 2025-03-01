@@ -22,17 +22,17 @@ const easeInSq = (x) => {
 };
 
 const wrap = (thing, a) => {
-  if (thing.x > a.width) {
-    thing.x = 0;
+  if (thing.x > a.wmax) {
+    thing.x = a.wmin;
   }
-  if (thing.y > a.height) {
-    thing.y = 0;
+  if (thing.y > a.hmax) {
+    thing.y = a.hmin;
   }
-  if (thing.x < 0) {
-    thing.x = a.width;
+  if (thing.x < a.wmin) {
+    thing.x = a.wmax;
   }
-  if (thing.y < 0) {
-    thing.y = a.height;
+  if (thing.y < a.hmin) {
+    thing.y = a.hmax;
   }
 };
 

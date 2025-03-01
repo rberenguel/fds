@@ -30,11 +30,11 @@ const log = (f) => {
   logg.innerHTML = f;
 };
 
-const linScale = (scale) => {
-  const minScale = 1e-5;
-  const maxScale = 1;
-  const minOutput = 0.5;
-  const maxOutput = 1;
+const linScale = (
+  scale,
+  props = { minScale: 1e-5, maxScale: 1, minOutput: 0.5, maxOutput: 1 },
+) => {
+  const { minScale, maxScale, minOutput, maxOutput } = props;
 
   // Clamp the scale factor to the valid range
   const clampedScale = Math.max(minScale, Math.min(maxScale, scale));
@@ -55,7 +55,14 @@ class SpaceScene extends Scene {
     this.player = props.player; // This is required
     this.app = props.app; // This is required, but likely I don't want it in super (non-pixi scenes)
     this.systemId = props.id; // This will very likely be required
-    this.viewframe = new Viewframe();
+
+    // Ordering is important:
+    // - Background:
+    //     - Nebula
+    //     - Starfield/dustfield
+    // - Viewframe
+    //     - Player
+    //     - Planets / other stuff
     this.starfield = new Starfield({
       width: this.app.renderer.width,
       height: this.app.renderer.height,
@@ -63,22 +70,30 @@ class SpaceScene extends Scene {
     this.starfield.generate(this.app);
     this.starfield.attach(this.app);
 
+    this.viewframe = new Viewframe();
+
+    this.renderedSystem = new RenderedSystem({
+      id: this.systemId,
+      app: this.app,
+      viewframe: this.viewframe,
+    });
+    this.renderedSystem.attachNebula();
+
     this.viewframe.attach(this.app);
     this.viewframe.scale = 1;
+    this.player.attach(this.viewframe);
+    this.renderedSystem.attachPlanets();
+
+    this.starfield.viewframe = this.viewframe; // TODO Trying to see if I can shift with this
 
     this.viewframe.pos.x =
       ((-1 / this.viewframe.scale) * this.app.screen.width) / 2;
     this.viewframe.pos.y =
       ((-1 / this.viewframe.scale) * this.app.screen.height) / 2;
 
-    this.player.attach(this.viewframe);
     this.player.viewframe = this.viewframe; // Linking to have zoom
     this.viewframe.vel = this.player.vel;
-    this.renderedSystem = new RenderedSystem({
-      id: this.systemId,
-      app: this.app,
-      viewframe: this.viewframe,
-    });
+
     this.objectList = this.renderedSystem.planetObjects; // This has to have more stuff
     this.waypoints = this.renderedSystem.planetObjects; // TODO this will have more stuff
     this.bulletList = props.bulletList;
@@ -93,7 +108,9 @@ class SpaceScene extends Scene {
     this.viewframe.move(delta.deltaTime);
     this.viewframe.update();
     let scale = Math.min(this.viewframe.scale, 100 / (nv + 1)); // TODO This prevents/screws with manual zooming
+    //console.log(scale)
     this.starfield.starContainer.scale = linScale(scale);
+    this.starfield.dustContainer.scale = linScale(scale);
     if (this.renderedSystem.nebulaSprite) {
       this.renderedSystem.nebulaSprite.scale = linScale(scale);
     }
@@ -124,6 +141,12 @@ class SpaceScene extends Scene {
       }
       otherShip.update(delta);
     }
+    scale = linScale(scale, {
+      minScale: 1e-15,
+      maxScale: 1,
+      minOutput: 1e-3,
+      maxOutput: 1,
+    });
     this.viewframe.scale = scale;
     this.viewframe.pos.x =
       this.player.pos.x - ((1 / scale) * this.app.screen.width) / 2;

@@ -19,19 +19,27 @@ class RenderedSystem extends System {
     this.viewframe = props.viewframe; // Required
     this.planetObjects = this._planetObjects();
     this.planetObjects.map((p) => p.generate(this.app));
-    this.planetObjects.map((p) => p.attach(this.viewframe));
     if (this.hasNebula) {
-      const nebula = new NebulaGenerator(
-        2 * this.app.renderer.width,
-        2 * this.app.renderer.height,
-      );
+      const nebula = new NebulaGenerator({
+        width: 2 * this.app.renderer.width,
+        height: 2 * this.app.renderer.height,
+        id: props.id,
+      });
       this.nebulaSprite = new Sprite(nebula.nebulaTexture);
       this.nebulaSprite.pivot.x = nebula.width / 2;
       this.nebulaSprite.pivot.y = nebula.height / 2;
       this.nebulaSprite.x = nebula.width / 4;
       this.nebulaSprite.y = nebula.height / 4;
-      this.app.stage.addChild(this.nebulaSprite);
     }
+  }
+
+  attachPlanets() {
+    console.log(this.viewframe);
+    this.planetObjects.map((p) => p.attach(this.viewframe));
+  }
+
+  attachNebula() {
+    if (this.hasNebula) this.app.stage.addChild(this.nebulaSprite);
   }
 
   update(delta) {
@@ -61,7 +69,6 @@ class RenderedSystem extends System {
       const p = this.planets[i];
       let planet;
       const a = shuffledAngles[i] + angleShift;
-      console.log(a);
       if (p.kind === PlanetKinds.EarthLike) {
         planet = new EarthLikePlanet({
           seed: i,
