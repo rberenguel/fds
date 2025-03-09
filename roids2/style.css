@@ -2,18 +2,6 @@ body {
   margin: 0;
 }
 
-@media screen and (orientation: portrait) {
-  body {
-    transform: rotate(90deg);
-    transform-origin: top left;
-    width: 100vh; /* Viewport height as width */
-    height: 100vw; /* Viewport width as height */
-    position: fixed;
-    top: 0;
-    left: 0;
-  }
-}
-
 #info {
   width: 100%;
   position: absolute;
