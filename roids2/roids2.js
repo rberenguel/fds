@@ -81,8 +81,11 @@ const gameActions = {
   },
 };
 
-const app = new Application();
-await app.init({ width: window.innerWidth, height: window.innerHeight });
+const app = new Application({	autoResize: true,
+  resolution: devicePixelRatio });
+await app.init({ width: window.screen.height, height: window.screen.width }); // Ugh?
+console.log(window.outerWidth)
+console.log(app.renderer.width)
 
 document.body.appendChild(app.canvas);
 
@@ -253,3 +256,41 @@ app.ticker.add((delta) => {
   }
   spaceScene.update(delta);
 });
+
+
+function resize() {
+
+	// Get the p
+	const parent = app.view.parentNode;
+   
+	// Resize the renderer
+	app.renderer.resize(parent.clientWidth, parent.clientHeight);
+  
+  // You can use the 'screen' property as the renderer visible
+  // area, this is more useful than view.width/height because
+  // it handles resolution
+  rect.position.set(app.screen.width, app.screen.height);
+}
+
+resize();
+
+/*
+function resizeApp() {
+  if (window.visualViewport) {
+      app.renderer.resize(window.visualViewport.width, window.visualViewport.height);
+  } else {
+      app.renderer.resize(window.outerWidth, window.outerHeight); // Fallback
+  }
+}
+
+// Initial resize
+resizeApp();
+
+// Resize on visual viewport changes
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', resizeApp);
+}
+
+//resize on window resize as a fallback.
+window.addEventListener('resize', resizeApp);
+*/
