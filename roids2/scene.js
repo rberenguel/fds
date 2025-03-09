@@ -6,7 +6,7 @@ import { Starfield } from "../stardust/parallax.js";
 import { sqnorm, wrapPos } from "../stardust/math.js";
 //import { PlanetKinds } from "./tinker/system.js";
 import { NebulaGenerator } from "../stardust/tinker/nebula.js";
-import { Sprite } from "../../libs/3rdparty/pixi.mjs";
+import { Sprite } from "../libs/3rdparty/pixi.mjs";
 import { otherControl } from "../stardust/pid.js";
 
 import { Asteroid } from "./asteroid.js";
