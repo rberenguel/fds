@@ -1,10 +1,11 @@
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   overflow: hidden; /* Prevent scrollbars */
 }
 canvas {
-  object-fit: cover
+  object-fit: cover;
 }
 
 #info {

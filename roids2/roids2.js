@@ -81,11 +81,10 @@ const gameActions = {
   },
 };
 
-const app = new Application({	autoResize: true,
-  resolution: devicePixelRatio });
+const app = new Application({ autoResize: true, resolution: devicePixelRatio });
 await app.init({ width: window.screen.width, height: window.screen.height }); // Ugh?
-console.log(window.outerWidth)
-console.log(app.renderer.width)
+console.log(window.outerWidth);
+console.log(app.renderer.width);
 
 document.body.appendChild(app.canvas);
 

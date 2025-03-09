@@ -56,13 +56,22 @@ const bindGamepadHandlers = () => {
   });
 };
 
+const glassVisible = () =>
+  document.getElementById("metap-glass").style.display === "block";
+
 const bindKeyHandlers = () => {
   document.addEventListener("keydown", (event) => {
+    if (glassVisible()) {
+      return;
+    }
     keys[event.code] = true; // Mark the key as pressed
     event.preventDefault();
   });
 
   document.addEventListener("keyup", (event) => {
+    if (glassVisible()) {
+      return;
+    }
     keys[event.code] = false; // Mark the key as released
     event.preventDefault();
   });

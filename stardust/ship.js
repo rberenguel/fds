@@ -5,7 +5,7 @@ import { Base1 } from "./base.js";
 import { PlasmaGun } from "./weapon.js";
 import { rotate, sqnorm } from "./math.js";
 
-import { Flame } from "./flame.js"
+import { Flame } from "./flame.js";
 import { seededRnd } from "./rnd.js";
 
 const rnd = seededRnd(performance.now());
@@ -184,7 +184,7 @@ class Lynx extends Ship {
     }
 
     super({ ...props, meshes: [mesh], weapons: weapons });
-    this.mass = 7
+    this.mass = 7;
   }
 }
 
@@ -225,6 +225,6 @@ class Bobcat extends Ship {
     }
 
     super({ ...props, meshes: [mesh], weapons: weapons });
-    this.mass = 10
+    this.mass = 10;
   }
 }

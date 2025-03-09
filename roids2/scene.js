@@ -274,7 +274,6 @@ class SpaceScene extends Scene {
           a.transferMomentum(this.player);
           if (a.e < 0) {
             newAsteroids.push(...a.split(this.player.vel));
-            console.log(newAsteroids);
           } else {
             a.addCrack(this.player);
           }
