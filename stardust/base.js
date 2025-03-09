@@ -96,6 +96,7 @@ class Base1 {
     };
     this.r = props?.r ?? 0;
     this.e = props?.e ?? 0;
+    this.mass = props?.mass ?? 1;
     this.meshes = props?.meshes;
   }
 

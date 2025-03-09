@@ -33,6 +33,7 @@ class PlasmaBullet extends Base1 {
     });
     super({ ...props, meshes: [mesh] });
     this.e = props.e ?? 10;
+    this.mass = props.mass ?? 3;
   }
 
   generate() {

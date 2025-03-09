@@ -1,4 +1,4 @@
-export { dist, sqdist, sqnorm, rotate, easeInSq, wrap };
+export { dist, sqdist, sqnorm, rotate, easeInSq, wrap, wrapPos };
 
 const rotate = (x1, x2, ang) => {
   const cos = Math.cos(ang);
@@ -33,6 +33,21 @@ const wrap = (thing, a) => {
   }
   if (thing.y < a.hmin) {
     thing.y = a.hmax;
+  }
+};
+
+const wrapPos = (thing, a) => {
+  if (thing.pos.x > a.wmax) {
+    thing.pos.x = a.wmin;
+  }
+  if (thing.pos.y > a.hmax) {
+    thing.pos.y = a.hmin;
+  }
+  if (thing.pos.x < a.wmin) {
+    thing.pos.x = a.wmax;
+  }
+  if (thing.pos.y < a.hmin) {
+    thing.pos.y = a.hmax;
   }
 };
 

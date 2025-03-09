@@ -5,52 +5,10 @@ import { Base1 } from "./base.js";
 import { PlasmaGun } from "./weapon.js";
 import { rotate, sqnorm } from "./math.js";
 
+import { Flame } from "./flame.js"
 import { seededRnd } from "./rnd.js";
 
 const rnd = seededRnd(performance.now());
-
-class Flame extends Base1 {
-  static ACCEL = 0.4;
-  constructor(props) {
-    const mesh = new Mesh({
-      kind: Meshes.kCircle,
-      center: [0, 0],
-      radius: 10,
-      fill: 0xffff00,
-    });
-    super({ ...props, meshes: [mesh] });
-    this.e = props.e ?? 10;
-  }
-
-  generate() {
-    super.generate();
-    //this.presentation.scale.set(this.scale)
-  }
-
-  update(delta) {
-    super.update(delta);
-    super.move(delta.deltaTime);
-
-    this.e -= 0.3;
-    const ne = Math.max(0, Math.min(1, this.e / 10));
-    const red = Math.floor(255 * ne); // Red decreases from 255 to 0
-    const green = Math.floor(255 * ne * ne); // Green decreases faster
-    const blue = 0;
-    const hexColor = (red << 16) | (green << 8) | blue;
-    for (let presentation of this.presentations) {
-      if (!presentation) {
-        this.presentation = { destroyed: true };
-        return;
-      }
-      if (presentation.destroyed) {
-        this.presentation = { destroyed: true };
-        return;
-      }
-      presentation.rotation = this.r;
-      presentation.tint = hexColor;
-    }
-  }
-}
 
 class Ship extends Base1 {
   static kind = "kShip";
@@ -191,7 +149,7 @@ class Ship extends Base1 {
   }
 }
 
-class Bobcat extends Ship {
+class Lynx extends Ship {
   constructor(props) {
     const mesh = new Mesh({
       kind: Meshes.kPoly,
@@ -226,10 +184,11 @@ class Bobcat extends Ship {
     }
 
     super({ ...props, meshes: [mesh], weapons: weapons });
+    this.mass = 7
   }
 }
 
-class Lynx extends Ship {
+class Bobcat extends Ship {
   constructor(props) {
     const mesh = new Mesh({
       kind: Meshes.kPoly,
@@ -266,5 +225,6 @@ class Lynx extends Ship {
     }
 
     super({ ...props, meshes: [mesh], weapons: weapons });
+    this.mass = 10
   }
 }
