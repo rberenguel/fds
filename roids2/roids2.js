@@ -83,7 +83,7 @@ const gameActions = {
 
 const app = new Application({	autoResize: true,
   resolution: devicePixelRatio });
-await app.init({ width: window.screen.height, height: window.screen.width }); // Ugh?
+await app.init({ width: window.screen.width, height: window.screen.height }); // Ugh?
 console.log(window.outerWidth)
 console.log(app.renderer.width)
 
@@ -256,23 +256,6 @@ app.ticker.add((delta) => {
   }
   spaceScene.update(delta);
 });
-
-
-function resize() {
-
-	// Get the p
-	const parent = app.view.parentNode;
-   
-	// Resize the renderer
-	app.renderer.resize(parent.clientWidth, parent.clientHeight);
-  
-  // You can use the 'screen' property as the renderer visible
-  // area, this is more useful than view.width/height because
-  // it handles resolution
-  rect.position.set(app.screen.width, app.screen.height);
-}
-
-resize();
 
 /*
 function resizeApp() {
