@@ -59,10 +59,10 @@ const gameActions = {
     player.backThrust();
   },
   moveRight: (f = 1) => {
-    player.yawRight();
+    player.yawRight(f);
   },
   moveLeft: (f = 1) => {
-    player.yawLeft();
+    player.yawLeft(f);
   },
   shoot: () => {
     if (player.e < 10) {
@@ -81,6 +81,24 @@ const gameActions = {
   },
 };
 
+const isLandscape = () =>
+  window.screen.orientation.angle === 90 ||
+  window.screen.orientation.angle === -90 ||
+  window.screen.orientation.type.startsWith("landscape");
+
+const isMobile = () => {
+  const userAgent = navigator.userAgent.toLowerCase();
+  return /android|iphone|ipad|ipod|mobi/i.test(userAgent);
+};
+
+const needsStandalone = () => {
+  const standalone = window.navigator.standalone === true;
+  const devel =
+    window.location.hostname.startsWith("192") ||
+    window.location.hostname.startsWith("127");
+  return isMobile() && !standalone && !devel;
+};
+
 const landscapeDimensions = getLandscapeDimensions(); // Renamed variable
 console.log(landscapeDimensions);
 const app = new Application({
@@ -97,9 +115,6 @@ await app.init({
   height: landscapeDimensions.height,
 }); // Ugh?
 
-console.log(window.outerWidth);
-console.log(app.renderer.width);
-
 document.body.appendChild(app.canvas);
 
 // Enable interactivity
@@ -108,7 +123,7 @@ app.renderer.view.tabIndex = -1;
 // Make sure the whole canvas area is interactive, not just the circle.
 app.stage.hitArea = app.screen;
 
-const vPadDisplacement = Math.min(app.renderer.width, app.renderer.height) / 6;
+const vPadDisplacement = Math.min(app.renderer.width, app.renderer.height) / 30;
 
 const virtualPad = new VirtualPad({
   gameActions: gameActions,
@@ -161,10 +176,14 @@ focusTrap.focus(); // Set focus to the hidden input
 
 const controller = handleControls(gameActions, keyMap, buttonMap);
 
+const scale = isMobile() ? 0.12 : SpaceScene.MAXSCALE;
+
+console.info("Generating player");
+
 const player = new Lynx({
   pos: {
-    x: (0.5 * app.renderer.width) / SpaceScene.MAXSCALE,
-    y: (0.5 * app.renderer.height) / SpaceScene.MAXSCALE,
+    x: (0.5 * app.renderer.width) / scale,
+    y: (0.5 * app.renderer.height) / scale,
   },
 });
 
@@ -176,6 +195,7 @@ let spaceScene = new SpaceScene({
   app: app,
   player: player,
   controller: controller,
+  scale: scale,
   id: 0, // TODO remove
 });
 
@@ -191,8 +211,8 @@ const commands = [
     lambda: () => {
       player.lives = 3;
       player.pos = {
-        x: (0.5 * app.renderer.width) / SpaceScene.MAXSCALE,
-        y: (0.5 * app.renderer.height) / SpaceScene.MAXSCALE,
+        x: (0.5 * app.renderer.width) / scale,
+        y: (0.5 * app.renderer.height) / scale,
       };
       for (let a of spaceScene.asteroids) {
         a.e = -1;
@@ -239,20 +259,6 @@ document.getElementById("menu").addEventListener("click", (ev) => {
 });
 
 let countDown = 0;
-
-const isLandscape = () =>
-  window.screen.orientation.angle === 90 ||
-  window.screen.orientation.angle === -90 ||
-  window.screen.orientation.type.startsWith("landscape");
-const needsStandalone = () => {
-  const userAgent = navigator.userAgent.toLowerCase();
-  const mobile = /android|iphone|ipad|ipod|mobi/i.test(userAgent);
-  const standalone = window.navigator.standalone === true;
-  const devel =
-    window.location.hostname.startsWith("192") ||
-    window.location.hostname.startsWith("127");
-  return mobile && !standalone && !devel;
-};
 
 app.ticker.add((delta) => {
   if (metaP.metaPGlass.style.display === "block") {
@@ -307,8 +313,8 @@ app.ticker.add((delta) => {
 
 function getLandscapeDimensions() {
   // Renamed function
-  const screenWidth = window.screen.width;
-  const screenHeight = window.screen.height;
+  const screenWidth = window.innerWidth;
+  const screenHeight = window.innerHeight;
 
   if (screenWidth >= screenHeight) {
     return { width: screenWidth, height: screenHeight };

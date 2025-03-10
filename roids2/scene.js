@@ -58,6 +58,7 @@ class SpaceScene extends Scene {
     this.player = props.player; // This is required
     this.app = props.app; // This is required, but likely I don't want it in super (non-pixi scenes)
     this.score = 0;
+    this.scale = props.scale ?? SpaceScene.MAXSCALE;
 
     // Ordering is important:
     // - Background:
@@ -89,7 +90,7 @@ class SpaceScene extends Scene {
     this.app.stage.addChild(this.nebulaSprite);
 
     this.viewframe.attach(this.app);
-    this.viewframe.scale = SpaceScene.MAXSCALE;
+    this.viewframe.scale = this.scale;
     this.player.attach(this.viewframe);
 
     this.starfield.viewframe = this.viewframe; // TODO Trying to see if I can shift with this
@@ -108,19 +109,19 @@ class SpaceScene extends Scene {
       this.player.pos.y -
       ((1 / this.viewframe.scale) * this.app.screen.height) / 2;
 
-    this.starfield.starContainer.scale = linScale(SpaceScene.MAXSCALE);
-    this.starfield.dustContainer.scale = linScale(SpaceScene.MAXSCALE);
+    this.starfield.starContainer.scale = linScale(this.scale);
+    this.starfield.dustContainer.scale = linScale(this.scale);
     this.addRandomAsteroids(5);
   }
 
   addRandomAsteroids(n) {
     for (let i = 0; i < n; i++) {
-      const x = (rnd() * this.app.renderer.width) / SpaceScene.MAXSCALE,
-        y = (rnd() * this.app.renderer.height) / SpaceScene.MAXSCALE;
+      const x = (rnd() * this.app.renderer.width) / this.scale,
+        y = (rnd() * this.app.renderer.height) / this.scale;
       const vx = 4 - 8 * rnd(),
         vy = 4 - 8 * rnd();
       const sides = Math.floor(5 + rnd() * 6);
-      const size = (30 + rnd() * 30) / SpaceScene.MAXSCALE;
+      const size = (30 + rnd() * 30) / this.scale;
       const spin = 0.025 - rnd() * 0.05;
       const ast = new Asteroid({
         pos: { x: x, y: y },
@@ -271,12 +272,8 @@ class SpaceScene extends Scene {
           this.player.invulnerable = performance.now();
           this.player.lives -= 1;
           livesDiv.textContent = this.player.lives;
-          a.transferMomentum(this.player);
-          if (a.e < 0) {
-            newAsteroids.push(...a.split(this.player.vel));
-          } else {
-            a.addCrack(this.player);
-          }
+          newAsteroids.push(...a.split(this.player.vel));
+          console.log(newAsteroids);
         }
       }
       this.asteroids = this.asteroids.concat(newAsteroids);
@@ -284,6 +281,7 @@ class SpaceScene extends Scene {
 
     // Elastic collision across asteroids
     for (let i = 0; i < this.asteroids.length; i++) {
+      continue;
       for (let j = i + 1; j < this.asteroids.length; j++) {
         const zis = this.asteroids[i];
         const other = this.asteroids[j];

@@ -177,6 +177,7 @@ function pointInRect(x, y, rect) {
 
 class VirtualPad {
   constructor(props) {
+    console.log("WTF");
     this.ix = 0;
     this.iy = 0;
     this.gameActions = props.gameActions;
@@ -216,6 +217,7 @@ class VirtualPad {
   }
 
   touchMove(e, r) {
+    console.log("FOO");
     if (!this.padStarted) {
       return;
     }
@@ -224,12 +226,25 @@ class VirtualPad {
     // The r correction works here but is not natural at all
     const angle = Math.atan2(vy, vx); // - Math.PI/2 - r()
     const distance = Math.sqrt(vx * vx + vy * vy);
+    console.log(distance);
+    // Calculate strength based on distance
+    let strength = 0.2;
+    if (distance > this.displacement / 2) {
+      // Only apply strength if past a threshold
+      strength = Math.min(
+        1,
+        (distance - this.displacement / 2) / (this.displacement / 2),
+      ); // Normalize to 0-1, starting from displacement/2
+      strength *= 2;
+      console.log(strength);
+    }
+
     if (distance < this.displacement / 2) {
       return;
     }
     const normalizedAngle = (angle + 2 * Math.PI) % (2 * Math.PI);
     if (normalizedAngle >= (Math.PI * 7) / 4 || normalizedAngle < Math.PI / 4) {
-      this.startMoving("moveRight");
+      this.startMoving("moveRight", strength); // Pass strength
     } else if (
       normalizedAngle >= Math.PI / 4 &&
       normalizedAngle < (Math.PI * 3) / 4
@@ -237,12 +252,12 @@ class VirtualPad {
       if (distance < this.displacement) {
         return;
       }
-      this.startMoving("moveDown", 0.8);
+      this.startMoving("moveDown", strength * 0.8); // Pass strength, reduced for diagonals
     } else if (
       normalizedAngle >= (Math.PI * 3) / 4 &&
       normalizedAngle < (Math.PI * 5) / 4
     ) {
-      this.startMoving("moveLeft");
+      this.startMoving("moveLeft", strength); // Pass strength
     } else if (
       normalizedAngle >= (Math.PI * 5) / 4 &&
       normalizedAngle < (Math.PI * 7) / 4
@@ -250,60 +265,61 @@ class VirtualPad {
       if (distance < this.displacement) {
         return;
       }
-      this.startMoving("moveUp", 0.8);
+      this.startMoving("moveUp", strength * 0.8); // Pass strength, reduced for diagonals
     }
     if (distance < 0.6 * this.displacement) {
       return;
     }
     // Intermediate areas (combine actions)
     if (normalizedAngle >= Math.PI / 8 && normalizedAngle < (Math.PI * 3) / 8) {
-      this.startMoving("moveDown", 0.8);
-      this.startMoving("moveRight");
+      this.startMoving("moveDown", strength * 0.8); // Pass strength
+      this.startMoving("moveRight", strength); // Pass strength
     } else if (
       normalizedAngle >= (Math.PI * 5) / 8 &&
       normalizedAngle < (Math.PI * 7) / 8
     ) {
-      this.startMoving("moveDown", 0.8);
-      this.startMoving("moveLeft");
+      this.startMoving("moveDown", strength * 0.8); // Pass strength
+      this.startMoving("moveLeft", strength); // Pass strength
     } else if (
       normalizedAngle >= (Math.PI * 9) / 8 &&
       normalizedAngle < (Math.PI * 11) / 8
     ) {
-      this.startMoving("moveUp", 0.8);
-      this.startMoving("moveLeft");
+      this.startMoving("moveUp", strength * 0.8); // Pass strength
+      this.startMoving("moveLeft", strength); // Pass strength
     } else if (
       normalizedAngle >= (Math.PI * 13) / 8 &&
       normalizedAngle < (Math.PI * 15) / 8
     ) {
-      this.startMoving("moveUp", 0.8);
-      this.startMoving("moveRight");
+      this.startMoving("moveUp", strength * 0.8); // Pass strength
+      this.startMoving("moveRight", strength); // Pass strength
     }
   }
 
   startShooting() {
     if (!this.shooting) {
       this.shooting = true;
-      this.gameActions["shoot"]();
+      this.gameActions["shoot"](); // No strength for shooting in this example
 
       this.shootInterval = setInterval(() => {
-        this.gameActions["shoot"]();
+        this.gameActions["shoot"](); // No strength for shooting in this example
       }, this.repeatFire);
     }
   }
 
-  startMoving(direction, f) {
+  startMoving(direction, strength) {
+    // <--- Strength argument added
     if (this.padStarted) {
       if (this.moving == direction) {
         return;
       }
       this.moving = direction;
-      this.gameActions[direction](f);
+      this.gameActions[direction](strength); // <--- Pass strength to gameAction
       if (this.moveInterval) {
         clearInterval(this.moveInterval);
       }
 
       this.moveInterval = setInterval(() => {
-        this.gameActions[direction](f);
+        this.gameActions[direction](strength); // <--- Pass strength to gameAction in interval too
       }, this.repeatMove);
     }
   }
