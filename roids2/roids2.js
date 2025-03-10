@@ -81,8 +81,22 @@ const gameActions = {
   },
 };
 
-const app = new Application({ autoResize: true, resolution: devicePixelRatio });
-await app.init({ width: window.screen.width, height: window.screen.height }); // Ugh?
+const landscapeDimensions = getLandscapeDimensions(); // Renamed variable
+console.log(landscapeDimensions);
+const app = new Application({
+  autoResize: true,
+  resolution: 1,
+  width: landscapeDimensions.width,
+  height: landscapeDimensions.height,
+});
+
+//const app = new Application({ autoResize: true, resolution: devicePixelRatio });
+await app.init({
+  id: "roids2",
+  width: landscapeDimensions.width,
+  height: landscapeDimensions.height,
+}); // Ugh?
+
 console.log(window.outerWidth);
 console.log(app.renderer.width);
 
@@ -168,6 +182,7 @@ let spaceScene = new SpaceScene({
 const scoreDiv = document.getElementById("score");
 const livesDiv = document.getElementById("lives");
 const messagesDiv = document.getElementById("messages");
+const glass = document.getElementById("glass");
 
 const commands = [
   {
@@ -189,6 +204,7 @@ const commands = [
       livesDiv.textContent = 3;
       scoreDiv.textContent = 0;
       messagesDiv.style.display = "none";
+      glass.style.display = "none"; // Group messaging into method
     },
   },
   {
@@ -224,13 +240,44 @@ document.getElementById("menu").addEventListener("click", (ev) => {
 
 let countDown = 0;
 
+const isLandscape = () =>
+  window.screen.orientation.angle === 90 ||
+  window.screen.orientation.angle === -90 ||
+  window.screen.orientation.type.startsWith("landscape");
+const needsStandalone = () => {
+  const userAgent = navigator.userAgent.toLowerCase();
+  const mobile = /android|iphone|ipad|ipod|mobi/i.test(userAgent);
+  const standalone = window.navigator.standalone === true;
+  const devel =
+    window.location.hostname.startsWith("192") ||
+    window.location.hostname.startsWith("127");
+  return mobile && !standalone && !devel;
+};
+
 app.ticker.add((delta) => {
   if (metaP.metaPGlass.style.display === "block") {
     return;
   }
-  if (player.lives <= 0) {
-    messagesDiv.textContent = `Game over! Select 'Start' in the upper-left menu to play again`;
+  if (!isLandscape()) {
+    messagesDiv.textContent =
+      "Please rotate your device, this can only be played in landscape mode";
     messagesDiv.style.display = "block";
+    glass.style.display = "block";
+    app.canvas.style.display = "none";
+    return;
+  }
+  if (needsStandalone()) {
+    messagesDiv.textContent =
+      "Please install as a standalone web app (Usually share -> Add to Home Screen)";
+    messagesDiv.style.display = "block";
+    glass.style.display = "block";
+    app.canvas.style.display = "none";
+    return;
+  }
+  if (player.lives <= 0) {
+    messagesDiv.innerHTML = `Game over!<br/>Select <em>Start</em> in the upper-left menu to play again`;
+    messagesDiv.style.display = "block";
+    glass.style.display = "block";
     return;
   }
   if (spaceScene.asteroids.length === 0) {
@@ -239,9 +286,11 @@ app.ticker.add((delta) => {
       countDown = performance.now() + 3000; // Start the 3-second countdown
       messagesDiv.textContent = "";
       messagesDiv.style.display = "block";
+      glass.style.display = "block";
     } else if (performance.now() >= countDown) {
       // 3 seconds have passed
       messagesDiv.style.display = "none";
+      glass.style.display = "none";
       spaceScene.addRandomAsteroids(5);
       countDown = 0; // Reset the countdown
     } else {
@@ -255,6 +304,43 @@ app.ticker.add((delta) => {
   }
   spaceScene.update(delta);
 });
+
+function getLandscapeDimensions() {
+  // Renamed function
+  const screenWidth = window.screen.width;
+  const screenHeight = window.screen.height;
+
+  if (screenWidth >= screenHeight) {
+    return { width: screenWidth, height: screenHeight };
+  } else {
+    return { width: screenHeight, height: screenWidth };
+  }
+}
+
+function resizeForLandscape() {
+  // Renamed function
+  const landscapeDimensions = getLandscapeDimensions(); // Using renamed function
+  app.renderer.resize(landscapeDimensions.width, landscapeDimensions.height); // Using renamed variable
+  console.log(
+    `Resized for Landscape: Width: ${landscapeDimensions.width}, Height: ${landscapeDimensions.height}`,
+  );
+}
+
+function handleOrientationChange() {
+  if (window.screen.orientation === 90 || window.screen.orientation === -90) {
+    // Landscape check
+    document.body.classList.add("landscape");
+  } else {
+    document.body.classList.remove("landscape");
+  }
+  messagesDiv.style.display = "none";
+  glass.style.display = "none";
+  app.canvas.style.display = "block";
+  resizeForLandscape(); // Still resize your canvas (see next step)
+}
+
+window.addEventListener("orientationchange", handleOrientationChange);
+handleOrientationChange(); // Call once on load
 
 /*
 function resizeApp() {

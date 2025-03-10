@@ -331,7 +331,7 @@ class SpaceScene extends Scene {
       const dis = this.asteroids[i];
       if (dis.presentation?.destroyed) {
         if (dis.flameList.length > 0) {
-          this.flameList = [...dis.flameList]; // Save the flames
+          this.flameList.push(...dis.flameList); // Save the flames
         }
         this.asteroids.splice(i, 1);
       }

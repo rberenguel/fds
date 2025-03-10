@@ -3,9 +3,36 @@ body {
   margin: 0;
   padding: 0;
   overflow: hidden; /* Prevent scrollbars */
+  background-color: black;
+  width: 100vw;
+  height: 100vh;
+}
+.landscape {
+  transform: rotate(90deg) translateY(-100vw); /* Rotate and reposition */
+  width: 100vh; /* Swap width and height */
+  height: 100vw;
 }
 canvas {
   object-fit: cover;
+}
+
+#metap-modal {
+  font-size: 1rem;
+  top: 2rem;
+  left: 2rem;
+  transform: none;
+}
+
+#glass {
+  position: absolute;
+  width: calc(max(100vh, 100vw));
+  height: calc(max(100vh, 100vw));
+  background-color: transparent;
+  overflow: hidden;
+  top: 0;
+  left: 0;
+  z-index: 3;
+  backdrop-filter: blur(10px);
 }
 
 #info {
@@ -54,6 +81,8 @@ canvas {
 }
 
 #messages {
+  z-index: 5;
+  font-size: 1rem;
   position: fixed; /* Use fixed positioning to center relative to the viewport */
   top: 50%;
   left: 50%;
@@ -62,6 +91,5 @@ canvas {
   padding: 20px;
   border-radius: 10px;
   text-align: center;
-  font-size: 2em;
   font-family: "monoidregular";
 }
