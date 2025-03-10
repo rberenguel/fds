@@ -273,7 +273,6 @@ class SpaceScene extends Scene {
           this.player.lives -= 1;
           livesDiv.textContent = this.player.lives;
           newAsteroids.push(...a.split(this.player.vel));
-          console.log(newAsteroids);
         }
       }
       this.asteroids = this.asteroids.concat(newAsteroids);
@@ -281,6 +280,7 @@ class SpaceScene extends Scene {
 
     // Elastic collision across asteroids
     for (let i = 0; i < this.asteroids.length; i++) {
+      // TODO: fix the break up of asteroids so elastic collision works
       continue;
       for (let j = i + 1; j < this.asteroids.length; j++) {
         const zis = this.asteroids[i];

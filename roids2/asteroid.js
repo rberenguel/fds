@@ -69,9 +69,7 @@ class Asteroid extends Base1 {
   split(vel) {
     // vel is the incoming vector (say, bullet)
     // We want them to separate fast, but not very fast
-    console.log(vel);
     const nv = 0.1 * sqnorm(vel.x, vel.y) + 0.1;
-    console.log(nv);
     if (this.size / 2 < 50) {
       for (let i = 0; i < 10; i++) {
         this.addFlame(this.pos, this.vel);
