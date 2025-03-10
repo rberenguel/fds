@@ -177,7 +177,6 @@ function pointInRect(x, y, rect) {
 
 class VirtualPad {
   constructor(props) {
-    console.log("WTF");
     this.ix = 0;
     this.iy = 0;
     this.gameActions = props.gameActions;
@@ -217,7 +216,6 @@ class VirtualPad {
   }
 
   touchMove(e, r) {
-    console.log("FOO");
     if (!this.padStarted) {
       return;
     }
@@ -226,7 +224,6 @@ class VirtualPad {
     // The r correction works here but is not natural at all
     const angle = Math.atan2(vy, vx); // - Math.PI/2 - r()
     const distance = Math.sqrt(vx * vx + vy * vy);
-    console.log(distance);
     // Calculate strength based on distance
     let strength = 0.2;
     if (distance > this.displacement / 2) {
@@ -236,7 +233,6 @@ class VirtualPad {
         (distance - this.displacement / 2) / (this.displacement / 2),
       ); // Normalize to 0-1, starting from displacement/2
       strength *= 2;
-      console.log(strength);
     }
 
     if (distance < this.displacement / 2) {

@@ -129,7 +129,6 @@ class Ship extends Base1 {
   }
 
   yawLeft(f = 1) {
-    console.log(f, this.r);
     this.r -= 0.03 * f;
   }
 
