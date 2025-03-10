@@ -281,7 +281,7 @@ app.ticker.add((delta) => {
     return;
   }
   if (player.lives <= 0) {
-    messagesDiv.innerHTML = `Game over!<br/>Select <em>Start</em> in the upper-left menu to play again`;
+    messagesDiv.innerHTML = `Game over!<br/>Select <em>Play</em> in the upper-left menu to play again`;
     messagesDiv.style.display = "block";
     glass.style.display = "block";
     return;
@@ -307,6 +307,9 @@ app.ticker.add((delta) => {
   } else {
     // Asteroids are present, reset the countdown
     countDown = 0;
+  }
+  if(messagesDiv.style.display != "none"){
+    return;
   }
   spaceScene.update(delta);
 });
