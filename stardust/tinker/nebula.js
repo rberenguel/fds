@@ -4,7 +4,7 @@ import {
   Graphics,
   Sprite,
   RenderTexture,
-  Texture,
+  Texture as PixiTexture,
   Matrix,
 } from "../../libs/3rdparty/pixi.mjs";
 
@@ -80,7 +80,7 @@ class NebulaGenerator {
 
         //nebula(p, 100);
         // Create a PixiJS texture from the p5 canvas
-        this.nebulaTexture = Texture.from(renderer.canvas);
+        this.nebulaTexture = PixiTexture.from(renderer.canvas);
       };
     });
   }
