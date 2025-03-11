@@ -3,7 +3,7 @@ export { Scene, SpaceScene };
 import { Viewframe } from "../stardust/viewframe.js";
 import { Starfield } from "../stardust/parallax.js";
 //import { RenderedSystem } from "./tinker/renderedSystem.js";
-import { sqnorm, wrapPos } from "../stardust/math.js";
+import { sqnorm, wrapPos, dist } from "../stardust/math.js";
 //import { PlanetKinds } from "./tinker/system.js";
 import { NebulaGenerator } from "../stardust/tinker/nebula.js";
 import { Sprite } from "../libs/3rdparty/pixi.mjs";
@@ -77,17 +77,25 @@ class SpaceScene extends Scene {
     this.viewframe = new Viewframe();
 
     // TODO: nebula should own rendering itself
+    console.info("Generating nebula");
     const nebula = new NebulaGenerator({
-      width: 2 * this.app.renderer.width,
-      height: 2 * this.app.renderer.height,
+      width: this.app.renderer.width,
+      height: this.app.renderer.height,
       id: 20 * rnd(),
     });
-    this.nebulaSprite = new Sprite(nebula.nebulaTexture);
-    this.nebulaSprite.pivot.x = nebula.width / 2;
-    this.nebulaSprite.pivot.y = nebula.height / 2;
-    this.nebulaSprite.x = nebula.width / 4;
-    this.nebulaSprite.y = nebula.height / 4;
-    this.app.stage.addChild(this.nebulaSprite);
+    console.info("Nebula generated");
+    try {
+      this.nebulaSprite = new Sprite(nebula.nebulaTexture);
+      this.nebulaSprite.pivot.x = nebula.width / 2;
+      this.nebulaSprite.pivot.y = nebula.height / 2;
+      this.nebulaSprite.x = nebula.width / 2;
+      this.nebulaSprite.y = nebula.height / 2;
+      this.app.stage.addChild(this.nebulaSprite);
+      console.info("Nebula sprite added");
+    } catch (err) {
+      console.info("Nebula failed");
+      console.error(err);
+    }
 
     this.viewframe.attach(this.app);
     this.viewframe.scale = this.scale;
@@ -111,7 +119,7 @@ class SpaceScene extends Scene {
 
     this.starfield.starContainer.scale = linScale(this.scale);
     this.starfield.dustContainer.scale = linScale(this.scale);
-    this.addRandomAsteroids(5);
+    this.addRandomAsteroids(10);
   }
 
   addRandomAsteroids(n) {
@@ -120,8 +128,16 @@ class SpaceScene extends Scene {
         y = (rnd() * this.app.renderer.height) / this.scale;
       const vx = 4 - 8 * rnd(),
         vy = 4 - 8 * rnd();
-      const sides = Math.floor(5 + rnd() * 6);
-      const size = (30 + rnd() * 30) / this.scale;
+      const sides = Math.floor(15 + rnd() * 6);
+      const factor = Math.sqrt(
+        Math.min(this.app.renderer.width, this.app.renderer.height),
+      );
+      const size = (0.5 * factor + rnd() * factor) / this.scale;
+      if (dist(this.player.pos, { x: x, y: y }) < size) {
+        // Avoid the player
+        --i;
+        continue;
+      }
       const spin = 0.025 - rnd() * 0.05;
       const ast = new Asteroid({
         pos: { x: x, y: y },
@@ -281,7 +297,6 @@ class SpaceScene extends Scene {
     // Elastic collision across asteroids
     for (let i = 0; i < this.asteroids.length; i++) {
       // TODO: fix the break up of asteroids so elastic collision works
-      continue;
       for (let j = i + 1; j < this.asteroids.length; j++) {
         const zis = this.asteroids[i];
         const other = this.asteroids[j];
@@ -289,23 +304,22 @@ class SpaceScene extends Scene {
           continue;
         }
         if (zis.collision(other) || other.collision(zis)) {
-          // 1. Calculate the collision normal vector (direction of impact)
           const dx = other.pos.x - zis.pos.x;
           const dy = other.pos.y - zis.pos.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
+          let dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 1e-4) {
+            dist = 0.001;
+          }
           const nx = dx / dist; // Normalized normal x
           const ny = dy / dist; // Normalized normal y
 
-          // 2. Calculate relative velocity along the normal
           const v1n = zis.vel.x * nx + zis.vel.y * ny;
           const v2n = other.vel.x * nx + other.vel.y * ny;
 
-          // 3. Calculate new velocities along the normal (1D elastic collision)
-          const m1 = zis.mass;
-          const m2 = other.mass;
+          const m1 = zis.mass + 0.1;
+          const m2 = other.mass + 0.1;
 
-          // Elastic collision formula with energy loss (coefficient of restitution)
-          const restitution = 0.8; // Adjust this value (0 to 1) for energy loss
+          const restitution = 0.7;
           const newV1n =
             (v1n * (m1 - m2 * restitution) + v2n * m2 * (1 + restitution)) /
             (m1 + m2);
@@ -313,7 +327,6 @@ class SpaceScene extends Scene {
             (v2n * (m2 - m1 * restitution) + v1n * m1 * (1 + restitution)) /
             (m1 + m2);
 
-          // 4. Update asteroid velocities
           zis.vel.x += (newV1n - v1n) * nx;
           zis.vel.y += (newV1n - v1n) * ny;
           other.vel.x += (newV2n - v2n) * nx;

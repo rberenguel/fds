@@ -46,21 +46,25 @@ class Ship extends Base1 {
     this.presentation.fill(0xff8800);
   }
 
-  backThrust(f = 1) {
+  backThrust(f = 1, limit = 1e6) {
     this.actions.push("backThrust");
     const _vx = this.vel.x + 0.1 * Math.cos(this.r) * f;
     const _vy = this.vel.y + 0.1 * Math.sin(this.r) * f;
     const _nv = sqnorm(_vx, _vy);
-    if (_nv < 1e6) {
+    if (_nv < limit) {
       this.vel.x = _vx;
       this.vel.y = _vy;
-    }
-    for (let i = 0; i < 3; i++) {
-      this._backThrust();
+      for (let i = 0; i < 3; i++) {
+        this._backThrust();
+      }
+    } else {
+      if (Math.random() < 0.2) {
+        this._backThrust({ fill: 0x0099ff });
+      }
     }
   }
 
-  _backThrust() {
+  _backThrust(props = {}) {
     const rf = rnd();
     const spread = 0.3 - 0.6 * rf;
     const ivx = -Math.cos(this.r + spread);
@@ -80,26 +84,31 @@ class Ship extends Base1 {
       },
       r: this.r,
       e: 12,
+      fill: props.fill,
       //scale: this.scale
     });
     this.flameList.push(fl);
   }
 
-  forwardThrust(f = 1) {
+  forwardThrust(f = 1, limit = 1e6) {
     this.actions.push("forwardThrust");
     const _vx = this.vel.x - 0.1 * Math.cos(this.r) * f;
     const _vy = this.vel.y - 0.1 * Math.sin(this.r) * f;
     const _nv = sqnorm(_vx, _vy);
-    if (_nv < 1e6) {
+    if (_nv < limit) {
       this.vel.x = _vx;
       this.vel.y = _vy;
-    }
-    for (let i = 0; i < 3; i++) {
-      this._forwardThrust();
+      for (let i = 0; i < 3; i++) {
+        this._forwardThrust();
+      }
+    } else {
+      if (Math.random() < 0.2) {
+        this._forwardThrust({ fill: 0x0099ff });
+      }
     }
   }
 
-  _forwardThrust() {
+  _forwardThrust(props = {}) {
     const rf = rnd();
     const spread = 0.15 - 0.3 * rf;
     const ivx = -Math.cos(this.r + spread);
@@ -119,7 +128,7 @@ class Ship extends Base1 {
       },
       r: this.r,
       e: 12,
-      //scale: this.scale
+      fill: props.fill,
     });
     this.flameList.push(fl);
   }

@@ -1,0 +1,23 @@
+#msgs-glass {
+  position: absolute;
+  width: calc(max(100vh, 100vw));
+  height: calc(max(100vh, 100vw));
+  background-color: transparent;
+  overflow: hidden;
+  top: 0;
+  left: 0;
+}
+
+#msgs-main {
+  z-index: 5;
+  font-size: 1rem;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  padding: 20px;
+  border-radius: 10px;
+  text-align: center;
+  font-family: "monoidregular";
+}

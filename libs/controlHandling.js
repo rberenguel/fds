@@ -57,7 +57,7 @@ const bindGamepadHandlers = () => {
 };
 
 const glassVisible = () =>
-  document.getElementById("metap-glass").style.display === "block";
+  document.getElementById("metap-glass")?.style?.display === "block";
 
 const bindKeyHandlers = () => {
   document.addEventListener("keydown", (event) => {

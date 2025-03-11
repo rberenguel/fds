@@ -163,10 +163,10 @@ const otherControl = (other, ship, target, deltaTime, bulletList) => {
     other.forwardThrust();
   }
   //document.querySelector("#pid-dt").innerHTML = deltaTime.toFixed(3)
-  document.querySelector("#pid-p").innerHTML =
+  /*document.querySelector("#pid-p").innerHTML =
     other.positionPID._error.toFixed(0);
   document.querySelector("#pid-i").innerHTML =
     other.positionPID._integral.toFixed(0);
   document.querySelector("#pid-d").innerHTML =
-    other.positionPID._derivative.toFixed(0);
+    other.positionPID._derivative.toFixed(0);*/
 };

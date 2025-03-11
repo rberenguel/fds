@@ -14,11 +14,16 @@ class Asteroid extends Base1 {
     const size = props.size;
     const sides = props.sides;
     const vertices = Asteroid.getVertices(size, sides);
+    const energy = Math.floor(0.5 * sides * sides);
+    const ne = Math.max(0, Math.min(1, energy / 1000));
+    const g = Math.floor(Math.max(100, Math.min(200, ne)));
+    const hexColor = (g << 16) | (g << 8) | g;
     const mesh = new Mesh({
       kind: Meshes.kPoly,
       vertices: vertices,
-      color: 0xffffff,
-      fill: 0x808080,
+      color: 0x000000,
+      width: 2,
+      fill: hexColor,
     });
 
     super({ ...props, meshes: [mesh] });
@@ -27,8 +32,8 @@ class Asteroid extends Base1 {
     this.size = props.size;
     this.sides = props.sides;
     this.spin = props.spin;
-    this.e = Math.floor(0.1 * sides * size);
     this.mass = sides * size;
+    this.e = energy;
     this.flameList = []; // For explosions
     this.bulletList = []; // Dummy, but needed for the loops
   }
@@ -53,7 +58,7 @@ class Asteroid extends Base1 {
 
   collision(other) {
     // TODO: This could be in Base, somehow?
-    if (dist(other.pos, this.pos) < 1.05 * this.size) {
+    if (dist(other.pos, this.pos) < 1.2 * this.size) {
       return true;
     }
     return false;
@@ -70,9 +75,9 @@ class Asteroid extends Base1 {
     // vel is the incoming vector (say, bullet)
     // We want them to separate fast, but not very fast
     const nv = 0.1 * sqnorm(vel.x, vel.y) + 0.1;
-    if (this.size / 2 < 50) {
-      for (let i = 0; i < 10; i++) {
-        this.addFlame(this.pos, this.vel);
+    if (this.size / 2 < 40) {
+      for (let i = 0; i < 20; i++) {
+        this.addFlame(this.pos, this.vel, true);
       }
       return [];
     }
@@ -106,6 +111,7 @@ class Asteroid extends Base1 {
     for (let i = 0; i < 20 + rnd() * 10; i++) {
       this.addFlame(this.pos, this.vel, true);
     }
+    console.log(a1, a2);
     return [a1, a2];
   }
 
@@ -157,7 +163,7 @@ class Asteroid extends Base1 {
       q0y = from.pos.y - this.pos.y + s * vy;
     const [p1x, p1y] = rotate(p0x, p0y, -this.presentations[0].rotation);
     const [q1x, q1y] = rotate(q0x, q0y, -this.presentations[0].rotation);
-    const verts = [p1x, p1y, p1x + 5, p1y + 5, q1x, q1y];
+    const verts = [p1x, p1y, p1x + 8, p1y + 8, q1x, q1y];
     this.presentations[0].poly(verts);
     const red = Math.floor(10 + 80 * rnd());
     const hexColor = red << 16;
@@ -168,7 +174,7 @@ class Asteroid extends Base1 {
     const rf = rnd();
     let spread = 0.3 - 0.6 * rf;
     if (wiggle) {
-      spread = rnd();
+      spread = 2 * Math.PI * rnd();
     }
     const ivx = -Math.cos(this.r + spread);
     const ivy = -Math.sin(this.r + spread);

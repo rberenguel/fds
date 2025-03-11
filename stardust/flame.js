@@ -9,7 +9,7 @@ class Flame extends Base1 {
       kind: Meshes.kCircle,
       center: [0, 0],
       radius: 10,
-      fill: 0xffff00,
+      fill: props.fill ?? 0xffff00,
     });
     super({ ...props, meshes: [mesh] });
     this.e = props.e ?? 10;

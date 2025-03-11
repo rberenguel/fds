@@ -1,5 +1,6 @@
 import { set, get } from "../libs/3rdparty/idb-keyval.js";
 
+import { Msgs } from "../libs/msgs/msgs.js";
 import { Application } from "../libs/3rdparty/pixi.mjs";
 
 import {
@@ -13,6 +14,7 @@ import {
 import { Bobcat, Lynx } from "../stardust/ship.js";
 
 import { SpaceScene } from "./scene.js";
+import { sqnorm } from "../stardust/math.js";
 
 bindGamepadHandlers();
 bindKeyHandlers();
@@ -50,13 +52,15 @@ const gameActions = {
     if (player.e < 10) {
       return;
     }
-    player.forwardThrust();
+
+    player.forwardThrust(1, 500);
   },
   moveDown: (f = 1) => {
     if (player.e < 10) {
       return;
     }
-    player.backThrust();
+
+    player.backThrust(1, 500);
   },
   moveRight: (f = 1) => {
     player.yawRight(f);
@@ -80,6 +84,8 @@ const gameActions = {
     metaP.metaP();
   },
 };
+
+const msgs = new Msgs();
 
 const isLandscape = () =>
   window.screen.orientation.angle === 90 ||
@@ -199,10 +205,10 @@ let spaceScene = new SpaceScene({
   id: 0, // TODO remove
 });
 
+console.info("Scene constructed");
+
 const scoreDiv = document.getElementById("score");
 const livesDiv = document.getElementById("lives");
-const messagesDiv = document.getElementById("messages");
-const glass = document.getElementById("glass");
 
 const commands = [
   {
@@ -214,6 +220,11 @@ const commands = [
         x: (0.5 * app.renderer.width) / scale,
         y: (0.5 * app.renderer.height) / scale,
       };
+      player.vel = {
+        x: 0,
+        y: 0,
+      };
+      player.r = 0;
       for (let a of spaceScene.asteroids) {
         a.e = -1;
       }
@@ -223,13 +234,13 @@ const commands = [
       spaceScene.score = 0;
       livesDiv.textContent = 3;
       scoreDiv.textContent = 0;
-      messagesDiv.style.display = "none";
-      glass.style.display = "none"; // Group messaging into method
+      msgs.hide();
     },
   },
   {
     title: "Add PID controlled ship",
     lambda: () => {
+      console.log("clicked");
       const other = new Bobcat({
         pos: {
           x: player.pos.x + 1000,
@@ -253,6 +264,7 @@ const commands = [
   },
 ];
 metaP.bind(commands);
+msgs.attach();
 
 document.getElementById("menu").addEventListener("click", (ev) => {
   metaP.metaP();
@@ -264,51 +276,50 @@ app.ticker.add((delta) => {
   if (metaP.metaPGlass.style.display === "block") {
     return;
   }
-  if (!isLandscape()) {
-    messagesDiv.textContent =
-      "Please rotate your device, this can only be played in landscape mode";
-    messagesDiv.style.display = "block";
-    glass.style.display = "block";
+  if (!isLandscape() && !msgs.visible) {
+    msgs.text(
+      "Please rotate your device, this can only be played in landscape mode",
+    );
+    msgs.show();
     app.canvas.style.display = "none";
     return;
   }
-  if (needsStandalone()) {
-    messagesDiv.textContent =
-      "Please install as a standalone web app (Usually share -> Add to Home Screen)";
-    messagesDiv.style.display = "block";
-    glass.style.display = "block";
+  if (needsStandalone() & !msgs.visible) {
+    msgs.text(
+      "Please install as a standalone web app (Usually share -> Add to Home Screen)",
+    );
+    msgs.show();
     app.canvas.style.display = "none";
     return;
   }
-  if (player.lives <= 0) {
-    messagesDiv.innerHTML = `Game over!<br/>Select <em>Play</em> in the upper-left menu to play again`;
-    messagesDiv.style.display = "block";
-    glass.style.display = "block";
+  if (player.lives <= 0 && !msgs.visible) {
+    msgs.html(
+      `Game over!<br/>Select <em>Play</em> in the upper-left menu to play again`,
+    );
+    msgs.show();
     return;
   }
   if (spaceScene.asteroids.length === 0) {
     if (countDown === 0) {
       // Asteroids just became empty
       countDown = performance.now() + 3000; // Start the 3-second countdown
-      messagesDiv.textContent = "";
-      messagesDiv.style.display = "block";
-      glass.style.display = "block";
+      msgs.text("");
+      msgs.show();
     } else if (performance.now() >= countDown) {
       // 3 seconds have passed
-      messagesDiv.style.display = "none";
-      glass.style.display = "none";
+      msgs.hide();
       spaceScene.addRandomAsteroids(5);
       countDown = 0; // Reset the countdown
     } else {
       // Update the countdown display
       const remainingTime = Math.ceil((countDown - performance.now()) / 1000); // Calculate remaining seconds
-      messagesDiv.textContent = `Next wave in: ${remainingTime} seconds`;
+      msgs.text(`Next wave in: ${remainingTime} seconds`);
     }
   } else {
     // Asteroids are present, reset the countdown
     countDown = 0;
   }
-  if(messagesDiv.style.display != "none"){
+  if (msgs.visible) {
     return;
   }
   spaceScene.update(delta);
@@ -342,8 +353,7 @@ function handleOrientationChange() {
   } else {
     document.body.classList.remove("landscape");
   }
-  messagesDiv.style.display = "none";
-  glass.style.display = "none";
+  msgs.hide();
   app.canvas.style.display = "block";
   resizeForLandscape(); // Still resize your canvas (see next step)
 }

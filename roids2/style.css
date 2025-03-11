@@ -23,18 +23,6 @@ canvas {
   transform: none;
 }
 
-#glass {
-  position: absolute;
-  width: calc(max(100vh, 100vw));
-  height: calc(max(100vh, 100vw));
-  background-color: transparent;
-  overflow: hidden;
-  top: 0;
-  left: 0;
-  z-index: 3;
-  backdrop-filter: blur(10px);
-}
-
 #info {
   width: 100%;
   position: absolute;
@@ -61,6 +49,7 @@ canvas {
 }
 
 #menu {
+  font-size: 1rem;
   flex-shrink: 0;
   margin-right: auto;
   padding: 10px;
@@ -76,20 +65,7 @@ canvas {
 
 #lives,
 #score {
+  font-size: 1rem;
   padding: 10px;
   margin-left: 10px; /* Add space between lives and score */
-}
-
-#messages {
-  z-index: 5;
-  font-size: 1rem;
-  position: fixed; /* Use fixed positioning to center relative to the viewport */
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%); /* Center the div precisely */
-  color: white;
-  padding: 20px;
-  border-radius: 10px;
-  text-align: center;
-  font-family: "monoidregular";
 }

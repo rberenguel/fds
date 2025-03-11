@@ -1,14 +1,10 @@
 export { NebulaGenerator };
 
-import {
-  Graphics,
-  Sprite,
-  RenderTexture,
-  Texture as PixiTexture,
-  Matrix,
-} from "../../libs/3rdparty/pixi.mjs";
+import { Texture as PixiTexture } from "../../libs/3rdparty/pixi.mjs";
 
 import { seededRnd } from "../rnd.js";
+
+// TODO: try to get p5 as a module
 
 //import p5 from '../libs/3rdparty/p5.min.js';
 class NebulaGenerator {
