@@ -15,8 +15,9 @@ import {
   bindKeyHandlers,
   handleControls,
   getDeviceInput,
-  VirtualPad,
-} from "../libs/controlHandling.js";
+} from "../libs/controller/controlHandling.js";
+
+import { VirtualPad } from "../libs/controller/virtualPad.js";
 
 import { Bobcat, Lynx } from "./ship.js";
 import { Asteroid } from "./asteroid.js";

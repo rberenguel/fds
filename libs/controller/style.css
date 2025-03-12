@@ -1,0 +1,65 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* Prevent scrollbars */
+  background-color: black;
+  width: 100vw;
+  height: 100vh;
+}
+.landscape {
+  transform: rotate(90deg) translateY(-100vw); /* Rotate and reposition */
+  width: 100vh; /* Swap width and height */
+  height: 100vw;
+}
+
+#direction-indicator-container {
+  position: fixed; /* Fixed to viewport */
+  top: 50%; /* Center vertically */
+  left: 50%; /* Center horizontally */
+  transform: translate(-50%, -50%); /* Precisely center */
+  width: 100px; /* Adjust container size as needed */
+  height: 100px; /* Adjust container size as needed */
+  display: none; /* Initially hidden */
+  pointer-events: none; /* Click-through */
+  z-index: 9999; /* Ensure it's on top */
+}
+
+#direction-arrow {
+  width: 0;
+  height: 0;
+  border-left: 15px solid transparent; /* Adjust arrow width */
+  border-right: 15px solid transparent; /* Adjust arrow width */
+  border-bottom: 30px solid rgba(0, 0, 255, 0.8); /* Arrow color and height */
+  transform-origin: top center; /* Rotation point at the top center of the arrow */
+  position: relative;
+  top: 10px; /* Adjust vertical position within container if needed */
+}
+
+#virtualpad-touchstart {
+  position: fixed;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: rgba(255, 0, 0, 0.7);
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.8;
+  transform: translate(-50%, -50%);
+}
+
+#virtualpad-touchmove {
+  position: fixed;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 255, 0.7);
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.8;
+  transform: translate(-50%, -50%);
+}
+
+.green {
+  background-color: rgba(0, 255, 0, 0.7) !important;
+}

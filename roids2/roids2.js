@@ -8,8 +8,9 @@ import {
   bindKeyHandlers,
   handleControls,
   getDeviceInput,
-  VirtualPad,
-} from "../libs/controlHandling.js";
+} from "../libs/controller/controlHandling.js";
+
+import { VirtualPad } from "../libs/controller/virtualPad.js";
 
 import { Bobcat, Lynx } from "../stardust/ship.js";
 
@@ -133,6 +134,7 @@ const vPadDisplacement = Math.min(app.renderer.width, app.renderer.height) / 30;
 
 const virtualPad = new VirtualPad({
   gameActions: gameActions,
+  debug: true,
   displacement: vPadDisplacement,
   padArea: {
     ul: [0, 0],
@@ -240,7 +242,6 @@ const commands = [
   {
     title: "Add PID controlled ship",
     lambda: () => {
-      console.log("clicked");
       const other = new Bobcat({
         pos: {
           x: player.pos.x + 1000,
