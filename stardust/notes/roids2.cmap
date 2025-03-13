@@ -1,0 +1,56 @@
+# Roids/2
+
+// zoom: 0.5 pan: -755.7999844062969 -427.00004095398884
+
+
+
+- dark
+
+
+- NOTE: shape="plaintext" fontcolor="sdyellow" fontsize=16 labelloc="l"
+- REF: arrowhead=none color="#ccc" style="dotted"
+
+
+Powerups \"Powerups\"
+
+
+Powerups -> PrimaryWeapons
+Powerups -> SecondaryWeapons
+Powerups -> Other
+
+PrimaryWeapons Primary weapons
+SecondaryWeapons Secondary weapons
+
+PrimaryWeapons -> MassDriver
+MassDriver [X] Mass driver\n(kinetic)
+MassDriver_info - f*m*v^2 energy\l- decay f on distance\l- low v, m\l\n ; NOTE
+MassDriver -> MassDriver_info ; REF
+
+
+SecondaryWeapons -> RailGun
+RailGun [X] Gauss cannon\n(kinetic)
+RailGun_info - f*m*v^2 energy\l- decay f on distance, \lsame rate as MD\l- high v, m\l\n ; NOTE
+RailGun -> RailGun_info ; REF
+
+SecondaryWeapons -> PhotonTorpedo
+PhotonTorpedo [ ] Photon torpedo
+PhotonTorpedo_info - Should be tracking\l- Tracking based on a\lforward arc on time of shot\n; NOTE
+PhotonTorpedo -> PhotonTorpedo_info ; REF
+PhotonTorpedo -> PTTA
+PhotonTorpedo -> PTTracking
+
+
+PTTA [x] Texture/Animation
+PTTracking [ ] Closest tracking
+
+PrimaryWeapons -> LaserBeam
+LaserBeam [ ] Laser beam
+
+
+PrimaryWeapons -> PhaserBeam
+PhaserBeam [ ] Phaser beam
+
+
+PrimaryWeapons -> Flux
+Flux [ ] Flux
+

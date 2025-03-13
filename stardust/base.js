@@ -176,6 +176,9 @@ class Base1 {
     if (this.e <= 0.1) {
       this.e = -1;
       for (let presentation of this.presentations) {
+        if (!presentation || presentation.destroyed) {
+          continue;
+        }
         presentation.destroy();
         presentation = null;
       }

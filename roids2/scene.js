@@ -260,14 +260,18 @@ class SpaceScene extends Scene {
             continue;
           }
           if (a.collision(b)) {
+            const ae = a.e;
             a.e -= b.e;
-            b.e = 0;
+            b.e -= ae;
             a.transferMomentum(b);
             a.addFlame(b.pos, b.vel);
             if (a.e < 0) {
               this.score += Math.round(a.size);
               scoreDiv.textContent = this.score.toFixed(0);
               newAsteroids.push(...a.split(b.vel));
+              if (Math.random() < 0.1) {
+                console.log("POWERUP");
+              }
             } else {
               a.addCrack(b);
             }

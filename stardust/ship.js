@@ -2,7 +2,12 @@ export { Bobcat, Lynx };
 
 import { Mesh, Meshes } from "./mesh.js";
 import { Base1 } from "./base.js";
-import { PlasmaGun } from "./weapon.js";
+import {
+  GaussCannon,
+  MassDriverGun,
+  PhotonTorpedoLauncher,
+  PlasmaGun,
+} from "./weapon.js";
 import { rotate, sqnorm } from "./math.js";
 
 import { Flame } from "./flame.js";
@@ -18,6 +23,9 @@ class Ship extends Base1 {
     this.e = 1000;
     //this.scale = props.scale ?? 1
     this.weapons = props.weapons ?? [];
+    this.primaryWeaponShift = 0;
+    this.secondaryWeaponShift = 0;
+    this.secondaryWeapons = props.secondaryWeapons ?? [];
     this.actions = [];
     this.flameList = []; // TODO: careful with this as a dangling reference
     this.bulletList = [];
@@ -173,26 +181,60 @@ class Lynx extends Ship {
       width: 10,
       fill: 0x000000,
     });
-    let weapons = [];
-    try {
-      const plasmaGun1 = new PlasmaGun({
-        pos: {
-          x: -40,
-          y: 40,
-        },
-      });
-      const plasmaGun2 = new PlasmaGun({
-        pos: {
-          x: -40,
-          y: -40,
-        },
-      });
-      weapons = [plasmaGun1, plasmaGun2];
-    } catch (err) {
-      console.error(err);
+    let weapons = props.weapons ?? [];
+    let secondaryWeapons = props.secondaryWeapons ?? [];
+    if (!props.weapons) {
+      try {
+        const plasmaGun1 = new PlasmaGun({
+          pos: {
+            x: -40,
+            y: 40,
+          },
+        });
+        const plasmaGun2 = new PlasmaGun({
+          pos: {
+            x: -40,
+            y: -40,
+          },
+        });
+        weapons = [plasmaGun1, plasmaGun2];
+        const railGun = new GaussCannon({
+          pos: {
+            x: 0,
+            y: 0,
+          },
+        });
+        const photonTorpedo = new PhotonTorpedoLauncher({
+          pos: {
+            x: 0,
+            y: 0,
+          },
+        });
+        secondaryWeapons = [photonTorpedo, railGun];
+        /*const massDriverGun1 = new MassDriverGun({
+          pos: {
+            x: -40,
+            y: 40,
+          },
+        });
+        const massDriverGun2 = new MassDriverGun({
+          pos: {
+            x: -40,
+            y: -40,
+          },
+        });*/
+        //weapons = [massDriverGun1, massDriverGun2];
+      } catch (err) {
+        console.error(err);
+      }
     }
 
-    super({ ...props, meshes: [mesh], weapons: weapons });
+    super({
+      ...props,
+      meshes: [mesh],
+      weapons: weapons,
+      secondaryWeapons: secondaryWeapons,
+    });
     this.mass = 7;
   }
 }

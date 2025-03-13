@@ -17,6 +17,13 @@ import { Bobcat, Lynx } from "../stardust/ship.js";
 import { SpaceScene } from "./scene.js";
 import { sqnorm } from "../stardust/math.js";
 
+import {
+  PlasmaGun,
+  GaussCannon,
+  MassDriverGun,
+  PhotonTorpedoLauncher,
+} from "../stardust/weapon.js";
+
 bindGamepadHandlers();
 bindKeyHandlers();
 
@@ -29,7 +36,9 @@ if (keyMap === undefined) {
     ArrowLeft: "moveLeft",
     ArrowRight: "moveRight",
     Space: "shoot",
+    Enter: "secondaryShoot",
     KeyQ: "menu",
+    KeyX: "weaponSwitch",
   };
 }
 
@@ -42,7 +51,8 @@ if (buttonMap === undefined) {
     b13: "moveDown",
     b12: "moveUp",
     b1: "shoot",
-    //b2: "reload",
+    b2: "secondaryShoot",
+    b3: "weaponSwitch",
   };
 }
 
@@ -78,12 +88,72 @@ const gameActions = {
       return;
     }
     prevshot = now;
-    player.weapons[0].fire(player, player.bulletList);
-    player.weapons[1].fire(player, player.bulletList);
+    player.weapons[0 + player.primaryWeaponShift].fire(
+      player,
+      player.bulletList,
+    );
+    player.weapons[1 + player.primaryWeaponShift].fire(
+      player,
+      player.bulletList,
+    );
+    showWeapons();
+  },
+  secondaryShoot: () => {
+    if (player.e < 10) {
+      return;
+    }
+    const now = performance.now();
+    if (now - prevshot < 1000) {
+      return;
+    }
+    prevshot = now;
+    try {
+      player.secondaryWeapons[0 + player.secondaryWeaponShift].fire(
+        player,
+        player.bulletList,
+      );
+    } catch {}
+  },
+  weaponSwitch: () => {
+    const now = performance.now();
+    console.log(player.weapons.length);
+    if (now - prevshot < 100) {
+      return;
+    }
+    prevshot = now;
+    console.log("Shifted weapons");
+    player.primaryWeaponShift =
+      (player.primaryWeaponShift + 2) % player.weapons.length;
+    player.secondaryWeaponShift =
+      (player.secondaryWeaponShift + 1) % player.secondaryWeapons.length;
+    showWeapons();
   },
   menu: () => {
     metaP.metaP();
   },
+};
+
+const showWeapons = () => {
+  const wa = player.weapons[0 + player.primaryWeaponShift];
+  const wb = player.weapons[1 + player.primaryWeaponShift];
+  const wc = player.secondaryWeapons[0 + player.secondaryWeaponShift];
+  let ammo = undefined;
+  if (wa.kind === "MassDriverGun") {
+    ammo = `${player.massDriverAmmo}`;
+  }
+  const a = wa.html;
+  const b = wb.html;
+  const c = wc.html;
+  const containerPrimary = document.getElementById("primary-weapon-types");
+  containerPrimary.innerHTML = `W1: ${a}${b}`;
+  const containerSecondary = document.getElementById("secondary-weapon-types");
+  containerSecondary.innerHTML = `W2: ${c}`;
+  const ammoContainer = document.getElementById("primary-weapon-ammo");
+  if (ammo) {
+    ammoContainer.textContent = `(${ammo})`;
+  } else {
+    ammoContainer.textContent = "";
+  }
 };
 
 const msgs = new Msgs();
@@ -188,12 +258,63 @@ const scale = isMobile() ? 0.12 : SpaceScene.MAXSCALE;
 
 console.info("Generating player");
 
+let weapons = [];
+let secondaryWeapons = [];
+try {
+  const plasmaGun1 = new PlasmaGun({
+    pos: {
+      x: -40,
+      y: 40,
+    },
+  });
+  const plasmaGun2 = new PlasmaGun({
+    pos: {
+      x: -40,
+      y: -40,
+    },
+  });
+  const railGun = new GaussCannon({
+    pos: {
+      x: 0,
+      y: 0,
+    },
+  });
+  const photonTorpedo = new PhotonTorpedoLauncher({
+    pos: {
+      x: 0,
+      y: 0,
+    },
+  });
+  secondaryWeapons = [photonTorpedo, railGun];
+  const massDriverGun1 = new MassDriverGun({
+    pos: {
+      x: -40,
+      y: 40,
+    },
+  });
+  const massDriverGun2 = new MassDriverGun({
+    pos: {
+      x: -40,
+      y: -40,
+    },
+  });
+  weapons = [plasmaGun1, plasmaGun2, massDriverGun1, massDriverGun2];
+} catch (err) {
+  console.error(err);
+}
+
 const player = new Lynx({
   pos: {
     x: (0.5 * app.renderer.width) / scale,
     y: (0.5 * app.renderer.height) / scale,
   },
+  weapons: weapons,
+  secondaryWeapons: secondaryWeapons,
 });
+
+player.massDriverAmmo = 30;
+
+showWeapons();
 
 player.generate();
 

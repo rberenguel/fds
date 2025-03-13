@@ -23,11 +23,6 @@ canvas {
   transform: none;
 }
 
-#info {
-  width: 100%;
-  position: absolute;
-}
-
 #score {
   text-align: right;
   margin-right: 1em;
@@ -37,6 +32,7 @@ canvas {
 
 #info {
   font-family: "monoidregular";
+  position: absolute;
   z-index: 1000;
   width: 100%;
   display: flex; /* Use flexbox for layout */
@@ -68,4 +64,46 @@ canvas {
   font-size: 1rem;
   padding: 10px;
   margin-left: 10px; /* Add space between lives and score */
+}
+
+#extra-info {
+  font-family: "monoidregular";
+  position: absolute;
+  z-index: 1000;
+  width: 100%;
+  display: flex; /* Use flexbox for layout */
+  align-items: center; /* Vertically center items */
+  box-sizing: border-box; /* Include padding and border in width */
+  bottom: 0.2em;
+  left: 0.2em;
+  color: #cc0;
+  font-size: 2vh;
+}
+
+.right-container {
+  display: flex;
+  flex-shrink: 0; /* Prevent shrinking */
+}
+
+#primary-weapon-types {
+  font-size: 2rem;
+  padding: 10px;
+  margin-left: 10px;
+}
+
+#primary-weapon-ammo {
+  font-size: 0.8rem;
+  padding-top: 1rem;
+  margin-left: 10px;
+}
+#secondary-weapon-types {
+  font-size: 2rem;
+  padding: 10px;
+  margin-left: 10px;
+}
+
+#secondary-weapon-ammo {
+  font-size: 0.8rem;
+  padding-top: 1rem;
+  margin-left: 10px;
 }
