@@ -8,8 +8,7 @@ import {
   PhotonTorpedoLauncher,
   PlasmaGun,
 } from "./weapon.js";
-import { rotate, sqnorm } from "./math.js";
-
+import { dist, sqnorm, rotate } from "../stardust/math.js";
 import { Flame } from "./flame.js";
 import { seededRnd } from "./rnd.js";
 
@@ -29,10 +28,43 @@ class Ship extends Base1 {
     this.actions = [];
     this.flameList = []; // TODO: careful with this as a dangling reference
     this.bulletList = [];
+    this._id = performance.now();
   }
 
   action() {
     return;
+  }
+
+  explode() {
+    let flames = [];
+    for (let i = 0; i < 30; i++) {
+      const m = 4 * Math.random();
+      const a = Math.random() * 2 * Math.PI;
+      const fl = new Flame({
+        pos: {
+          x: this.pos.x,
+          y: this.pos.y,
+        },
+        vel: {
+          x: m * Math.cos(a),
+          y: m * Math.sin(a),
+        },
+        r: 0,
+        e: 12 + Math.random() * 8,
+        scale: 0.8,
+      });
+      flames.push(fl);
+    }
+    return flames;
+  }
+
+  collision(other) {
+    // TODO: This could be in Base, somehow?
+    // TODO For ship, this is totally made up
+    if (dist(other.pos, this.pos) < 50) {
+      return true;
+    }
+    return false;
   }
 
   annotateMountPoints() {
@@ -160,8 +192,25 @@ class Ship extends Base1 {
     this.actions = this.actions.slice(-2);
     super.update(delta);
     super.move(delta.deltaTime);
+    // TODO this is repeated EVERYWHERE
     for (let presentation of this.presentations) {
+      if (!presentation) {
+        this.presentation = { destroyed: true };
+        return;
+      }
+      if (presentation.destroyed) {
+        this.presentation = { destroyed: true };
+        return;
+      }
       presentation.rotation = this.r;
+    }
+    if (isNaN(this.vel.x) || isNaN(this.vel.y)) {
+      this.presentation = { destroyed: true };
+      return;
+    }
+    if (isNaN(this.pos.x) || isNaN(this.pos.y)) {
+      this.presentation = { destroyed: true };
+      return;
     }
   }
 }
@@ -190,12 +239,14 @@ class Lynx extends Ship {
             x: -40,
             y: 40,
           },
+          source: this._id,
         });
         const plasmaGun2 = new PlasmaGun({
           pos: {
             x: -40,
             y: -40,
           },
+          source: this._id,
         });
         weapons = [plasmaGun1, plasmaGun2];
         const railGun = new GaussCannon({
@@ -203,12 +254,14 @@ class Lynx extends Ship {
             x: 0,
             y: 0,
           },
+          source: this._id,
         });
         const photonTorpedo = new PhotonTorpedoLauncher({
           pos: {
             x: 0,
             y: 0,
           },
+          source: this._id,
         });
         secondaryWeapons = [photonTorpedo, railGun];
         /*const massDriverGun1 = new MassDriverGun({
@@ -257,8 +310,9 @@ class Bobcat extends Ship {
       fill: 0x000000,
     });
     let weapons = [];
+    super({ ...props, meshes: [mesh], weapons: weapons });
     try {
-      const plasmaGun1 = new PlasmaGun({
+      /*const plasmaGun1 = new PlasmaGun({
         pos: {
           x: -30,
           y: 50,
@@ -269,13 +323,27 @@ class Bobcat extends Ship {
           x: -30,
           y: -50,
         },
+      });*/
+      const massDriverGun1 = new MassDriverGun({
+        pos: {
+          x: -30,
+          y: 50,
+        },
+        source: this._id,
       });
-      weapons = [plasmaGun1, plasmaGun2];
+      const massDriverGun2 = new MassDriverGun({
+        pos: {
+          x: -30,
+          y: -50,
+        },
+        source: this._id,
+      });
+      weapons = [massDriverGun1, massDriverGun2];
+      this.weapons = weapons;
     } catch (err) {
       console.error(err);
     }
 
-    super({ ...props, meshes: [mesh], weapons: weapons });
     this.mass = 10;
   }
 }

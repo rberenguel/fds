@@ -15,6 +15,8 @@ class Gun {
       x: props.pos?.x ?? 0,
       y: props.pos?.y ?? 0,
     };
+    console.log(props.source);
+    this.source = props.source ?? -1;
   }
 }
 
@@ -34,6 +36,7 @@ class PlasmaBullet extends Base1 {
     super({ ...props, meshes: [mesh] });
     this.e = props.e ?? 10;
     this.mass = props.mass ?? 3;
+    this.source = props.source ?? -1;
   }
 
   generate() {
@@ -79,6 +82,7 @@ class MassDriverBullet extends Base1 {
     this.e = this.f * sqnorm(this.vel.x, this.vel.y) * this.mass;
     this._initial_e = this.e;
     this.mass = props.mass ?? 0.4;
+    this.source = props.source ?? -1;
   }
 
   generate() {
@@ -139,6 +143,7 @@ class PlasmaGun extends Gun {
       r: shooter.r,
       e: 10,
       scale: shooter.scale,
+      source: this.source,
     });
     bulletList.push(b);
   }
@@ -177,6 +182,7 @@ class MassDriverGun extends Gun {
       r: shooter.r,
       e: 10,
       scale: shooter.scale,
+      source: this.source,
     });
     bulletList.push(b);
     shooter.massDriverAmmo--;
@@ -215,6 +221,7 @@ class GaussCannon extends Gun {
       r: shooter.r,
       e: 10,
       scale: shooter.scale,
+      source: this.source,
     });
     bulletList.push(b);
   }
@@ -247,6 +254,7 @@ class PhotonTorpedo extends Base1 {
     this.e = props.e ?? 10;
     this.mass = props.mass ?? 3;
     this.moved = 0;
+    this.source = props.source ?? -1;
   }
 
   generate() {
@@ -332,6 +340,7 @@ class PhotonTorpedoLauncher extends Gun {
       r: shooter.r,
       e: 1000,
       scale: shooter.scale,
+      source: this.source,
     });
     bulletList.push(b);
   }

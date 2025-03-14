@@ -312,6 +312,14 @@ const player = new Lynx({
   secondaryWeapons: secondaryWeapons,
 });
 
+for (let w of player.weapons) {
+  w.source = player._id;
+}
+
+for (let w of player.secondaryWeapons) {
+  w.source = player._id;
+}
+
 player.massDriverAmmo = 30;
 
 showWeapons();
@@ -365,8 +373,8 @@ const commands = [
     lambda: () => {
       const other = new Bobcat({
         pos: {
-          x: player.pos.x + 1000,
-          y: player.pos.y + 500,
+          x: player.pos.x + 300,
+          y: player.pos.y + 300,
         },
       });
 
@@ -382,6 +390,13 @@ const commands = [
     inputs: [{ title: "How many?", default: "1" }],
     lambda: (num) => {
       spaceScene.addRandomAsteroids(parseInt(num));
+    },
+  },
+  {
+    title: "Add enemies",
+    inputs: [{ title: "How many?", default: "1" }],
+    lambda: (num) => {
+      spaceScene.addRandomEnemies(parseInt(num) -1);
     },
   },
 ];
@@ -431,6 +446,7 @@ app.ticker.add((delta) => {
       // 3 seconds have passed
       msgs.hide();
       spaceScene.addRandomAsteroids(5);
+      spaceScene.addRandomEnemies(2);
       countDown = 0; // Reset the countdown
     } else {
       // Update the countdown display

@@ -54,57 +54,137 @@ function normalizeAngle(angle) {
   return angle;
 }
 
-const otherControl = (other, ship, target, deltaTime, bulletList) => {
-  const dt = deltaTime / 1000; // Assuming 60 FPS
+const otherControl = (
+  other,
+  ship,
+  target,
+  deltaTime,
+  bulletList,
+  asteroids,
+) => {
+  const dt = deltaTime / 1000;
 
-  // --- Yaw Control (PID) ---
   if (!other.yawPID) {
-    other.yawPID = new PIDController(0.1, 0.01, 0.01, deltaTime / 1000);
-
-    other.thrustPID = new PIDController(0.05, 0.001, 0.0001, deltaTime / 1000);
-
-    other.positionPID = new PIDController(
-      0.1,
-      0.0001,
-      0.0001,
-      deltaTime / 1000,
-    );
+    other.yawPID = new PIDController(0.1, 0.01, 0.01, dt);
+    other.thrustPID = new PIDController(0.05, 0.001, 0.0001, dt);
+    other.positionPID = new PIDController(0.01, 0.0, 0.0, dt);
   }
 
   const dx = target.pos.x - other.pos.x;
   const dy = target.pos.y - other.pos.y;
   const dist = Math.sqrt(dx * dx + dy * dy);
 
-  if (dist < 5) {
-    // Dead zone (close enough)
-    //other.vel.x = 0;
-    //other.vel.y = 0;
-    other.yawPID.reset(); // Reset integral term when at target
+  if (dist < 10) {
+    other.yawPID.reset();
     other.thrustPID.reset();
     other.positionPID.reset();
-    return; // Exit early - no need to calculate angles or thrust
+    return;
   }
-  // --- Prediction ---
-  const predictionTime = 2 * dt;
+
+  // --- Predictive Asteroid Avoidance ---
+  let avoidanceAngle = 0;
+  let isAvoiding = false;
+  const avoidanceTimeThreshold = 2; // Time in seconds to look ahead for collisions
+  const collisionRadiusFactor = 1.5; // Multiply combined radius for safety
+
+  let closestThreatTime = Infinity;
+  let bestAvoidanceAngle = 0;
+
+  for (const asteroid of asteroids) {
+    const relativePositionX = other.pos.x - asteroid.pos.x;
+    const relativePositionY = other.pos.y - asteroid.pos.y;
+    const relativeVelocityX = other.vel.x - asteroid.vel.x;
+    const relativeVelocityY = other.vel.y - asteroid.vel.y;
+
+    const a =
+      relativeVelocityX * relativeVelocityX +
+      relativeVelocityY * relativeVelocityY;
+    if (a <= 0) continue; // Avoid division by zero if no relative velocity
+
+    const b =
+      relativePositionX * relativeVelocityX +
+      relativePositionY * relativeVelocityY;
+    const timeToClosestApproach = -b / a;
+
+    if (
+      timeToClosestApproach > 0 &&
+      timeToClosestApproach < avoidanceTimeThreshold
+    ) {
+      const closestPointRelativeX =
+        relativePositionX + relativeVelocityX * timeToClosestApproach;
+      const closestPointRelativeY =
+        relativePositionY + relativeVelocityY * timeToClosestApproach;
+      const distanceAtClosestApproachSq =
+        closestPointRelativeX * closestPointRelativeX +
+        closestPointRelativeY * closestPointRelativeY;
+
+      const combinedRadius =
+        ((other.size || 10) / 2 + asteroid.size / 2) * collisionRadiusFactor;
+
+      if (distanceAtClosestApproachSq < combinedRadius * combinedRadius) {
+        isAvoiding = true;
+
+        // Calculate avoidance angle based on the direction to the asteroid at the closest approach
+        const angleToClosestApproach = Math.atan2(
+          closestPointRelativeY,
+          closestPointRelativeX,
+        );
+        const shipAngle = other.r;
+        const angleDifferenceToAsteroid = normalizeAngle(
+          angleToClosestApproach - shipAngle,
+        );
+
+        // Steer away - try both directions and pick the one that requires less rotation
+        const avoidLeftAngle = normalizeAngle(
+          angleDifferenceToAsteroid + Math.PI / 2,
+        );
+        const avoidRightAngle = normalizeAngle(
+          angleDifferenceToAsteroid - Math.PI / 2,
+        );
+
+        // Choose the avoidance direction that is closer to the current facing
+        if (Math.abs(avoidLeftAngle) < Math.abs(avoidRightAngle)) {
+          avoidanceAngle = avoidLeftAngle;
+        } else {
+          avoidanceAngle = avoidRightAngle;
+        }
+
+        // Prioritize the most imminent threat
+        if (timeToClosestApproach < closestThreatTime) {
+          closestThreatTime = timeToClosestApproach;
+          bestAvoidanceAngle = avoidanceAngle;
+        }
+      }
+    }
+  }
+
+  // --- Target Prediction for Chasing ---
+  const predictionTime = 100 * dt;
   const predictedTargetX = target.pos.x + target.vel.x * predictionTime;
   const predictedTargetY = target.pos.y + target.vel.y * predictionTime;
 
-  const desiredAngle = Math.atan2(
-    predictedTargetY - other.pos.y,
-    predictedTargetX - other.pos.x,
-  );
+  let desiredAngle;
+  if (isAvoiding) {
+    desiredAngle = normalizeAngle(other.r + bestAvoidanceAngle);
+  } else {
+    desiredAngle = Math.atan2(
+      predictedTargetY - other.pos.y,
+      predictedTargetX - other.pos.x,
+    );
+  }
+
   const angleDifference = normalizeAngle(desiredAngle - other.r);
 
-  // Yaw PID output is the desired *yaw rate*
-  const yawRate = other.yawPID.update(0, angleDifference, dt); // Setpoint is 0
+  // --- Yaw Control (PID) ---
+  const yawRate = other.yawPID.update(0, angleDifference, dt);
 
   if (yawRate > 0.01) {
-    // Use a small threshold to avoid rapid switching
-    other.yawRight(); // Turn right
+    other.yawRight();
   } else if (yawRate < -0.01) {
-    other.yawLeft(); // Turn left
-  } // Else:  Don't rotate (within the threshold)
+    other.yawLeft();
+  }
 
+  // --- Shooting Logic (No changes here) ---
   const shootingAngle = Math.atan2(
     other.pos.y - ship.pos.y,
     other.pos.x - ship.pos.x,
@@ -116,30 +196,28 @@ const otherControl = (other, ship, target, deltaTime, bulletList) => {
 
   if (
     Math.abs(normalizeAngle(shootingAngle - other.r + Math.PI)) < 0.3 &&
-    sdist < 1000
+    sdist < 1500
   ) {
-    //console.log("Bang")
     const now = performance.now();
-    if (now - other.prevshot < 100) {
+    if (now - other.prevshot < 150) {
       return;
     }
     other.prevshot = now;
-    other.weapons[0].fire(other, bulletList);
-    other.weapons[1].fire(other, bulletList);
+    if (other.weapons && other.weapons[0])
+      other.weapons[0].fire(other, bulletList);
+    if (other.weapons && other.weapons[1])
+      other.weapons[1].fire(other, bulletList);
   }
 
-  // --- Thrust Control (PID) --- (No changes here from the previous *correct* version)
+  // --- Thrust Control (PID) --- (No changes here)
   const dirX = dx / dist;
   const dirY = dy / dist;
 
-  // Feedforward Velocity
   const targetForwardVelocity_ff =
     target.vel.x * Math.cos(other.r) + target.vel.y * Math.sin(other.r);
 
-  // Position PID (Outer Loop)
   const desiredSpeed_pid = other.positionPID.update(dist, 0, dt);
 
-  // Combine Feedforward and PID output
   const desiredSpeed = desiredSpeed_pid + targetForwardVelocity_ff;
 
   const targetVelX = dirX * desiredSpeed;
@@ -156,17 +234,9 @@ const otherControl = (other, ship, target, deltaTime, bulletList) => {
     currentForwardVelocity,
     dt,
   );
-  //console.log(thrust)
   if (thrust > 0.01) {
     other.backThrust();
   } else if (thrust < -0.01) {
     other.forwardThrust();
   }
-  //document.querySelector("#pid-dt").innerHTML = deltaTime.toFixed(3)
-  /*document.querySelector("#pid-p").innerHTML =
-    other.positionPID._error.toFixed(0);
-  document.querySelector("#pid-i").innerHTML =
-    other.positionPID._integral.toFixed(0);
-  document.querySelector("#pid-d").innerHTML =
-    other.positionPID._derivative.toFixed(0);*/
 };

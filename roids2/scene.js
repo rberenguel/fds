@@ -4,11 +4,12 @@ import { Viewframe } from "../stardust/viewframe.js";
 import { Starfield } from "../stardust/parallax.js";
 //import { RenderedSystem } from "./tinker/renderedSystem.js";
 import { sqnorm, wrapPos, dist } from "../stardust/math.js";
+import { Flame } from "../stardust/flame.js";
 //import { PlanetKinds } from "./tinker/system.js";
 import { NebulaGenerator } from "../stardust/tinker/nebula.js";
 import { Sprite } from "../libs/3rdparty/pixi.mjs";
 import { otherControl } from "../stardust/pid.js";
-
+import { Bobcat, Lynx } from "../stardust/ship.js";
 import { Asteroid } from "./asteroid.js";
 import { seededRnd } from "../stardust/rnd.js";
 
@@ -119,7 +120,36 @@ class SpaceScene extends Scene {
 
     this.starfield.starContainer.scale = linScale(this.scale);
     this.starfield.dustContainer.scale = linScale(this.scale);
-    this.addRandomAsteroids(10);
+    this.addRandomAsteroids(5);
+    this.addRandomEnemies(2);
+  }
+
+  addRandomEnemies(n) {
+    for (let i = 0; i < 1 + Math.random() * n; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const m = 2000 + Math.random() * 2000;
+      const x = this.player.pos.x + Math.cos(a) * m;
+      const y = this.player.pos.y + Math.sin(a) * m;
+      for (let a of this.asteroids) {
+        if (dist({ x, y }, a.pos) < a.size + 300) {
+          --i;
+          continue;
+        }
+      }
+      const other = new Bobcat({
+        pos: {
+          x: x,
+          y: y,
+        },
+        r: -a,
+      });
+
+      other.prevShot = -1;
+      other.action = () => "kChase";
+      other.generate();
+      other.attach(this.viewframe);
+      this.otherShips.push(other);
+    }
   }
 
   addRandomAsteroids(n) {
@@ -133,7 +163,7 @@ class SpaceScene extends Scene {
         Math.min(this.app.renderer.width, this.app.renderer.height),
       );
       const size = (0.5 * factor + rnd() * factor) / this.scale;
-      if (dist(this.player.pos, { x: x, y: y }) < size) {
+      if (dist(this.player.pos, { x: x, y: y }) < 500 + size) {
         // Avoid the player
         --i;
         continue;
@@ -159,7 +189,7 @@ class SpaceScene extends Scene {
 
     const target = {
       pos: {
-        x: this.player.pos.x - 800,
+        x: this.player.pos.x - 10,
         y: this.player.pos.y,
       },
       vel: {
@@ -175,8 +205,15 @@ class SpaceScene extends Scene {
           target,
           delta.deltaTime,
           this.player.bulletList,
+          this.asteroids,
         ); // TODO: Too many arguments, and the last one…
       }
+      wrapPos(otherShip, {
+        wmin: 0,
+        wmax: this.app.renderer.width / this.viewframe.scale,
+        hmin: 0,
+        hmax: this.app.renderer.height / this.viewframe.scale,
+      });
       otherShip.update(delta);
     }
 
@@ -199,7 +236,7 @@ class SpaceScene extends Scene {
     }
     this.player.update(delta);
     // Remove destroyed asteroids (in-place)
-
+    let newAsteroids = [];
     for (let flammable of [
       this,
       this.player,
@@ -249,7 +286,7 @@ class SpaceScene extends Scene {
         });
         f.update(delta);
       }
-      let newAsteroids = [];
+
       for (let b of flammable.bulletList) {
         // Handle bullet collisions with asteroids now
         if (b.e <= 0.01) {
@@ -277,26 +314,99 @@ class SpaceScene extends Scene {
             }
           }
         }
-      }
 
-      for (let a of this.asteroids) {
         if (this.player.invulnerable) {
           continue;
         }
-        // player collision now
-        if (a.e < 0) {
-          continue;
+        if (this.player.collision(b)) {
+          if (b.source === this.player._id) {
+            continue;
+          }
+          const pe = this.player.e;
+          this.player.e -= b.e;
+          b.e -= pe;
+          const fl = new Flame({
+            pos: {
+              x: b.pos.x,
+              y: b.pos.y,
+            },
+            vel: {
+              x: b.vel.x - this.player.vel.x * this.player.mass,
+              y: b.vel.y - this.player.vel.y * this.player.mass,
+            },
+            r: 0,
+            e: 12,
+            scale: 0.7,
+          });
+          this.flameList.push(fl);
+          if (this.player.e < 0) {
+            this.flameList = this.flameList.concat(this.player.explode());
+            this.player.invulnerable = performance.now();
+            this.player.e = 1000;
+            this.player.lives -= 1;
+            livesDiv.textContent = this.player.lives;
+          }
         }
-        if (a.collision(this.player)) {
+
+        for (let o of this.otherShips) {
+          if (o.e < 0) {
+            continue;
+          }
+          if (o.collision(b)) {
+            const oe = o.e;
+            o.e -= b.e;
+            b.e -= oe;
+            const fl = new Flame({
+              pos: {
+                x: b.pos.x,
+                y: b.pos.y,
+              },
+              vel: {
+                x: b.vel.x - o.vel.x * o.mass,
+                y: b.vel.y - o.vel.y * o.mass,
+              },
+              r: 0,
+              e: 12,
+              scale: 0.7,
+            });
+            this.flameList.push(fl); // TODO this should be handled internally
+            //o.transferMomentum(b); TODO momentum
+            if (o.e < 0) {
+              o.e = -1;
+              this.score += 2000;
+              this.flameList = this.flameList.concat(o.explode()); // TODO this should be handled internally
+              scoreDiv.textContent = this.score.toFixed(0);
+            }
+          }
+        }
+      }
+    }
+    for (let a of this.asteroids) {
+      // player collision now
+      if (this.player.invulnerable) {
+        continue;
+      }
+
+      if (a.e < 0) {
+        continue;
+      }
+      if (a.collision(this.player)) {
+        a.e = -1;
+        this.player.invulnerable = performance.now();
+        this.player.lives -= 1;
+        livesDiv.textContent = this.player.lives;
+        newAsteroids.push(...a.split(this.player.vel));
+      }
+      for (let o of this.otherShips) {
+        if (a.collision(o)) {
           a.e = -1;
-          this.player.invulnerable = performance.now();
-          this.player.lives -= 1;
-          livesDiv.textContent = this.player.lives;
+          o.e = -1;
           newAsteroids.push(...a.split(this.player.vel));
         }
       }
-      this.asteroids = this.asteroids.concat(newAsteroids);
     }
+
+    this.asteroids = this.asteroids.concat(newAsteroids);
 
     // Elastic collision across asteroids
     for (let i = 0; i < this.asteroids.length; i++) {
@@ -349,6 +459,16 @@ class SpaceScene extends Scene {
           this.flameList.push(...dis.flameList); // Save the flames
         }
         this.asteroids.splice(i, 1);
+      }
+    }
+
+    for (let i = this.otherShips.length - 1; i >= 0; i--) {
+      const dis = this.otherShips[i];
+      if (dis.presentation?.destroyed) {
+        if (dis.flameList.length > 0) {
+          this.flameList.push(...dis.flameList); // Save the flames
+        }
+        this.otherShips.splice(i, 1);
       }
     }
 
