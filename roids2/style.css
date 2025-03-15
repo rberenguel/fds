@@ -16,6 +16,18 @@ canvas {
   object-fit: cover;
 }
 
+#glass {
+  position: absolute;
+  width: calc(max(100vh, 100vw));
+  height: calc(max(100vh, 100vw));
+  background-color: transparent;
+  overflow: hidden;
+  top: 0;
+  left: 0;
+  z-index: 5;
+  backdrop-filter: blur(5px);
+}
+
 #metap-modal {
   font-size: 1rem;
   top: 2rem;
@@ -85,6 +97,13 @@ canvas {
   flex-shrink: 0; /* Prevent shrinking */
 }
 
+#hull {
+  min-width: 8em;
+  font-size: 2rem;
+  padding: 10px;
+  margin-left: 10px;
+}
+
 #primary-weapon-types {
   font-size: 2rem;
   padding: 10px;
@@ -106,4 +125,70 @@ canvas {
   font-size: 0.8rem;
   padding-top: 1rem;
   margin-left: 10px;
+}
+
+#powerup-container {
+  z-index: 5;
+  font-size: 1rem;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  padding: 20px;
+  border-radius: 1rem; /* TODO: check all radii */
+  border: 1px solid #ccc;
+  text-align: center;
+  font-family: "monoidregular";
+  width: 40%;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+#powerup-container > h3 {
+  width: 100%;
+  flex-basis: 100%;
+}
+
+/* Styles for each power-up choice */
+.powerup-choice {
+  flex: 1; /* Each choice takes equal available space (50% in this case) */
+  display: flex;
+  flex-direction: column; /* Arrange glyph and description vertically */
+  align-items: center; /* Center content horizontally within each choice */
+  padding: 10px; /* Add some spacing */
+  box-sizing: border-box; /* Include padding in the element's total width and height */
+}
+
+/* Styles for the square glyph container */
+.choice-glyph {
+  width: 50%; /* Adjust the size as needed */
+  height: 50%; /* Make it a square */
+  aspect-ratio: 1/1;
+  border-radius: 1rem;
+  border: 1px solid #ccc; /* Optional: border for visual */
+  margin-bottom: 5px; /* Space between glyph and description */
+  display: flex; /* To easily center the glyph (if needed later) */
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.choice-glyph img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain; /* Or 'cover' depending on your desired behavior */
+}
+
+/* Styles for the power-up description */
+.choice-description {
+  text-align: center;
+  color: white;
+}
+
+.choice-description table {
+  text-align: center;
+  color: white;
 }

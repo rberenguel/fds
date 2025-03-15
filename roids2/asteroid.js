@@ -21,9 +21,9 @@ class Asteroid extends Base1 {
     const mesh = new Mesh({
       kind: Meshes.kPoly,
       vertices: vertices,
-      color: 0x000000,
-      width: 2,
-      fill: hexColor,
+      color: 0xffffff,
+      width: 3,
+      fill: 0x111111,
     });
 
     super({ ...props, meshes: [mesh] });
@@ -138,11 +138,11 @@ class Asteroid extends Base1 {
         return;
       }
       presentation.rotation = this.r;
-      //presentation.tint = hexColor;
     }
   }
   addCrack(from) {
     if (this.e <= 0) {
+      this.e = -1;
       return false;
     }
     /*if (rnd() > from.e) {

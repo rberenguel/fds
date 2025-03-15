@@ -12,7 +12,7 @@ import { otherControl } from "../stardust/pid.js";
 import { Bobcat, Lynx } from "../stardust/ship.js";
 import { Asteroid } from "./asteroid.js";
 import { seededRnd } from "../stardust/rnd.js";
-
+import { MassDriverGun } from "../stardust/weapons/weapons.js";
 const rnd = seededRnd(performance.now());
 
 class Scene {
@@ -120,12 +120,10 @@ class SpaceScene extends Scene {
 
     this.starfield.starContainer.scale = linScale(this.scale);
     this.starfield.dustContainer.scale = linScale(this.scale);
-    this.addRandomAsteroids(5);
-    this.addRandomEnemies(2);
   }
 
-  addRandomEnemies(n) {
-    for (let i = 0; i < 1 + Math.random() * n; i++) {
+  addEnemies(n) {
+    for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2;
       const m = 2000 + Math.random() * 2000;
       const x = this.player.pos.x + Math.cos(a) * m;
@@ -145,6 +143,7 @@ class SpaceScene extends Scene {
       });
 
       other.prevShot = -1;
+      other.ammo[MassDriverGun.kind] = 300000000000000;
       other.action = () => "kChase";
       other.generate();
       other.attach(this.viewframe);
@@ -152,7 +151,7 @@ class SpaceScene extends Scene {
     }
   }
 
-  addRandomAsteroids(n) {
+  addAsteroids(n) {
     for (let i = 0; i < n; i++) {
       const x = (rnd() * this.app.renderer.width) / this.scale,
         y = (rnd() * this.app.renderer.height) / this.scale;

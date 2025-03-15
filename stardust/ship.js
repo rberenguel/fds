@@ -7,7 +7,7 @@ import {
   MassDriverGun,
   PhotonTorpedoLauncher,
   PlasmaGun,
-} from "./weapon.js";
+} from "./weapons/weapons.js";
 import { dist, sqnorm, rotate } from "../stardust/math.js";
 import { Flame } from "./flame.js";
 import { seededRnd } from "./rnd.js";
@@ -19,15 +19,18 @@ class Ship extends Base1 {
 
   constructor(props) {
     super(props);
-    this.e = 1000;
+    this.e = props.e ?? 1000;
+    this.initialE = this.e;
     //this.scale = props.scale ?? 1
     this.weapons = props.weapons ?? [];
     this.primaryWeaponShift = 0;
     this.secondaryWeaponShift = 0;
     this.secondaryWeapons = props.secondaryWeapons ?? [];
+    this.ammo = {};
     this.actions = [];
     this.flameList = []; // TODO: careful with this as a dangling reference
     this.bulletList = [];
+    this.recoveryRate = props.recoveryRate ?? 0;
     this._id = performance.now();
   }
 
@@ -192,7 +195,29 @@ class Ship extends Base1 {
     this.actions = this.actions.slice(-2);
     super.update(delta);
     super.move(delta.deltaTime);
+    this.e += this.recoveryRate * delta.deltaTime;
+    this.e = Math.min(this.e, this.initialE);
+    let w = this.weapons[0];
+    if (w) {
+      const rr = w.baseStats.ammoRefreshRate;
+      if (rr) {
+        this.ammo[w.kind] += rr * delta.deltaTime;
+      }
+    }
+    w = this.secondaryWeapons[0];
+    if (w) {
+      const rr = w.baseStats.ammoRefreshRate;
+      if (rr) {
+        this.ammo[w.kind] += rr * delta.deltaTime;
+      }
+    }
+
     // TODO this is repeated EVERYWHERE
+    const ne = Math.max(0, Math.min(1, this.e / this.initialE));
+    const red = 255; // Red decreases from 255 to 0
+    const green = Math.floor(255 * ne); // Green decreases faster
+    const blue = Math.floor(255 * ne);
+    const hexColor = (red << 16) | (green << 8) | blue;
     for (let presentation of this.presentations) {
       if (!presentation) {
         this.presentation = { destroyed: true };
@@ -203,6 +228,7 @@ class Ship extends Base1 {
         return;
       }
       presentation.rotation = this.r;
+      presentation.tint = hexColor;
     }
     if (isNaN(this.vel.x) || isNaN(this.vel.y)) {
       this.presentation = { destroyed: true };

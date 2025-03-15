@@ -158,6 +158,44 @@ const otherControl = (
     }
   }
 
+  // --- Asteroid Shooting Logic ---
+  const asteroidShootingRange = 900; // Adjust this value
+  const asteroidFacingThreshold = 0.5;
+
+  for (const asteroid of asteroids) {
+    const distanceToAsteroidX = asteroid.pos.x - other.pos.x;
+    const distanceToAsteroidY = asteroid.pos.y - other.pos.y;
+    const distanceToAsteroid = Math.sqrt(
+      distanceToAsteroidX * distanceToAsteroidX +
+        distanceToAsteroidY * distanceToAsteroidY,
+    );
+
+    if (distanceToAsteroid < asteroidShootingRange) {
+      const angleToAsteroid = Math.atan2(
+        distanceToAsteroidY,
+        distanceToAsteroidX,
+      );
+      const shipAngle = other.r;
+      const angleDifferenceToAsteroid = normalizeAngle(
+        angleToAsteroid - shipAngle,
+      );
+
+      if (Math.abs(angleDifferenceToAsteroid) < asteroidFacingThreshold) {
+        console.log("FIRING AT ASTEROID");
+        const now = performance.now();
+        if (now - other.prevshot < 150) {
+          continue; // Don't shoot too rapidly
+        }
+        other.prevshot = now;
+        if (other.weapons && other.weapons[0])
+          other.weapons[0].fire(other, bulletList);
+        if (other.weapons && other.weapons[1])
+          other.weapons[1].fire(other, bulletList);
+        break; // Shoot at one asteroid at a time for now
+      }
+    }
+  }
+
   // --- Target Prediction for Chasing ---
   const predictionTime = 100 * dt;
   const predictedTargetX = target.pos.x + target.vel.x * predictionTime;
@@ -184,7 +222,7 @@ const otherControl = (
     other.yawLeft();
   }
 
-  // --- Shooting Logic (No changes here) ---
+  // --- Shooting Logic (No changes here - for the player) ---
   const shootingAngle = Math.atan2(
     other.pos.y - ship.pos.y,
     other.pos.x - ship.pos.x,
