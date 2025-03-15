@@ -82,7 +82,8 @@ const gameActions = {
       return;
     }
     const now = performance.now();
-    if (now - prevshot < 100) {
+    const firerate = player.weapons[0 + player.primaryWeaponShift].firerate;
+    if (now - prevshot < firerate) {
       return;
     }
     prevshot = now;
@@ -100,8 +101,10 @@ const gameActions = {
     if (player.e < 10) {
       return;
     }
+    const firerate =
+      player.secondaryWeapons[0 + player.secondaryWeaponShift].firerate;
     const now = performance.now();
-    if (now - prevshot < 1000) {
+    if (now - prevshot < firerate) {
       return;
     }
     prevshot = now;
@@ -401,6 +404,11 @@ const commands = [
       for (let f of spaceScene.flameList) {
         f.e = -1;
       }
+    },
+  },
+  {
+    title: "Mass drivers",
+    lambda: () => {
       const massDriverGun1 = new MassDriverGun({
         pos: {
           x: -40,

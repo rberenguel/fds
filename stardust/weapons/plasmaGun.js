@@ -11,12 +11,13 @@ const rnd = seededRnd(performance.now());
 class PlasmaGun extends Gun {
   static kind = "PlasmaGun";
   kind = "PlasmaGun";
+  firerate = 50;
   html = "Pg";
   static baseStats = {
     // Energy, no mass use really
-    baseE: 40,
-    decay: 0.9,
-    ACCEL: 20,
+    baseE: 20,
+    decay: 0.5,
+    ACCEL: 40,
   };
   ammo = false;
   baseStats = PlasmaGun.baseStats;
@@ -84,7 +85,7 @@ class PlasmaBullet extends Base1 {
     this.e = props.e ?? 10;
     this.initialE = this.e;
     this.decay = props.decay ?? 0.15;
-    this.mass = props.mass ?? 3;
+    this.mass = props.mass ?? 1;
     this.source = props.source ?? -1;
   }
 

@@ -11,6 +11,7 @@ const rnd = seededRnd(performance.now());
 
 class MassDriverGun extends Gun {
   static ACCEL = 50;
+  firerate = 100;
   kind = "MassDriverGun";
   static kind = "MassDriverGun";
   html = "Md"; // Dot

@@ -10,6 +10,7 @@ const rnd = seededRnd(performance.now());
 class GaussCannon extends Gun {
   kind = "GaussCannon"; // TODO make an object with these constants
   static kind = "GaussCannon"; // TODO make an object with these constants
+  firerate = 1000;
   html = "Gc"; // Fisheye
   static baseStats = {
     mass: 5,

@@ -11,6 +11,7 @@ import { seededRnd } from "../rnd.js";
 class PhotonTorpedoLauncher extends Gun {
   static kind = "PhotonTorpedo"; // TODO make an object with these constants
   kind = PhotonTorpedoLauncher.kind;
+  firerate = 1000; // It's not really a rate and it is annoying me
   html = "Pt"; // Asterisk alignment
   ammo = true;
   static baseStats = {
