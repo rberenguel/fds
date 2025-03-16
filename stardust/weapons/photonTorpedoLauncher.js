@@ -36,7 +36,8 @@ class PhotonTorpedoLauncher extends Gun {
   constructor(props) {
     super({ ...props });
     this.stats = { ...this.constructor.baseStats };
-    this.color = 0xff0000;
+    this.color = props.color ?? 0xff0000;
+    this.haloColor = props.haloColor ?? 0xff0000;
   }
 
   fire(shooter, bulletList) {
@@ -65,6 +66,8 @@ class PhotonTorpedoLauncher extends Gun {
       r: shooter.r,
       e: this.stats.baseE,
       minRange: this.stats.minRange,
+      color: this.color,
+      haloColor: this.haloColor,
       scale: shooter.scale,
       source: this.source,
     });
@@ -78,10 +81,9 @@ class PhotonTorpedo extends Base1 {
   constructor(props) {
     const numMeshes = 10;
     let meshes = [];
-    const baseColor = 0xffee77;
-
+    const baseColor = props.haloColor ?? 0xffee77;
     for (let i = 0; i < numMeshes; i++) {
-      const radius = Math.random() * 10 + 10;
+      const radius = Math.random() * 10 + 15;
       let vertices = [];
       for (let j = 0; j < 3; j++) {
         const angle = Math.random() * 2 * Math.PI;
@@ -92,12 +94,13 @@ class PhotonTorpedo extends Base1 {
         kind: Meshes.kPoly,
         vertices: vertices,
         color: baseColor,
-        fill: { color: baseColor, alpha: 0xff * (0.3 * Math.random() + 0.7) },
+        fill: { color: baseColor, alpha: 0.2 * Math.random() + 0.8 },
       });
       meshes.push(mesh);
     }
 
     super({ ...props, meshes: meshes });
+    this.color = props.color ?? 0xff0000;
     this.e = props.e ?? 10;
     this.mass = props.mass ?? 3;
     this.minRange = props.minRange ?? 1500;
@@ -108,7 +111,7 @@ class PhotonTorpedo extends Base1 {
   generate() {
     let p = new Graphics();
     p.circle(0, 0, 10);
-    p.fill(0xff0000);
+    p.fill(this.color);
     this.presentations = [p];
     for (const mesh of this.meshes) {
       let p = new Graphics();
@@ -143,7 +146,7 @@ class PhotonTorpedo extends Base1 {
       const blue = ne * (0.3 + 0.5 * Math.random()) * 0xff;
       const hexColor = (red << 16) | (green << 8) | blue;
       const presentation = this.presentations[i];
-      const alpha = Math.random() * 155;
+      const alpha = 0.3 + 0.7 * Math.random();
       if (!presentation || presentation.destroyed) {
         this.presentations[i] = { destroyed: true };
         continue;

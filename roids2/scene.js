@@ -105,10 +105,9 @@ class SpaceScene extends Scene {
 
     this.viewframe.attach(this.app);
     this.viewframe.scale = this.scale;
-    this.player.attach(this.viewframe);
 
     this.starfield.viewframe = this.viewframe; // TODO Trying to see if I can shift with this
-    this.player.viewframe = this.viewframe; // Linking to have zoom
+
     this.viewframe.vel = this.player.vel;
 
     this.bulletList = [];
@@ -125,6 +124,12 @@ class SpaceScene extends Scene {
 
     this.starfield.starContainer.scale = linScale(this.scale);
     this.starfield.dustContainer.scale = linScale(this.scale);
+    this.bindPlayer();
+  }
+
+  bindPlayer() {
+    this.player.attach(this.viewframe);
+    this.player.viewframe = this.viewframe; // Linking to have zoom
   }
 
   addEnemies(n) {
@@ -148,7 +153,7 @@ class SpaceScene extends Scene {
       });
 
       other.prevShot = -1;
-      if (Math.random() < 0.5) {
+      if (Math.random() < 2.5) {
         other.ammo[LaserGun.kind] = {};
         other.ammo[LaserGun.kind].count = 10;
         other.ammo[LaserGun.kind].max = 30;
@@ -157,15 +162,17 @@ class SpaceScene extends Scene {
             x: -30,
             y: 50,
           },
+          color: 0xff2200,
         });
         const laserGun2 = new LaserGun({
           pos: {
             x: -30,
             y: -50,
           },
+          color: 0xff2200,
         });
-        laserGun1.stats.baseE = LaserGun.baseStats.baseE * 2;
-        laserGun2.stats.baseE = LaserGun.baseStats.baseE * 2;
+        laserGun1.stats.baseE = LaserGun.baseStats.baseE * 1.7;
+        laserGun2.stats.baseE = LaserGun.baseStats.baseE * 1.7; // 2 was way too much, 1.2 too little
         other.weapons = [laserGun1, laserGun2];
         if (Math.random() < 0.5) {
           const photonTorpedo = new PhotonTorpedoLauncher({
@@ -261,7 +268,7 @@ class SpaceScene extends Scene {
     this.starfield.update(this.player.vel);
     this.viewframe.update();
 
-    const target = {
+    let target = {
       pos: {
         x: this.player.pos.x - 10,
         y: this.player.pos.y,
@@ -272,25 +279,74 @@ class SpaceScene extends Scene {
       },
     };
     for (let otherShip of this.otherShips) {
-      if (otherShip.action() === "kChase") {
-        otherControl(
-          otherShip,
-          this.player,
-          target,
-          delta.deltaTime,
-          this.player.bulletList,
-          this.asteroids,
-          this.app.renderer.width / this.viewframe.scale,
-          this.app.renderer.height / this.viewframe.scale,
-        ); // TODO: Too many arguments, and the last one…
+      if (otherShip.e < 0) {
+        continue;
       }
-      wrapPos(otherShip, {
+      if (otherShip.action() === "kChase") {
+        otherControl({
+          other: otherShip,
+          ship: this.player,
+          target: target,
+          deltaTime: delta.deltaTime,
+          bulletList: this.player.bulletList,
+          asteroids: this.asteroids,
+          gameWidth: this.app.renderer.width / this.viewframe.scale,
+          gameHeight: this.app.renderer.height / this.viewframe.scale,
+        }); // TODO: Too many arguments, and the last one…
+      }
+      if (otherShip.action() === "kIdle") {
+        const validAsteroids = this.asteroids.filter((a) => a.e > 1);
+        let closestAsteroid = null;
+        let minDistance = Infinity;
+
+        if (validAsteroids.length > 0) {
+          for (const asteroid of validAsteroids) {
+            // Calculate the distance between the otherShip and the asteroid
+            const dx = asteroid.pos.x - otherShip.pos.x;
+            const dy = asteroid.pos.y - otherShip.pos.y;
+            const distSq = dx * dx + dy * dy; // Using squared distance for efficiency
+
+            if (distSq < minDistance) {
+              minDistance = distSq;
+              closestAsteroid = asteroid;
+            }
+          }
+        }
+
+        let target = closestAsteroid;
+        let ship = undefined;
+        if (!closestAsteroid) {
+          target = this.otherShips.filter((o) => o != otherShip).at(0);
+          if (target) {
+            target.kind = "kOtherShip";
+            ship = target;
+          } else {
+            otherShip.explode();
+            otherShip.e = -1;
+            continue;
+          }
+        } else {
+          target.kind = "kAsteroid";
+        }
+
+        otherControl({
+          other: otherShip,
+          target: target,
+          ship: ship,
+          deltaTime: delta.deltaTime,
+          bulletList: this.player.bulletList,
+          asteroids: this.asteroids,
+          gameWidth: this.app.renderer.width / this.viewframe.scale,
+          gameHeight: this.app.renderer.height / this.viewframe.scale,
+        });
+      }
+      /*wrapPos(otherShip, {
         wmin: 0,
         wmax: this.app.renderer.width / this.viewframe.scale,
         hmin: 0,
         hmax: this.app.renderer.height / this.viewframe.scale,
       });
-      otherShip.update(delta);
+      otherShip.update(delta);*/
     }
 
     this.controller();
@@ -375,28 +431,21 @@ class SpaceScene extends Scene {
           }
           if (a.collision(b)) {
             const ae = a.e;
-            console.log(a.e, b.e);
             a.e = b.e > 0 ? a.e - b.e : a.e; // Strange situations
             b.e -= ae;
             a.transferMomentum(b);
             a.addFlame(b.pos, b.vel);
-            if (a.e < 0) {
+            if (a.e < 0 && b.source === this.player._id) {
               this.score += Math.round(a.size);
               scoreDiv.textContent = this.score.toFixed(0);
               newAsteroids.push(...a.split(b.vel));
-              if (Math.random() < 0.1) {
-                console.log("POWERUP");
-              }
             } else {
               a.addCrack(b);
             }
           }
         }
 
-        if (this.player.invulnerable) {
-          continue;
-        }
-        if (this.player.collision(b)) {
+        if (this.player.e > 0 && this.player.collision(b)) {
           if (b.source === this.player._id) {
             continue;
           }
@@ -418,16 +467,19 @@ class SpaceScene extends Scene {
           });
           this.flameList.push(fl);
           if (this.player.e < 0) {
-            this.flameList = this.flameList.concat(this.player.explode());
-            this.player.invulnerable = performance.now();
-            this.player.e = 1000;
             this.player.lives -= 1;
-            livesDiv.textContent = this.player.lives;
+            this.player.explode();
+            this.player.e = -1;
+            this.flameList = this.flameList.concat(this.player.flameList);
+            //this.player.invulnerable = performance.now();
+            //this.player.e = 1000;
+            //livesDiv.textContent = this.player.lives;
           }
         }
 
         for (let o of this.otherShips) {
           if (o.e < 0) {
+            o.e = -1;
             continue;
           }
           if (b.source === o._id) {
@@ -454,35 +506,38 @@ class SpaceScene extends Scene {
             //o.transferMomentum(b); TODO momentum
             if (o.e < 0) {
               o.e = -1;
-              this.score += 2000;
-              this.flameList = this.flameList.concat(o.explode()); // TODO this should be handled internally
-              scoreDiv.textContent = this.score.toFixed(0);
+              //this.score += 2000;
+              o.explode(); // TODO this should be handled internally
+              //scoreDiv.textContent = this.score.toFixed(0);
             }
           }
         }
       }
     }
     for (let a of this.asteroids) {
-      // player collision now
-      if (this.player.invulnerable) {
-        continue;
-      }
-
       if (a.e < 0) {
         continue;
       }
-      if (a.collision(this.player)) {
+      if (this.player.e > 0 && a.collision(this.player)) {
         a.e = -1;
-        this.player.invulnerable = performance.now();
+        //this.player.invulnerable = performance.now();
         this.player.lives -= 1;
-        livesDiv.textContent = this.player.lives;
+        //livesDiv.textContent = this.player.lives;
+        this.player.explode();
+        this.player.e = -1;
+        this.flameList = this.flameList.concat(this.player.flameList);
         newAsteroids.push(...a.split(this.player.vel));
       }
       for (let o of this.otherShips) {
+        if (o.e < 0) {
+          o.e = -1;
+          continue;
+        }
         if (a.collision(o)) {
           a.e = -1;
           o.e = -1;
-          newAsteroids.push(...a.split(this.player.vel));
+          o.explode();
+          newAsteroids.push(...a.split(o.vel));
         }
       }
     }
@@ -565,6 +620,15 @@ class SpaceScene extends Scene {
         hmax: this.app.renderer.height / this.viewframe.scale,
       });
       a.update(delta);
+    }
+    for (let o of this.otherShips) {
+      wrapPos(o, {
+        wmin: 0,
+        wmax: this.app.renderer.width / this.viewframe.scale,
+        hmin: 0,
+        hmax: this.app.renderer.height / this.viewframe.scale,
+      });
+      o.update(delta);
     }
   }
 }

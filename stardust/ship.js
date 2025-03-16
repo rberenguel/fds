@@ -49,7 +49,6 @@ class Ship extends Base1 {
   explode(props = {}) {
     const minenergy = props.minenergy ?? 12;
     const pos = props.pos ?? { x: 0, y: 0 };
-    let flames = [];
     const [rpx, rpy] = rotate(pos.x, pos.y, this.r);
     for (let i = 0; i < props.count ?? 12; i++) {
       const m = 4 * Math.random();
@@ -68,9 +67,8 @@ class Ship extends Base1 {
         e: minenergy + Math.random() * 8,
         scale: 0.8,
       });
-      flames.push(fl);
+      this.flameList.push(fl);
     }
-    return flames;
   }
 
   collision(other) {
@@ -116,14 +114,12 @@ class Ship extends Base1 {
     if (nv > 10 && Math.abs(angleDifference) < 0.5 && this.emergencyBrakes) {
       this.vel.x = 0;
       this.vel.y = 0;
-      this.flameList = this.flameList.concat(
-        this.explode({
-          pos: { x: -60, y: 0 },
-          count: 15,
-          minenergy: 20,
-          fill: 0x00ccff,
-        }),
-      );
+      this.explode({
+        pos: { x: -60, y: 0 },
+        count: 15,
+        minenergy: 20,
+        fill: 0x00ccff,
+      });
       return;
     }
 
@@ -174,18 +170,15 @@ class Ship extends Base1 {
     const velocityAngle = Math.atan2(this.vel.y, this.vel.x);
     //const angleDifference = normalizeAngle(this.r - velocityAngle);
     const angleDifference = shortestAngleDifference(this.r, velocityAngle);
-    console.log(angleDifference);
     if (nv > 10 && Math.abs(angleDifference) < 0.2 && this.emergencyBrakes) {
       this.vel.x = 0;
       this.vel.y = 0;
-      this.flameList = this.flameList.concat(
-        this.explode({
-          pos: { x: 90, y: 0 },
-          count: 15,
-          minenergy: 20,
-          fill: 0x00ccff,
-        }),
-      );
+      this.explode({
+        pos: { x: 90, y: 0 },
+        count: 15,
+        minenergy: 20,
+        fill: 0x00ccff,
+      });
       return;
     }
 
@@ -240,7 +233,6 @@ class Ship extends Base1 {
 
   generate() {
     super.generate();
-    //this.presentation.scale.set(this.scale)
   }
 
   /* pos would be universe coordinates, then here I need to use screen coordinates */
@@ -280,6 +272,14 @@ class Ship extends Base1 {
     const green = Math.floor(255 * ne); // Green decreases faster
     const blue = Math.floor(255 * ne);
     const hexColor = (red << 16) | (green << 8) | blue;
+    if (isNaN(this.vel.x) || isNaN(this.vel.y)) {
+      this.presentation = { destroyed: true };
+      return;
+    }
+    if (isNaN(this.pos.x) || isNaN(this.pos.y)) {
+      this.presentation = { destroyed: true };
+      return;
+    }
     for (let presentation of this.presentations) {
       if (!presentation) {
         this.presentation = { destroyed: true };
@@ -313,14 +313,6 @@ class Ship extends Base1 {
           }
         }
       }
-    }
-    if (isNaN(this.vel.x) || isNaN(this.vel.y)) {
-      this.presentation = { destroyed: true };
-      return;
-    }
-    if (isNaN(this.pos.x) || isNaN(this.pos.y)) {
-      this.presentation = { destroyed: true };
-      return;
     }
   }
 }

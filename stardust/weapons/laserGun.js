@@ -31,7 +31,7 @@ class LaserGun extends Gun {
       stats.ACCEL
     ).toFixed(0);
     const mip = LaserGun.baseStats.baseE.toFixed(0);
-    const html = `<p>Plasma gun</p><hr/><p>Energy (no ammo)</p><table><tr><td>Point blank dmg: </td><td>${mip}</td></tr><tr><td>Speed: </td><td>${stats.ACCEL}</td></tr><td>Range: </td><td>${range}</td></tr></table>`;
+    const html = `<p>Laser gun</p><hr/><p>Energy (recharging)</p><table><tr><td>Point blank dmg: </td><td>${mip}</td></tr><tr><td>Speed: </td><td>${stats.ACCEL}</td></tr><td>Range: </td><td>${range}</td></tr></table>`;
     return html;
   };
   present() {
@@ -40,6 +40,7 @@ class LaserGun extends Gun {
   constructor(props) {
     super({ ...props });
     this.stats = { ...this.constructor.baseStats };
+    this.color = props.color ?? 0x00ccff;
   }
 
   fire(shooter, bulletList) {
@@ -68,6 +69,7 @@ class LaserGun extends Gun {
       minRange: this.stats.minRange,
       decay: this.stats.decay,
       scale: shooter.scale,
+      color: this.color,
       source: this.source,
     });
     bulletList.push(b);
@@ -85,8 +87,8 @@ class LaserGunShot extends Base1 {
         [-20, -8],
         [-20, 8],
       ],
-      color: 0x00ccff,
-      fill: 0x00ccff,
+      color: props.color,
+      fill: props.color,
     });
     super({ ...props, meshes: [mesh] });
 
@@ -111,11 +113,7 @@ class LaserGunShot extends Base1 {
     if (this.moved > this.minRange) {
       this.e -= 1000;
     }
-    const ne = Math.max(0, Math.min(1, this.e / this.initialE));
-    const red = Math.floor(255 * (1 - ne)); // Cools to red
-    const green = Math.floor(255 * ne);
-    const blue = Math.floor(255 * ne * ne);
-    const hexColor = (red << 16) | (green << 8) | blue;
+
     for (let presentation of this.presentations) {
       if (!presentation) {
         this.presentation = { destroyed: true };
@@ -126,7 +124,6 @@ class LaserGunShot extends Base1 {
         return;
       }
       presentation.rotation = this.r;
-      presentation.tint = hexColor;
     }
   }
 }

@@ -17,7 +17,12 @@
   transform: translate(-50%, -50%);
   color: white;
   padding: 20px;
-  border-radius: 10px;
+  border-radius: 1rem;
+  border: 1px solid #ccc;
   text-align: center;
   font-family: "monoidregular";
+}
+
+.glass {
+  backdrop-filter: blur(5px);
 }

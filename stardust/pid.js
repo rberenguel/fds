@@ -48,16 +48,15 @@ class PIDController {
   }
 }
 
-const otherControl = (
-  other,
-  ship,
-  target,
-  deltaTime,
-  bulletList,
-  asteroids,
-  gameWidth, // Add gameWidth as a parameter
-  gameHeight, // Add gameHeight as a parameter
-) => {
+const otherControl = (props = {}) => {
+  const other = props.other;
+  const ship = props.ship;
+  const target = props.target;
+  const deltaTime = props.deltaTime;
+  const bulletList = props.bulletList;
+  const asteroids = props.asteroids;
+  const gameWidth = props.gameWidth;
+  const gameHeight = props.gameHeight;
   const dt = deltaTime / 1000;
 
   if (!other.yawPID) {
@@ -221,10 +220,17 @@ const otherControl = (
           continue; // Don't shoot too rapidly
         }
         other.prevshot = now;
-        if (other.weapons && other.weapons[0])
-          other.weapons[0].fire(other, bulletList);
-        if (other.weapons && other.weapons[1])
-          other.weapons[1].fire(other, bulletList);
+        if ((other.ammo?.[other.weapons[0]?.kind]?.count ?? 0) >= 2) {
+          if (other.weapons && other.weapons[0])
+            other.weapons[0].fire(other, bulletList);
+          if (other.weapons && other.weapons[1])
+            other.weapons[1].fire(other, bulletList);
+        }
+        if (target.kind === "kAsteroid") {
+          if (distanceToAsteroid < 1000 && other.secondaryWeapons[0]) {
+            other.secondaryWeapons[0].fire(other, bulletList);
+          }
+        }
         break; // Shoot at one asteroid at a time for now
       }
     }
@@ -268,49 +274,49 @@ const otherControl = (
     other.yawLeft();
   }
 
-  // --- Shooting Logic (No changes here - for the player) ---
-  const shootingAngle = Math.atan2(
-    other.pos.y - ship.pos.y,
-    other.pos.x - ship.pos.x,
-  );
+  if (ship) {
+    // Ship targetting
+    const shootingAngle = Math.atan2(
+      other.pos.y - ship.pos.y,
+      other.pos.x - ship.pos.x,
+    );
 
-  // Wrapped distance to ship (player)
-  let sdx = ship.pos.x - other.pos.x;
-  if (sdx > gameWidth / 2) {
-    sdx -= gameWidth;
-  } else if (sdx < -gameWidth / 2) {
-    sdx += gameWidth;
-  }
-
-  let sdy = ship.pos.y - other.pos.y;
-  if (sdy > gameHeight / 2) {
-    sdy -= gameHeight;
-  } else if (sdy < -gameHeight / 2) {
-    sdy += gameHeight;
-  }
-  const sdist = Math.sqrt(sdx * sdx + sdy * sdy);
-
-  if (
-    Math.abs(normalizeAngle(shootingAngle - other.r + Math.PI)) < 0.3 &&
-    sdist < 0.8 * (other.weapons[0]?.stats?.minRange ?? 1500)
-  ) {
-    const now = performance.now();
-    if (now - other.prevshot < (other.weapons[0]?.fireRate ?? 100)) {
-      return;
+    let sdx = ship.pos.x - other.pos.x;
+    if (sdx > gameWidth / 2) {
+      sdx -= gameWidth;
+    } else if (sdx < -gameWidth / 2) {
+      sdx += gameWidth;
     }
-    if ((other.ammo?.[other.weapons[0]?.kind]?.count ?? 0) < 2) {
-      return;
-    }
-    other.prevshot = now;
-    if (other.weapons && other.weapons[0])
-      other.weapons[0].fire(other, bulletList);
-    if (other.weapons && other.weapons[1])
-      other.weapons[1].fire(other, bulletList);
 
-    // TODO tracking firerate should be internal of the weapon itself
-    if (sdist < 1000 && other.secondaryWeapons[0]) {
-      console.log("OPEN FIRE");
-      other.secondaryWeapons[0].fire(other, bulletList);
+    let sdy = ship.pos.y - other.pos.y;
+    if (sdy > gameHeight / 2) {
+      sdy -= gameHeight;
+    } else if (sdy < -gameHeight / 2) {
+      sdy += gameHeight;
+    }
+    const sdist = Math.sqrt(sdx * sdx + sdy * sdy);
+
+    if (
+      Math.abs(normalizeAngle(shootingAngle - other.r + Math.PI)) < 0.3 &&
+      sdist < 0.8 * (other.weapons[0]?.stats?.minRange ?? 1500)
+    ) {
+      const now = performance.now();
+      if (now - other.prevshot < (other.weapons[0]?.fireRate ?? 100)) {
+        return;
+      }
+      if ((other.ammo?.[other.weapons[0]?.kind]?.count ?? 0) < 2) {
+        return;
+      }
+      other.prevshot = now;
+      if (other.weapons && other.weapons[0])
+        other.weapons[0].fire(other, bulletList);
+      if (other.weapons && other.weapons[1])
+        other.weapons[1].fire(other, bulletList);
+
+      // TODO tracking firerate should be internal of the weapon itself
+      if (sdist < 1000 && other.secondaryWeapons[0]) {
+        other.secondaryWeapons[0].fire(other, bulletList);
+      }
     }
   }
 

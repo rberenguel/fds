@@ -40,11 +40,9 @@ class GaussCannon extends Gun {
   fire(shooter, bulletList) {
     // Shooter is a reference to whoever is shooting, so we can take
     // direction and velocity vector.
-    console.log(shooter.ammo[GaussCannon.kind]);
     if ((shooter.ammo[GaussCannon.kind].count ?? 0) < 1) {
       return;
     }
-    console.log("Firing");
     const rf = rnd();
     const spread = -0.0005 + 0.001 * rf;
     const ivx = Math.cos(shooter.r + spread);

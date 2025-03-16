@@ -71,7 +71,12 @@ canvas {
   flex-shrink: 0;
 }
 
-#lives,
+#next-wave-countdown {
+  font-size: 1rem;
+  padding: 10px;
+  margin-left: 10px;
+}
+
 #score {
   font-size: 1rem;
   padding: 10px;
@@ -128,6 +133,7 @@ canvas {
 }
 
 #powerup-container {
+  cursor: pointer;
   z-index: 5;
   font-size: 1rem;
   position: fixed;
@@ -148,6 +154,11 @@ canvas {
 }
 
 #powerup-container > h3 {
+  width: 100%;
+  flex-basis: 100%;
+}
+
+#skip-powerup {
   width: 100%;
   flex-basis: 100%;
 }

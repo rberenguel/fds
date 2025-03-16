@@ -20,14 +20,25 @@ class Msgs {
   }
 
   hide() {
+    console.log("HIDING THE THING");
+    console.log(this._div);
+    this._div.classList.remove("glass");
     this._glass.style.display = "none";
     this._div.style.display = "none";
     this.visible = false;
   }
 
   show() {
+    console.log("SHOWING THE THING");
     this._glass.style.display = "block";
     this._div.style.display = "block";
+    this.visible = true;
+  }
+
+  showSmall() {
+    console.log("SHOWING THE SMALL THING");
+    this._div.style.display = "block";
+    this._div.classList.add("glass");
     this.visible = true;
   }
 

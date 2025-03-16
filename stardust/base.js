@@ -100,7 +100,10 @@ class Base1 {
     this.meshes = props?.meshes;
   }
 
-  generate() {
+  generate(unconditionally = false) {
+    if (this.generated && !unconditionally) {
+      return;
+    }
     this.presentations = [];
     for (const mesh of this.meshes) {
       let p = new Graphics();
@@ -152,6 +155,7 @@ class Base1 {
         }
         presentation.destroy();
         presentation = null;
+        this.generated = false;
       }
     }
     for (let presentation of this.presentations) {

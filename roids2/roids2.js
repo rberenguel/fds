@@ -278,33 +278,40 @@ const scale = isMobile() ? 0.12 : SpaceScene.MAXSCALE;
 
 console.info("Generating player");
 
-let weapons = [];
-let secondaryWeapons = [];
-try {
-  const plasmaGun1 = new PlasmaGun({
-    pos: {
-      x: -40,
-      y: 40,
-    },
-  });
-  const plasmaGun2 = new PlasmaGun({
-    pos: {
-      x: -40,
-      y: -40,
-    },
-  });
-  const photonTorpedo = new PhotonTorpedoLauncher({
-    pos: {
-      x: 0,
-      y: 0,
-    },
-  });
-  secondaryWeapons = [photonTorpedo];
+const baseWeapons = () => {
+  let weapons = [];
+  let secondaryWeapons = [];
+  try {
+    const plasmaGun1 = new PlasmaGun({
+      pos: {
+        x: -40,
+        y: 40,
+      },
+    });
+    const plasmaGun2 = new PlasmaGun({
+      pos: {
+        x: -40,
+        y: -40,
+      },
+    });
+    const photonTorpedo = new PhotonTorpedoLauncher({
+      pos: {
+        x: 0,
+        y: 0,
+      },
+      color: 0x00ddff,
+      haloColor: 0x11ddff,
+    });
+    secondaryWeapons = [photonTorpedo];
 
-  weapons = [plasmaGun1, plasmaGun2];
-} catch (err) {
-  console.error(err);
-}
+    weapons = [plasmaGun1, plasmaGun2];
+  } catch (err) {
+    console.error(err);
+  }
+  return { weapons: weapons, secondaryWeapons: secondaryWeapons };
+};
+
+const { weapons, secondaryWeapons } = baseWeapons();
 
 const player = new Lynx({
   pos: {
@@ -319,7 +326,7 @@ player.recoveryRate = 0.04;
 player.emergencyBrakes = false;
 player.pointSight = false;
 
-const resetPlayerPVA = () => {
+const resetPlayerPVA = (regenerate = false) => {
   player.pos = {
     x: (0.5 * app.renderer.width) / scale,
     y: (0.5 * app.renderer.height) / scale,
@@ -329,6 +336,7 @@ const resetPlayerPVA = () => {
     y: 0,
   };
   player.r = 0;
+  player.lives = 1;
   if (player.weapons[0].ammo) {
     player.ammo[player.weapons[0].kind] = {};
     player.ammo[player.weapons[0].kind].count = player.weapons[0].ammoMax;
@@ -341,7 +349,12 @@ const resetPlayerPVA = () => {
     player.ammo[player.secondaryWeapons[0].kind].max =
       player.secondaryWeapons[0].ammoMax;
   }
+  spaceScene.player = player;
   player.e = 1000; // TODO: this should be the current player maximum instead
+  if (regenerate) {
+    player.generate(true);
+    spaceScene.bindPlayer(); // This is like very disconnected?
+  }
 };
 
 for (let w of player.weapons) {
@@ -383,16 +396,8 @@ const commands = [
     title: "Play",
 
     lambda: () => {
-      player.lives = 1;
-      player.pos = {
-        x: (0.5 * app.renderer.width) / scale,
-        y: (0.5 * app.renderer.height) / scale,
-      };
-      player.vel = {
-        x: 0,
-        y: 0,
-      };
-      player.r = 0;
+      msgs.hide();
+      resetPlayerPVA(true);
       for (let a of spaceScene.asteroids) {
         a.e = -1;
       }
@@ -402,12 +407,26 @@ const commands = [
       for (let f of spaceScene.flameList) {
         f.e = -1;
       }
+      for (let b of spaceScene.bulletList) {
+        b.e = -1;
+      }
       level = 0;
       spaceScene.score = 0;
-      livesDiv.textContent = 3;
       scoreDiv.textContent = 0;
-      msgs.hide();
+      chosePowerup = true;
+      finishCountdown = 0;
+      countDown = 0;
+      player.pointSight = false;
+      player.emergencyBrakes = false;
+      const { weapons, secondaryWeapons } = baseWeapons();
+      player.weapons = weapons;
+      player.secondaryWeapons = secondaryWeapons;
     },
+  },
+  {
+    title: "Debug commands:",
+    lambda: () => {},
+    disabled: true,
   },
   {
     title: "To level",
@@ -498,6 +517,7 @@ document.getElementById("menu").addEventListener("click", (ev) => {
 });
 
 let countDown = 0;
+let finishCountdown = 0;
 let level = 0;
 let chosePowerup = true;
 
@@ -600,6 +620,16 @@ const offerChoices = (options = []) => {
       choosing = false;
     });
   });
+  const skipPowerup = document.getElementById("skip-powerup");
+  skipPowerup.textContent = "Skip the choice (-2000 points)";
+  skipPowerup.addEventListener("click", () => {
+    spaceScene.score -= 2000;
+    glass.style.display = "none";
+    powerupContainer.style.display = "none";
+    chosePowerup = true;
+    choosing = false;
+    showHUDInfo();
+  });
 };
 
 const allPowerUpChoices = [
@@ -663,10 +693,42 @@ const allPowerUpChoices = [
     },
   },
   {
+    id: "kLaserGun",
+    name: "Laser Gun",
+    description: () => {
+      const title = "<h2>Primary weapon</h2>";
+      const htmlA = LaserGun.present();
+      const htmlB = player.weapons[0].present();
+      return `${title} ${htmlA} <h3>replace</h3> ${htmlB}`;
+    },
+    glyph: "lasergun.png",
+    lambda: () => {
+      const laserGun1 = new LaserGun({
+        pos: {
+          x: -40,
+          y: 40,
+        },
+      });
+      const laserGun2 = new LaserGun({
+        pos: {
+          x: -40,
+          y: -40,
+        },
+      });
+      player.weapons = [laserGun1, laserGun2];
+      player.ammo[LaserGun.kind] = {};
+      player.ammo[LaserGun.kind].count = 10;
+      player.ammo[LaserGun.kind].max = laserGun1.ammoMax;
+      for (let w of player.weapons) {
+        w.source = player._id;
+      }
+    },
+  },
+  {
     id: "kEmergencyBrakes",
     name: "Emergency brakes",
     description: () => {
-      const title = "<h2>Active utility</h2>";
+      const title = "<h2>Passive utility</h2>";
       return `${title}<p>Emergency brakes</p> Accelerate in the opposite direction of your travel to brake immediately.`;
     },
     glyph: "emergencybrakes.png",
@@ -711,13 +773,18 @@ app.ticker.add((delta) => {
     app.canvas.style.display = "none";
     return;
   }
-  if (player.lives <= 0 && !msgs.visible) {
+  if (player.lives <= 0 && !msgs.visible && !choosing) {
     msgs.html(
       `Game over!<br/>Select <em>Play</em> in the upper-left menu to play again`,
     );
-    msgs.show();
+    msgs.showSmall();
+    player.explode();
+    for (let o of spaceScene.otherShips) {
+      o.action = () => "kIdle";
+    }
     return;
   }
+  /*
   if (spaceScene.otherShips.length == 0 && level > 1) {
     // Refill ammo immediately if there are no enemy ships. Why not?
     if (player.weapons[0].ammo) {
@@ -731,10 +798,11 @@ app.ticker.add((delta) => {
       player.ammo[player.secondaryWeapons[0].kind].max =
         player.secondaryWeapons[0].ammoMax;
     }
-  }
-  if (!chosePowerup && spaceScene.asteroids.length === 0) {
+  }*/
+  if (!chosePowerup && spaceScene.asteroids.length === 0 && player.lives >= 1) {
     // TODO
     choosing = true;
+    finishCountdown = 0; // Why here?
     const choices = [...allPowerUpChoices];
     choices.sort(() => Math.random() - 0.5);
 
@@ -742,10 +810,33 @@ app.ticker.add((delta) => {
 
     return;
   }
-  if (spaceScene.asteroids.length === 0) {
+  if (
+    spaceScene.otherShips.length === 0 &&
+    spaceScene.asteroids.length > 0 &&
+    player.lives >= 1
+  ) {
+    if (finishCountdown === 0) {
+      console.log("Setting the finish countdown");
+      finishCountdown = performance.now() + 10000;
+    } else if (performance.now() >= finishCountdown) {
+      // Finish countdown has ended
+      console.log("Removing all asteroids, " + finishCountdown);
+      for (let a of spaceScene.asteroids) {
+        a.e = -1;
+      }
+    } else {
+      const remainingTime = Math.ceil(
+        (finishCountdown - performance.now()) / 1000,
+      ).toFixed(0); // Calculate remaining seconds
+      document.getElementById("next-wave-countdown").innerText =
+        `Next wave in ${remainingTime} seconds`;
+    }
+  }
+  if (spaceScene.asteroids.length === 0 && player.lives >= 1) {
     if (countDown === 0 && chosePowerup) {
       // Asteroids just became empty and a powerup has been chosen
       countDown = performance.now() + 3000; // Start the 3-second countdown
+      document.getElementById("next-wave-countdown").innerText = "";
       msgs.text("");
       msgs.show();
       level++;
@@ -753,11 +844,12 @@ app.ticker.add((delta) => {
       // 3 seconds have passed
       msgs.hide();
       const nextLevel = countsPerLevel(level);
-      resetPlayerPVA();
+      resetPlayerPVA(false);
       spaceScene.addAsteroids(nextLevel.asteroids);
       spaceScene.addEnemies(nextLevel.ships);
       countDown = 0; // Reset the countdown
       chosePowerup = false;
+      finishCountdown === 0;
     } else {
       // Update the countdown display
       const remainingTime = Math.ceil((countDown - performance.now()) / 1000); // Calculate remaining seconds
@@ -783,7 +875,7 @@ app.ticker.add((delta) => {
     // Asteroids are present, reset the countdown
     countDown = 0;
   }
-  if (msgs.visible) {
+  if (msgs.visible && player.lives > 0) {
     return;
   }
   spaceScene.update(delta);
