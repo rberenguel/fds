@@ -140,9 +140,32 @@ class Asteroid extends Base1 {
       presentation.rotation = this.r;
     }
   }
+
+  explode() {
+    for (let i = 0; i < 30; i++) {
+      const m = 4 * Math.random();
+      const a = Math.random() * 2 * Math.PI;
+      const fl = new Flame({
+        pos: {
+          x: this.pos.x,
+          y: this.pos.y,
+        },
+        vel: {
+          x: m * Math.cos(a),
+          y: m * Math.sin(a),
+        },
+        r: 0,
+        e: 12 + Math.random() * 8,
+        scale: 0.8,
+      });
+      this.flameList.push(fl);
+    }
+  }
+
   addCrack(from) {
-    if (this.e <= 0) {
+    if (this.e <= 0.1) {
       this.e = -1;
+      this.explode();
       return false;
     }
     /*if (rnd() > from.e) {

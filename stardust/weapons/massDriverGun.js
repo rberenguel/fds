@@ -24,7 +24,7 @@ class MassDriverGun extends Gun {
     ammoRefreshRate: 0.009,
   };
   ammo = true;
-  baseStats = MassDriverGun.baseStats;
+  ammoMax = 99;
   static present = () => {
     const stats = MassDriverGun.baseStats;
     const range = ((stats.f / stats.decay) * stats.ACCEL).toFixed(0);
@@ -37,20 +37,21 @@ class MassDriverGun extends Gun {
   }
   constructor(props) {
     super({ ...props });
+    this.stats = { ...this.constructor.baseStats };
   }
 
   fire(shooter, bulletList) {
     // Shooter is a reference to whoever is shooting, so we can take
     // direction and velocity vector.
-    if ((shooter.ammo[MassDriverGun.kind] ?? 0) < 1) {
+    if ((shooter.ammo[MassDriverGun.kind].count ?? 0) < 1) {
       return;
     }
     const rf = rnd();
     const spread = -0.005 + 0.01 * rf;
     const ivx = Math.cos(shooter.r + spread);
     const ivy = Math.sin(shooter.r + spread);
-    const vx = MassDriverGun.baseStats.ACCEL * ivx + shooter.vel.x;
-    const vy = MassDriverGun.baseStats.ACCEL * ivy + shooter.vel.y;
+    const vx = this.stats.ACCEL * ivx + shooter.vel.x;
+    const vy = this.stats.ACCEL * ivy + shooter.vel.y;
     const [rpx, rpy] = rotate(this.pos.x, this.pos.y, shooter.r);
     const b = new MassDriverBullet({
       pos: {
@@ -62,15 +63,15 @@ class MassDriverGun extends Gun {
         y: vy,
       },
       r: shooter.r,
-      e: MassDriverGun.baseStats.e,
-      f: MassDriverGun.baseStats.f,
-      decay: MassDriverGun.baseStats.decay,
-      mass: MassDriverGun.baseStats.mass,
+      e: this.stats.e,
+      f: this.stats.f,
+      decay: this.stats.decay,
+      mass: this.stats.mass,
       scale: shooter.scale,
       source: this.source,
     });
     bulletList.push(b);
-    shooter.ammo[MassDriverGun.kind]--;
+    shooter.ammo[MassDriverGun.kind].count--;
   }
 }
 

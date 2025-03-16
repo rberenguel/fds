@@ -14,14 +14,15 @@ class PhotonTorpedoLauncher extends Gun {
   firerate = 1000; // It's not really a rate and it is annoying me
   html = "Pt"; // Asterisk alignment
   ammo = true;
+  ammoMax = 2;
   static baseStats = {
     // Energy, no mass usage really
     minRange: 1500,
     baseE: 1000,
-    ACCEL: 20,
-    ammoRefreshRate: 0.00001,
+    ACCEL: 50,
+    ammoRefreshRate: 0.001,
   };
-  baseStats = PhotonTorpedoLauncher.baseStats;
+
   static present = () => {
     const stats = PhotonTorpedoLauncher.baseStats;
     const range = stats.minRange;
@@ -34,21 +35,22 @@ class PhotonTorpedoLauncher extends Gun {
   }
   constructor(props) {
     super({ ...props });
+    this.stats = { ...this.constructor.baseStats };
+    this.color = 0xff0000;
   }
 
   fire(shooter, bulletList) {
-    console.log("Firing torpedo");
     // Shooter is a reference to whoever is shooting, so we can take
     // direction and velocity vector.
-    if ((shooter.ammo[PhotonTorpedoLauncher.kind] ?? 0) < 1) {
+    if ((shooter.ammo[PhotonTorpedoLauncher.kind].count ?? 0) < 1) {
       return;
     }
     // Photon torpedos will eventually be tracking, so this will need more information somehow.
     const spread = 0;
     const ivx = Math.cos(shooter.r + spread);
     const ivy = Math.sin(shooter.r + spread);
-    const vx = PhotonTorpedoLauncher.baseStats.ACCEL * ivx + shooter.vel.x;
-    const vy = PhotonTorpedoLauncher.baseStats.ACCEL * ivy + shooter.vel.y;
+    const vx = this.stats.ACCEL * ivx + 0.1 * shooter.vel.x;
+    const vy = this.stats.ACCEL * ivy + 0.1 * shooter.vel.y; // Less affected by player speed
     const [rpx, rpy] = rotate(this.pos.x, this.pos.y, shooter.r);
     const b = new PhotonTorpedo({
       mass: 3,
@@ -61,14 +63,14 @@ class PhotonTorpedoLauncher extends Gun {
         y: vy,
       },
       r: shooter.r,
-      e: PhotonTorpedoLauncher.baseStats.baseE,
-      minRange: PhotonTorpedoLauncher.baseStats.minRange,
+      e: this.stats.baseE,
+      minRange: this.stats.minRange,
       scale: shooter.scale,
       source: this.source,
     });
     console.log(b);
     bulletList.push(b);
-    shooter.ammo[PhotonTorpedoLauncher.kind]--;
+    shooter.ammo[PhotonTorpedoLauncher.kind].count--;
   }
 }
 

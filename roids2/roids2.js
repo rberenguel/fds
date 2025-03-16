@@ -20,6 +20,7 @@ import {
   GaussCannon,
   MassDriverGun,
   PhotonTorpedoLauncher,
+  LaserGun,
 } from "../stardust/weapons/weapons.js";
 
 bindGamepadHandlers();
@@ -87,6 +88,12 @@ const gameActions = {
       return;
     }
     prevshot = now;
+    if (
+      (player.ammo[player.weapons[0 + player.primaryWeaponShift].kind]?.count ??
+        10) < 2
+    ) {
+      return;
+    }
     player.weapons[0 + player.primaryWeaponShift].fire(
       player,
       player.bulletList,
@@ -141,10 +148,10 @@ const showHUDInfo = () => {
   let ammoP = undefined;
   let ammoS = undefined;
   if (player.ammo[wa.kind]) {
-    ammoP = `${player.ammo[wa.kind].toFixed(0)}`;
+    ammoP = `${(player.ammo[wa.kind].count ?? 0).toFixed(0)}`;
   }
   if (player.ammo[wc.kind]) {
-    ammoS = `${player.ammo[wc.kind].toFixed(0)}`;
+    ammoS = `${(player.ammo[wc.kind].count ?? 0).toFixed(0)}`;
   }
   const a = wa.html;
   const b = wb.html;
@@ -321,10 +328,16 @@ const resetPlayerPVA = () => {
   };
   player.r = 0;
   if (player.weapons[0].ammo) {
-    player.ammo[player.weapons[0].kind] = 100;
+    player.ammo[player.weapons[0].kind] = {};
+    player.ammo[player.weapons[0].kind].count = player.weapons[0].ammoMax;
+    player.ammo[player.weapons[0].kind].max = player.weapons[0].ammoMax;
   }
   if (player.secondaryWeapons[0].ammo) {
-    player.ammo[player.secondaryWeapons[0].kind] = 2;
+    player.ammo[player.secondaryWeapons[0].kind] = {};
+    player.ammo[player.secondaryWeapons[0].kind].count =
+      player.secondaryWeapons[0].ammoMax;
+    player.ammo[player.secondaryWeapons[0].kind].max =
+      player.secondaryWeapons[0].ammoMax;
   }
   player.e = 1000; // TODO: this should be the current player maximum instead
 };
@@ -337,8 +350,12 @@ for (let w of player.secondaryWeapons) {
   w.source = player._id;
 }
 player.ammo = {};
-player.ammo[MassDriverGun.kind] = 30;
-player.ammo[PhotonTorpedoLauncher.kind] = 2;
+player.ammo[MassDriverGun.kind] = {};
+player.ammo[MassDriverGun.kind].count = 30;
+player.ammo[MassDriverGun.kind].max = 30;
+player.ammo[PhotonTorpedoLauncher.kind] = {};
+player.ammo[PhotonTorpedoLauncher.kind].count = 2;
+player.ammo[PhotonTorpedoLauncher.kind].max = 2;
 console.log(player.ammo);
 showHUDInfo();
 
@@ -422,7 +439,34 @@ const commands = [
         },
       });
       player.weapons = [massDriverGun1, massDriverGun2];
-      player.ammo[MassDriverGun.kind] = 100;
+      player.ammo[MassDriverGun.kind] = {};
+      player.ammo[MassDriverGun.kind].count = 99;
+      player.ammo[MassDriverGun.kind].max = massDriverGun1.ammoMax;
+      console.log(player.ammo[MassDriverGun.kind].count);
+      for (let w of player.weapons) {
+        w.source = player._id;
+      }
+    },
+  },
+  {
+    title: "Laser guns",
+    lambda: () => {
+      const laserGun1 = new LaserGun({
+        pos: {
+          x: -40,
+          y: 40,
+        },
+      });
+      const laserGun2 = new LaserGun({
+        pos: {
+          x: -40,
+          y: -40,
+        },
+      });
+      player.weapons = [laserGun1, laserGun2];
+      player.ammo[LaserGun.kind] = {};
+      player.ammo[LaserGun.kind].count = 10;
+      player.ammo[LaserGun.kind].max = laserGun1.ammoMax;
       for (let w of player.weapons) {
         w.source = player._id;
       }
@@ -443,6 +487,7 @@ const commands = [
     },
   },
 ];
+metaP.maxCommands = 10;
 metaP.bind(commands);
 msgs.attach();
 
@@ -588,10 +633,15 @@ app.ticker.add((delta) => {
   if (spaceScene.otherShips.length == 0 && level > 1) {
     // Refill ammo immediately if there are no enemy ships. Why not?
     if (player.weapons[0].ammo) {
-      player.ammo[player.weapons[0].kind] = 100;
+      player.ammo[player.weapons[0].kind].count = player.weapons[0].ammoMax;
+      // TODO this has to have the potential to be improved per-player
     }
     if (player.secondaryWeapons[0].ammo) {
-      player.ammo[player.secondaryWeapons[0].kind] = 2;
+      player.ammo[player.secondaryWeapons[0].kind] = {};
+      player.ammo[player.secondaryWeapons[0].kind].count =
+        player.secondaryWeapons[0].ammoMax;
+      player.ammo[player.secondaryWeapons[0].kind].max =
+        player.secondaryWeapons[0].ammoMax;
     }
   }
   if (!chosePowerup && spaceScene.asteroids.length === 0) {
@@ -621,8 +671,11 @@ app.ticker.add((delta) => {
               y: -40,
             },
           });
+
           player.weapons = [massDriverGun1, massDriverGun2];
-          player.ammo[MassDriverGun.kind] = 100;
+          player.ammo[MassDriverGun.kind] = {};
+          player.ammo[MassDriverGun.kind].count = 99;
+          player.ammo[MassDriverGun.kind].max = massDriverGun1.ammoMax;
           for (let w of player.weapons) {
             w.source = player._id;
           }
@@ -646,6 +699,9 @@ app.ticker.add((delta) => {
             },
           });
           player.secondaryWeapons = [railGun];
+          player.ammo[GaussCannon.kind] = {};
+          player.ammo[GaussCannon.kind].count = 2;
+          player.ammo[GaussCannon.kind].max = 2;
           for (let w of player.secondaryWeapons) {
             w.source = player._id;
           }
@@ -674,7 +730,23 @@ app.ticker.add((delta) => {
     } else {
       // Update the countdown display
       const remainingTime = Math.ceil((countDown - performance.now()) / 1000); // Calculate remaining seconds
-      msgs.html(`Wave ${level} in ${remainingTime} seconds`);
+      const nextLevel = countsPerLevel(level);
+      const a = nextLevel.asteroids;
+      const s = nextLevel.ships;
+      let extra = "";
+      if (s >= 1) {
+        extra = `<br/><span style='color: white'>DANGER<em> You will face ${s} ships </em>DANGER</span>`;
+      }
+      if (s >= 2) {
+        extra = `<br/><span style='color: orange'>DANGER<em> You will face ${s} ships </em>DANGER</span>`;
+      }
+      if (s >= 4) {
+        extra = `<br/><span style='color: red'>DANGER<em> You will face ${s} ships </em>DANGER</span>`;
+      }
+      msgs.html(
+        `Wave ${level} in ${remainingTime} seconds<br\>You will face ${a} asteroids` +
+          extra,
+      );
     }
   } else {
     // Asteroids are present, reset the countdown

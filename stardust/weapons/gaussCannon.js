@@ -19,8 +19,8 @@ class GaussCannon extends Gun {
     decay: 0.01,
     ammoRefreshRate: 0.00001,
   };
-  baseStats = GaussCannon.baseStats;
   ammo = true;
+  ammoMax = 2;
   static present = () => {
     const stats = GaussCannon.baseStats;
     const range = ((stats.f / stats.decay) * stats.ACCEL).toFixed(0);
@@ -33,24 +33,28 @@ class GaussCannon extends Gun {
   }
   constructor(props) {
     super({ ...props });
+    this.stats = { ...this.constructor.baseStats };
+    this.color = 0xffffff;
   }
 
   fire(shooter, bulletList) {
     // Shooter is a reference to whoever is shooting, so we can take
     // direction and velocity vector.
-    if ((shooter.ammo[GaussCannon.kind] ?? 0) < 1) {
+    console.log(shooter.ammo[GaussCannon.kind]);
+    if ((shooter.ammo[GaussCannon.kind].count ?? 0) < 1) {
       return;
     }
+    console.log("Firing");
     const rf = rnd();
     const spread = -0.0005 + 0.001 * rf;
     const ivx = Math.cos(shooter.r + spread);
     const ivy = Math.sin(shooter.r + spread);
-    const vx = GaussCannon.baseStats.ACCEL * ivx + shooter.vel.x;
-    const vy = GaussCannon.baseStats.ACCEL * ivy + shooter.vel.y;
+    const vx = this.stats.ACCEL * ivx + shooter.vel.x;
+    const vy = this.stats.ACCEL * ivy + shooter.vel.y;
     const [rpx, rpy] = rotate(this.pos.x, this.pos.y, shooter.r);
     const b = new MassDriverBullet({
       f: 1,
-      mass: GaussCannon.baseStats.mass,
+      mass: this.stats.mass,
       pos: {
         x: shooter.pos.x + rpx,
         y: shooter.pos.y + rpy,
@@ -60,12 +64,13 @@ class GaussCannon extends Gun {
         y: vy,
       },
       r: shooter.r,
-      f: GaussCannon.baseStats.f,
-      decay: GaussCannon.baseStats.decay,
+      f: this.stats.f,
+      decay: this.stats.decay,
       e: 1,
       scale: shooter.scale,
       source: this.source,
     });
+    shooter.ammo[GaussCannon.kind].count--;
     bulletList.push(b);
   }
 }

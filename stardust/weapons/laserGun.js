@@ -1,4 +1,4 @@
-export { PlasmaGun };
+export { LaserGun };
 
 import { Gun } from "./weaponBase.js";
 import { rotate } from "../math.js";
@@ -8,30 +8,34 @@ import { seededRnd } from "../rnd.js";
 
 const rnd = seededRnd(performance.now());
 
-class PlasmaGun extends Gun {
-  static kind = "PlasmaGun";
-  kind = "PlasmaGun";
+class LaserGun extends Gun {
+  static kind = "LaserGun";
+  kind = "LaserGun";
   firerate = 50;
-  html = "Pg";
+  html = "Lg";
   static baseStats = {
     // Energy, no mass use really
+    minRange: 3500,
     baseE: 20,
-    decay: 0.5,
-    ACCEL: 40,
+    decay: 0.3,
+    ACCEL: 100,
+    ammoRefreshRate: 0.05,
   };
-  ammo = false;
+  ammo = true;
+  ammoMax = 10;
+  // Although it's an energy weapon, it uses a lot of energy. Let's treat it as ammo
   static present = () => {
-    const stats = PlasmaGun.baseStats;
+    const stats = LaserGun.baseStats;
     const range = (
-      (stats.baseE / PlasmaGun.baseStats.decay) *
+      (stats.baseE / LaserGun.baseStats.decay) *
       stats.ACCEL
     ).toFixed(0);
-    const mip = PlasmaGun.baseStats.baseE.toFixed(0);
+    const mip = LaserGun.baseStats.baseE.toFixed(0);
     const html = `<p>Plasma gun</p><hr/><p>Energy (no ammo)</p><table><tr><td>Point blank dmg: </td><td>${mip}</td></tr><tr><td>Speed: </td><td>${stats.ACCEL}</td></tr><td>Range: </td><td>${range}</td></tr></table>`;
     return html;
   };
   present() {
-    return PlasmaGun.present();
+    return LaserGun.present();
   }
   constructor(props) {
     super({ ...props });
@@ -41,14 +45,16 @@ class PlasmaGun extends Gun {
   fire(shooter, bulletList) {
     // Shooter is a reference to whoever is shooting, so we can take
     // direction and velocity vector.
-    const rf = rnd();
-    const spread = -0.01 + 0.02 * rf;
+    if ((shooter.ammo[LaserGun.kind].count ?? 0) <= 1) {
+      return;
+    }
+    const spread = 0;
     const ivx = Math.cos(shooter.r + spread);
     const ivy = Math.sin(shooter.r + spread);
-    const vx = this.stats.ACCEL * ivx + shooter.vel.x;
-    const vy = this.stats.ACCEL * ivy + shooter.vel.y;
+    const vx = this.stats.ACCEL * ivx + 0.01 * shooter.vel.x;
+    const vy = this.stats.ACCEL * ivy + 0.01 * shooter.vel.y; // Very little affected from player movement
     const [rpx, rpy] = rotate(this.pos.x, this.pos.y, shooter.r);
-    const b = new PlasmaBullet({
+    const b = new LaserGunShot({
       pos: {
         x: shooter.pos.x + rpx,
         y: shooter.pos.y + rpy,
@@ -59,34 +65,38 @@ class PlasmaGun extends Gun {
       },
       r: shooter.r,
       e: this.stats.baseE,
+      minRange: this.stats.minRange,
       decay: this.stats.decay,
       scale: shooter.scale,
       source: this.source,
     });
     bulletList.push(b);
+    shooter.ammo[LaserGun.kind].count--;
   }
 }
 
-class PlasmaBullet extends Base1 {
+class LaserGunShot extends Base1 {
   constructor(props) {
     const mesh = new Mesh({
       kind: Meshes.kPoly,
       vertices: [
-        [12, 0],
-        [0, -7],
-        [-12, 0],
-        [0, 7],
+        [20, 8],
+        [20, -8],
+        [-20, -8],
+        [-20, 8],
       ],
-      color: 0x00ffff,
-      fill: 0x00ffff,
+      color: 0x00ccff,
+      fill: 0x00ccff,
     });
     super({ ...props, meshes: [mesh] });
 
     this.e = props.e ?? 10;
     this.initialE = this.e;
     this.decay = props.decay ?? 0.15;
-    this.mass = props.mass ?? 1;
+    this.mass = props.mass ?? 0.0001;
     this.source = props.source ?? -1;
+    this.minRange = props.minRange ?? 2000;
+    this.moved = 0;
   }
 
   generate() {
@@ -96,7 +106,11 @@ class PlasmaBullet extends Base1 {
   update(delta) {
     super.update(delta);
     super.move(delta.deltaTime);
-    this.e -= 0.5 * (Math.random() * this.decay + this.decay);
+    this.e -= 0.5;
+    this.moved += Math.abs(this.vel.x) + Math.abs(this.vel.y);
+    if (this.moved > this.minRange) {
+      this.e -= 1000;
+    }
     const ne = Math.max(0, Math.min(1, this.e / this.initialE));
     const red = Math.floor(255 * (1 - ne)); // Cools to red
     const green = Math.floor(255 * ne);

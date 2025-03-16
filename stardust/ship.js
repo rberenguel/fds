@@ -199,16 +199,24 @@ class Ship extends Base1 {
     this.e = Math.min(this.e, this.initialE);
     let w = this.weapons[0];
     if (w) {
-      const rr = w.baseStats.ammoRefreshRate;
+      const rr = w.stats.ammoRefreshRate;
       if (rr) {
-        this.ammo[w.kind] += rr * delta.deltaTime;
+        this.ammo[w.kind].count += rr * delta.deltaTime;
+        this.ammo[w.kind].count = Math.min(
+          this.ammo[w.kind].max,
+          this.ammo[w.kind].count,
+        );
       }
     }
     w = this.secondaryWeapons[0];
     if (w) {
-      const rr = w.baseStats.ammoRefreshRate;
+      const rr = w.stats.ammoRefreshRate;
       if (rr) {
-        this.ammo[w.kind] += rr * delta.deltaTime;
+        this.ammo[w.kind].count += rr * delta.deltaTime;
+        this.ammo[w.kind].count = Math.min(
+          this.ammo[w.kind].max,
+          this.ammo[w.kind].count,
+        );
       }
     }
 
@@ -228,7 +236,18 @@ class Ship extends Base1 {
         return;
       }
       presentation.rotation = this.r;
-      presentation.tint = hexColor;
+      if (presentation.name != "secondaryWeapon") {
+        presentation.tint = hexColor;
+      } else {
+        if (
+          this.secondaryWeapons[0] &&
+          this.ammo[this.secondaryWeapons[0].kind].count >= 1
+        ) {
+          presentation.tint = this.secondaryWeapons[0].color;
+        } else {
+          presentation.tint = 0x000000;
+        }
+      }
     }
     if (isNaN(this.vel.x) || isNaN(this.vel.y)) {
       this.presentation = { destroyed: true };
@@ -255,6 +274,14 @@ class Lynx extends Ship {
       color: 0xffffff,
       width: 10,
       fill: 0x000000,
+    });
+    const secondaryWeaponMesh = new Mesh({
+      name: "secondaryWeapon",
+      kind: Meshes.kCircle,
+      center: [0, 0],
+      radius: 10,
+      color: 0xffffff,
+      fill: 0xffffff,
     });
     let weapons = props.weapons ?? [];
     let secondaryWeapons = props.secondaryWeapons ?? [];
@@ -310,7 +337,7 @@ class Lynx extends Ship {
 
     super({
       ...props,
-      meshes: [mesh],
+      meshes: [mesh, secondaryWeaponMesh],
       weapons: weapons,
       secondaryWeapons: secondaryWeapons,
     });
@@ -335,8 +362,16 @@ class Bobcat extends Ship {
       width: 10,
       fill: 0x000000,
     });
+    const secondaryWeaponMesh = new Mesh({
+      name: "secondaryWeapon",
+      kind: Meshes.kCircle,
+      center: [0, 0],
+      radius: 10,
+      color: 0xffffff,
+      fill: 0xffffff,
+    });
     let weapons = [];
-    super({ ...props, meshes: [mesh], weapons: weapons });
+    super({ ...props, meshes: [mesh, secondaryWeaponMesh], weapons: weapons });
     try {
       /*const plasmaGun1 = new PlasmaGun({
         pos: {

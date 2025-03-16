@@ -101,8 +101,9 @@ class Base1 {
   }
 
   generate() {
-    let p = new Graphics();
+    this.presentations = [];
     for (const mesh of this.meshes) {
+      let p = new Graphics();
       if (mesh.kind === Meshes.kPoly) {
         p.poly(mesh.flatten());
         if (mesh.fill !== undefined) {
@@ -121,40 +122,10 @@ class Base1 {
           p.fill(mesh.fill);
         }
       }
-      /*if (mesh.kind === Meshes.kPlanet) {
-        let q = new Graphics();
-        p.circle(mesh.center[0], mesh.center[1], mesh.radius);
-        q.circle(mesh.center[0], mesh.center[1], mesh.radius);
-        if (mesh.width) {
-          p.stroke({ color: mesh.color, width: mesh.width ?? 0 });
-          q.stroke({ color: mesh.color, width: mesh.width ?? 0 });
-        }
-        if (mesh.fill !== undefined) {
-          p.fill(mesh.fill);
-          q.fill(mesh.fill);
-        }
-        let c = new Container();
-        let cc = new Container();
-        cc.mask = p;
-        cc.addChild(p);
-        cc.addChild(q);
-        cc.addChild(mesh.texture.sprite);
-        c.addChild(cc);
-        cc.planetTexture = true;
-        const rad = mesh.radius;
-        mesh.texture.sprite.anchor.x = 0.5;
-        mesh.texture.sprite.anchor.y = 0.5;
-        mesh.texture.sprite.x = mesh.center[0];
-        mesh.texture.sprite.y = mesh.center[1];
-        // Scale ideally is proportional to size (max of height and width) and adjusted for planet radius…
-        mesh.texture.sprite.scale =
-          (2 * mesh.radius) / mesh.texture.sprite._size;
-        this.generated = true;
-        this.presentations = [cc];
-        return;
-      }*/
+      p.name = mesh.name;
+      this.presentations.push(p);
     }
-    this.presentations = [p];
+
     this.generated = true;
   }
 

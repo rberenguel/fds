@@ -12,7 +12,12 @@ import { otherControl } from "../stardust/pid.js";
 import { Bobcat, Lynx } from "../stardust/ship.js";
 import { Asteroid } from "./asteroid.js";
 import { seededRnd } from "../stardust/rnd.js";
-import { MassDriverGun } from "../stardust/weapons/weapons.js";
+import {
+  MassDriverGun,
+  LaserGun,
+  PhotonTorpedoLauncher,
+  GaussCannon,
+} from "../stardust/weapons/weapons.js";
 const rnd = seededRnd(performance.now());
 
 class Scene {
@@ -143,7 +148,77 @@ class SpaceScene extends Scene {
       });
 
       other.prevShot = -1;
-      other.ammo[MassDriverGun.kind] = 300000000000000;
+      if (Math.random() < 0.5) {
+        other.ammo[LaserGun.kind] = {};
+        other.ammo[LaserGun.kind].count = 10;
+        other.ammo[LaserGun.kind].max = 30;
+        const laserGun1 = new LaserGun({
+          pos: {
+            x: -30,
+            y: 50,
+          },
+        });
+        const laserGun2 = new LaserGun({
+          pos: {
+            x: -30,
+            y: -50,
+          },
+        });
+        laserGun1.stats.baseE = LaserGun.baseStats.baseE * 2;
+        laserGun2.stats.baseE = LaserGun.baseStats.baseE * 2;
+        other.weapons = [laserGun1, laserGun2];
+        if (Math.random() < 0.5) {
+          const photonTorpedo = new PhotonTorpedoLauncher({
+            pos: {
+              x: 0,
+              y: 0,
+            },
+            source: this._id,
+          });
+          photonTorpedo.stats.ammoRefreshRate =
+            PhotonTorpedoLauncher.baseStats.ammoRefreshRate * 2;
+          other.secondaryWeapons = [photonTorpedo];
+          other.ammo[PhotonTorpedoLauncher.kind] = {};
+          other.ammo[PhotonTorpedoLauncher.kind].count = 2;
+          other.ammo[PhotonTorpedoLauncher.kind].max = 2;
+          for (let w of other.secondaryWeapons) {
+            w.source = other._id;
+          }
+        }
+
+        for (let w of other.weapons) {
+          w.source = other._id;
+        }
+      } else {
+        other.ammo[MassDriverGun.kind] = {};
+        other.ammo[MassDriverGun.kind].count = 300000000000000;
+        other.ammo[MassDriverGun.kind].max = 300000000000000;
+        if (Math.random() < 0.5) {
+          const railGun = new GaussCannon({
+            pos: {
+              x: 0,
+              y: 0,
+            },
+            source: this._id,
+          });
+          railGun.stats.ammoRefreshRate =
+            GaussCannon.baseStats.ammoRefreshRate * 2;
+          other.secondaryWeapons = [railGun];
+          other.ammo[GaussCannon.kind] = {};
+          other.ammo[GaussCannon.kind].count = 2;
+          other.ammo[GaussCannon.kind].max = 2;
+          for (let w of other.secondaryWeapons) {
+            w.source = other._id;
+          }
+        }
+        for (let w of other.weapons) {
+          w.source = other._id;
+        }
+        for (let w of other.secondaryWeapons) {
+          w.source = other._id;
+        }
+      }
+
       other.action = () => "kChase";
       other.generate();
       other.attach(this.viewframe);
@@ -289,6 +364,7 @@ class SpaceScene extends Scene {
       for (let b of flammable.bulletList) {
         // Handle bullet collisions with asteroids now
         if (b.e <= 0.01) {
+          b.e = -1;
           continue;
         }
         for (let a of this.asteroids) {
@@ -297,7 +373,8 @@ class SpaceScene extends Scene {
           }
           if (a.collision(b)) {
             const ae = a.e;
-            a.e -= b.e;
+            console.log(a.e, b.e);
+            a.e = b.e > 0 ? a.e - b.e : a.e; // Strange situations
             b.e -= ae;
             a.transferMomentum(b);
             a.addFlame(b.pos, b.vel);
@@ -349,6 +426,9 @@ class SpaceScene extends Scene {
 
         for (let o of this.otherShips) {
           if (o.e < 0) {
+            continue;
+          }
+          if (b.source === o._id) {
             continue;
           }
           if (o.collision(b)) {

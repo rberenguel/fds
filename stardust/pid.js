@@ -160,7 +160,7 @@ const otherControl = (
 
   // --- Asteroid Shooting Logic ---
   const asteroidShootingRange = 900; // Adjust this value
-  const asteroidFacingThreshold = 0.5;
+  const asteroidFacingThreshold = 0.7;
 
   for (const asteroid of asteroids) {
     const distanceToAsteroidX = asteroid.pos.x - other.pos.x;
@@ -181,9 +181,8 @@ const otherControl = (
       );
 
       if (Math.abs(angleDifferenceToAsteroid) < asteroidFacingThreshold) {
-        console.log("FIRING AT ASTEROID");
         const now = performance.now();
-        if (now - other.prevshot < 150) {
+        if (now - other.prevshot < 120) {
           continue; // Don't shoot too rapidly
         }
         other.prevshot = now;
@@ -234,10 +233,13 @@ const otherControl = (
 
   if (
     Math.abs(normalizeAngle(shootingAngle - other.r + Math.PI)) < 0.3 &&
-    sdist < 1500
+    sdist < (0.8 * other.weapons[0].stats.minRange ?? 1500)
   ) {
     const now = performance.now();
-    if (now - other.prevshot < 150) {
+    if (now - other.prevshot < other.weapons[0].fireRate) {
+      return;
+    }
+    if ((other.ammo[other.weapons[0].kind].count ?? 0) < 2) {
       return;
     }
     other.prevshot = now;
@@ -245,6 +247,12 @@ const otherControl = (
       other.weapons[0].fire(other, bulletList);
     if (other.weapons && other.weapons[1])
       other.weapons[1].fire(other, bulletList);
+
+    // TODO tracking firerate should be internal of the weapon itself
+    if (sdist < 1000 && other.secondaryWeapons[0]) {
+      console.log("OPEN FIRE");
+      other.secondaryWeapons[0].fire(other, bulletList);
+    }
   }
 
   // --- Thrust Control (PID) --- (No changes here)

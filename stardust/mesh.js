@@ -8,6 +8,7 @@ const Meshes = {
 
 class Mesh {
   constructor(props) {
+    this.name = props.name ?? "";
     this.kind = props.kind;
     this.vertices = props.vertices;
     this.color = props.color;
