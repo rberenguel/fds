@@ -475,17 +475,17 @@ const commands = [
     },
   },
   {
-    title: "Add asteroids",
-    inputs: [{ title: "How many?", default: "1" }],
-    lambda: (num) => {
-      spaceScene.addRandomAsteroids(parseInt(num));
+    title: "Pointsight",
+
+    lambda: () => {
+      player.pointSight = true;
     },
   },
   {
-    title: "Add enemies",
-    inputs: [{ title: "How many?", default: "1" }],
-    lambda: (num) => {
-      spaceScene.addRandomEnemies(parseInt(num) - 1);
+    title: "Emergency brakes",
+
+    lambda: () => {
+      player.emergencyBrakes = true;
     },
   },
 ];
