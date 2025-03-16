@@ -64,6 +64,9 @@ class PlasmaGun extends Gun {
       source: this.source,
     });
     bulletList.push(b);
+    if (window.drumSampler && shooter.human) {
+      window.drumSampler.triggerAttackRelease("g0", 0.5); // Snarestick
+    }
   }
 }
 

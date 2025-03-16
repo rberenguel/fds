@@ -449,6 +449,9 @@ class SpaceScene extends Scene {
           if (b.source === this.player._id) {
             continue;
           }
+          if (window.drumSampler) {
+            window.drumSampler.triggerAttackRelease("a4", 0.5); // Cowbell
+          }
           const pe = this.player.e;
           this.player.e -= b.e;
           b.e -= pe;
@@ -469,6 +472,9 @@ class SpaceScene extends Scene {
           if (this.player.e < 0) {
             this.player.lives -= 1;
             this.player.explode({ e: -this.player.e });
+            if (window.drumSampler) {
+              window.drumSampler.triggerAttackRelease("f0", 0.5); // Crash
+            }
             this.player.e = -1;
             this.flameList.push(...this.player.flameList);
             //this.player.invulnerable = performance.now();

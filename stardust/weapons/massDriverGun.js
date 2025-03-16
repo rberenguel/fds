@@ -72,6 +72,9 @@ class MassDriverGun extends Gun {
     });
     bulletList.push(b);
     shooter.ammo[MassDriverGun.kind].count--;
+    if (window.drumSampler && shooter.human) {
+      window.drumSampler.triggerAttackRelease("c0", 0.5); // Ride FF
+    }
   }
 }
 

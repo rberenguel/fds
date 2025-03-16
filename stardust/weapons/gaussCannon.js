@@ -67,9 +67,12 @@ class GaussCannon extends Gun {
       e: 1,
       scale: shooter.scale,
       source: this.source,
-      flameList: shooter.bulletList
+      flameList: shooter.bulletList,
     });
     shooter.ammo[GaussCannon.kind].count--;
     bulletList.push(b);
+    if (window.drumSampler && shooter.human) {
+      window.drumSampler.triggerAttackRelease("f0", 0.5); // Crash
+    }
   }
 }

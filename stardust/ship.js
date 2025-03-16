@@ -48,10 +48,10 @@ class Ship extends Base1 {
 
   explode(props = {}) {
     const minenergy = props.minenergy ?? 12;
-    const explenergy = Math.min(Math.max(props.e, 1), 5)
+    const explenergy = Math.min(Math.max(props.e, 1), 5);
     const pos = props.pos ?? { x: 0, y: 0 };
     const [rpx, rpy] = rotate(pos.x, pos.y, this.r);
-    for (let i = 0; i < (props.count ?? 12)*explenergy; i++) {
+    for (let i = 0; i < (props.count ?? 12) * explenergy; i++) {
       const m = 4 * Math.random();
       const a = Math.random() * 2 * Math.PI;
       const fl = new Flame({
@@ -121,6 +121,9 @@ class Ship extends Base1 {
         minenergy: 20,
         fill: 0x00ccff,
       });
+      if (window.drumSampler && this.human) {
+        window.drumSampler.triggerAttackRelease("e1", 0.8); // Snare ghost
+      }
       return;
     }
 
@@ -180,6 +183,9 @@ class Ship extends Base1 {
         minenergy: 20,
         fill: 0x00ccff,
       });
+      if (window.drumSampler && this.human) {
+        window.drumSampler.triggerAttackRelease("e1", 0.8); // Snare ghost
+      }
       return;
     }
 

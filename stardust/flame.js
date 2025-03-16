@@ -13,10 +13,10 @@ class Flame extends Base1 {
     });
     super({ ...props, meshes: [mesh] });
     this.e = props.e ?? 10;
-    this.initialE = this.e
+    this.initialE = this.e;
     this.scale = props.scale ?? 1;
-    this.fill = props.fill
-    this.decay = props.decay ?? 0.3
+    this.fill = props.fill;
+    this.decay = props.decay ?? 0.3;
   }
 
   generate() {
@@ -32,8 +32,8 @@ class Flame extends Base1 {
 
     this.e -= this.decay;
     const ne = Math.max(0, Math.min(1, this.e / this.initialE));
-    let hexColor
-    if(this.fill){
+    let hexColor;
+    if (this.fill) {
       const r = (this.fill >> 16) & 0xff;
       const g = (this.fill >> 8) & 0xff;
       const b = this.fill & 0xff;
@@ -47,7 +47,7 @@ class Flame extends Base1 {
       const blue = 0;
       hexColor = (red << 16) | (green << 8) | blue;
     }
-    
+
     for (let presentation of this.presentations) {
       if (!presentation) {
         this.presentation = { destroyed: true };

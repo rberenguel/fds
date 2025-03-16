@@ -322,11 +322,13 @@ const player = new Lynx({
   weapons: weapons,
   secondaryWeapons: secondaryWeapons,
 });
+player.human = true;
 player.recoveryRate = 0.04;
 player.emergencyBrakes = false;
 player.pointSight = false;
 
 const resetPlayerPVA = (regenerate = false) => {
+  player.human = true;
   player.pos = {
     x: (0.5 * app.renderer.width) / scale,
     y: (0.5 * app.renderer.height) / scale,
@@ -421,6 +423,12 @@ const commands = [
       const { weapons, secondaryWeapons } = baseWeapons();
       player.weapons = weapons;
       player.secondaryWeapons = secondaryWeapons;
+      for (let w of player.weapons) {
+        w.source = player._id;
+      }
+      for (let w of player.secondaryWeapons) {
+        w.source = player._id;
+      }
     },
   },
   {
