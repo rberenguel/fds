@@ -1,5 +1,7 @@
 export { PIDController, otherControl };
 
+import { normalizeAngle } from "./math.js";
+
 class PIDController {
   constructor(Kp, Ki, Kd, dt) {
     this.Kp = Kp; // Proportional gain
@@ -46,14 +48,6 @@ class PIDController {
   }
 }
 
-function normalizeAngle(angle) {
-  angle = angle % (2 * Math.PI);
-  if (angle < 0) {
-    angle += 2 * Math.PI;
-  }
-  return angle;
-}
-
 const otherControl = (
   other,
   ship,
@@ -61,6 +55,8 @@ const otherControl = (
   deltaTime,
   bulletList,
   asteroids,
+  gameWidth, // Add gameWidth as a parameter
+  gameHeight, // Add gameHeight as a parameter
 ) => {
   const dt = deltaTime / 1000;
 
@@ -70,8 +66,21 @@ const otherControl = (
     other.positionPID = new PIDController(0.01, 0.0, 0.0, dt);
   }
 
-  const dx = target.pos.x - other.pos.x;
-  const dy = target.pos.y - other.pos.y;
+  // --- Wrapped Distance Calculation to Target ---
+  let dx = target.pos.x - other.pos.x;
+  if (dx > gameWidth / 2) {
+    dx -= gameWidth;
+  } else if (dx < -gameWidth / 2) {
+    dx += gameWidth;
+  }
+
+  let dy = target.pos.y - other.pos.y;
+  if (dy > gameHeight / 2) {
+    dy -= gameHeight;
+  } else if (dy < -gameHeight / 2) {
+    dy += gameHeight;
+  }
+
   const dist = Math.sqrt(dx * dx + dy * dy);
 
   if (dist < 10) {
@@ -81,7 +90,7 @@ const otherControl = (
     return;
   }
 
-  // --- Predictive Asteroid Avoidance ---
+  // --- Predictive Asteroid Avoidance (Wrapped Distance) ---
   let avoidanceAngle = 0;
   let isAvoiding = false;
   const avoidanceTimeThreshold = 2; // Time in seconds to look ahead for collisions
@@ -91,8 +100,21 @@ const otherControl = (
   let bestAvoidanceAngle = 0;
 
   for (const asteroid of asteroids) {
-    const relativePositionX = other.pos.x - asteroid.pos.x;
-    const relativePositionY = other.pos.y - asteroid.pos.y;
+    // Wrapped relative position to asteroid
+    let relativePositionX = other.pos.x - asteroid.pos.x;
+    if (relativePositionX > gameWidth / 2) {
+      relativePositionX -= gameWidth;
+    } else if (relativePositionX < -gameWidth / 2) {
+      relativePositionX += gameWidth;
+    }
+
+    let relativePositionY = other.pos.y - asteroid.pos.y;
+    if (relativePositionY > gameHeight / 2) {
+      relativePositionY -= gameHeight;
+    } else if (relativePositionY < -gameHeight / 2) {
+      relativePositionY += gameHeight;
+    }
+
     const relativeVelocityX = other.vel.x - asteroid.vel.x;
     const relativeVelocityY = other.vel.y - asteroid.vel.y;
 
@@ -158,13 +180,26 @@ const otherControl = (
     }
   }
 
-  // --- Asteroid Shooting Logic ---
+  // --- Asteroid Shooting Logic (Wrapped Distance) ---
   const asteroidShootingRange = 900; // Adjust this value
   const asteroidFacingThreshold = 0.7;
 
   for (const asteroid of asteroids) {
-    const distanceToAsteroidX = asteroid.pos.x - other.pos.x;
-    const distanceToAsteroidY = asteroid.pos.y - other.pos.y;
+    // Wrapped distance to asteroid
+    let distanceToAsteroidX = asteroid.pos.x - other.pos.x;
+    if (distanceToAsteroidX > gameWidth / 2) {
+      distanceToAsteroidX -= gameWidth;
+    } else if (distanceToAsteroidX < -gameWidth / 2) {
+      distanceToAsteroidX += gameWidth;
+    }
+
+    let distanceToAsteroidY = asteroid.pos.y - other.pos.y;
+    if (distanceToAsteroidY > gameHeight / 2) {
+      distanceToAsteroidY -= gameHeight;
+    } else if (distanceToAsteroidY < -gameHeight / 2) {
+      distanceToAsteroidY += gameHeight;
+    }
+
     const distanceToAsteroid = Math.sqrt(
       distanceToAsteroidX * distanceToAsteroidX +
         distanceToAsteroidY * distanceToAsteroidY,
@@ -195,19 +230,31 @@ const otherControl = (
     }
   }
 
-  // --- Target Prediction for Chasing ---
+  // --- Target Prediction for Chasing (Wrapped Distance) ---
   const predictionTime = 100 * dt;
   const predictedTargetX = target.pos.x + target.vel.x * predictionTime;
   const predictedTargetY = target.pos.y + target.vel.y * predictionTime;
+
+  // Wrapped distance to predicted target
+  let predictedDX = predictedTargetX - other.pos.x;
+  if (predictedDX > gameWidth / 2) {
+    predictedDX -= gameWidth;
+  } else if (predictedDX < -gameWidth / 2) {
+    predictedDX += gameWidth;
+  }
+
+  let predictedDY = predictedTargetY - other.pos.y;
+  if (predictedDY > gameHeight / 2) {
+    predictedDY -= gameHeight;
+  } else if (predictedDY < -gameHeight / 2) {
+    predictedDY += gameHeight;
+  }
 
   let desiredAngle;
   if (isAvoiding) {
     desiredAngle = normalizeAngle(other.r + bestAvoidanceAngle);
   } else {
-    desiredAngle = Math.atan2(
-      predictedTargetY - other.pos.y,
-      predictedTargetX - other.pos.x,
-    );
+    desiredAngle = Math.atan2(predictedDY, predictedDX);
   }
 
   const angleDifference = normalizeAngle(desiredAngle - other.r);
@@ -227,19 +274,31 @@ const otherControl = (
     other.pos.x - ship.pos.x,
   );
 
-  const sdx = ship.pos.x - other.pos.x;
-  const sdy = ship.pos.y - other.pos.y;
+  // Wrapped distance to ship (player)
+  let sdx = ship.pos.x - other.pos.x;
+  if (sdx > gameWidth / 2) {
+    sdx -= gameWidth;
+  } else if (sdx < -gameWidth / 2) {
+    sdx += gameWidth;
+  }
+
+  let sdy = ship.pos.y - other.pos.y;
+  if (sdy > gameHeight / 2) {
+    sdy -= gameHeight;
+  } else if (sdy < -gameHeight / 2) {
+    sdy += gameHeight;
+  }
   const sdist = Math.sqrt(sdx * sdx + sdy * sdy);
 
   if (
     Math.abs(normalizeAngle(shootingAngle - other.r + Math.PI)) < 0.3 &&
-    sdist < (0.8 * other.weapons[0].stats.minRange ?? 1500)
+    sdist < 0.8 * (other.weapons[0]?.stats?.minRange ?? 1500)
   ) {
     const now = performance.now();
-    if (now - other.prevshot < other.weapons[0].fireRate) {
+    if (now - other.prevshot < (other.weapons[0]?.fireRate ?? 100)) {
       return;
     }
-    if ((other.ammo[other.weapons[0].kind].count ?? 0) < 2) {
+    if ((other.ammo?.[other.weapons[0]?.kind]?.count ?? 0) < 2) {
       return;
     }
     other.prevshot = now;

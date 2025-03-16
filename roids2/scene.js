@@ -280,6 +280,8 @@ class SpaceScene extends Scene {
           delta.deltaTime,
           this.player.bulletList,
           this.asteroids,
+          this.app.renderer.width / this.viewframe.scale,
+          this.app.renderer.height / this.viewframe.scale,
         ); // TODO: Too many arguments, and the last one…
       }
       wrapPos(otherShip, {

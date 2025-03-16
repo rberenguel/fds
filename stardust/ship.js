@@ -11,8 +11,16 @@ import {
 import { dist, sqnorm, rotate } from "../stardust/math.js";
 import { Flame } from "./flame.js";
 import { seededRnd } from "./rnd.js";
-
+import { normalizeAngle } from "../stardust/math.js";
 const rnd = seededRnd(performance.now());
+
+function shortestAngleDifference(angle1, angle2) {
+  let difference = angle1 - angle2;
+  const twoPI = 2 * Math.PI;
+  while (difference > Math.PI) difference -= twoPI;
+  while (difference < -Math.PI) difference += twoPI;
+  return difference;
+}
 
 class Ship extends Base1 {
   static kind = "kShip";
@@ -38,22 +46,26 @@ class Ship extends Base1 {
     return;
   }
 
-  explode() {
+  explode(props = {}) {
+    const minenergy = props.minenergy ?? 12;
+    const pos = props.pos ?? { x: 0, y: 0 };
     let flames = [];
-    for (let i = 0; i < 30; i++) {
+    const [rpx, rpy] = rotate(pos.x, pos.y, this.r);
+    for (let i = 0; i < props.count ?? 12; i++) {
       const m = 4 * Math.random();
       const a = Math.random() * 2 * Math.PI;
       const fl = new Flame({
         pos: {
-          x: this.pos.x,
-          y: this.pos.y,
+          x: this.pos.x + rpx,
+          y: this.pos.y + rpy,
         },
         vel: {
           x: m * Math.cos(a),
           y: m * Math.sin(a),
         },
+        fill: props.fill,
         r: 0,
-        e: 12 + Math.random() * 8,
+        e: minenergy + Math.random() * 8,
         scale: 0.8,
       });
       flames.push(fl);
@@ -91,6 +103,30 @@ class Ship extends Base1 {
 
   backThrust(f = 1, limit = 1e6) {
     this.actions.push("backThrust");
+    const nv = sqnorm(this.vel.x, this.vel.y);
+    const velocityAngle = Math.atan2(this.vel.y, this.vel.x);
+
+    const oppositeVelocityAngle = normalizeAngle(velocityAngle + Math.PI);
+
+    const angleDifference = shortestAngleDifference(
+      this.r,
+      oppositeVelocityAngle,
+    );
+
+    if (nv > 10 && Math.abs(angleDifference) < 0.5 && this.emergencyBrakes) {
+      this.vel.x = 0;
+      this.vel.y = 0;
+      this.flameList = this.flameList.concat(
+        this.explode({
+          pos: { x: -60, y: 0 },
+          count: 15,
+          minenergy: 20,
+          fill: 0x00ccff,
+        }),
+      );
+      return;
+    }
+
     const _vx = this.vel.x + 0.1 * Math.cos(this.r) * f;
     const _vy = this.vel.y + 0.1 * Math.sin(this.r) * f;
     const _nv = sqnorm(_vx, _vy);
@@ -101,7 +137,7 @@ class Ship extends Base1 {
         this._backThrust();
       }
     } else {
-      if (Math.random() < 0.2) {
+      if (Math.random() < 0.5) {
         this._backThrust({ fill: 0x0099ff });
       }
     }
@@ -128,13 +164,31 @@ class Ship extends Base1 {
       r: this.r,
       e: 12,
       fill: props.fill,
-      //scale: this.scale
     });
     this.flameList.push(fl);
   }
 
   forwardThrust(f = 1, limit = 1e6) {
     this.actions.push("forwardThrust");
+    const nv = sqnorm(this.vel.x, this.vel.y);
+    const velocityAngle = Math.atan2(this.vel.y, this.vel.x);
+    //const angleDifference = normalizeAngle(this.r - velocityAngle);
+    const angleDifference = shortestAngleDifference(this.r, velocityAngle);
+    console.log(angleDifference);
+    if (nv > 10 && Math.abs(angleDifference) < 0.2 && this.emergencyBrakes) {
+      this.vel.x = 0;
+      this.vel.y = 0;
+      this.flameList = this.flameList.concat(
+        this.explode({
+          pos: { x: 90, y: 0 },
+          count: 15,
+          minenergy: 20,
+          fill: 0x00ccff,
+        }),
+      );
+      return;
+    }
+
     const _vx = this.vel.x - 0.1 * Math.cos(this.r) * f;
     const _vy = this.vel.y - 0.1 * Math.sin(this.r) * f;
     const _nv = sqnorm(_vx, _vy);
@@ -236,16 +290,27 @@ class Ship extends Base1 {
         return;
       }
       presentation.rotation = this.r;
-      if (presentation.name != "secondaryWeapon") {
+      if (presentation.name == "") {
         presentation.tint = hexColor;
       } else {
-        if (
-          this.secondaryWeapons[0] &&
-          this.ammo[this.secondaryWeapons[0].kind].count >= 1
-        ) {
-          presentation.tint = this.secondaryWeapons[0].color;
-        } else {
-          presentation.tint = 0x000000;
+        if (presentation.name == "secondaryWeapon") {
+          if (
+            this.secondaryWeapons[0] &&
+            this.ammo[this.secondaryWeapons[0].kind].count >= 1
+          ) {
+            presentation.tint = this.secondaryWeapons[0].color;
+          } else {
+            presentation.tint = 0x000000;
+          }
+        }
+        if (presentation.name == "pointSight") {
+          if (!this.pointSight) {
+            presentation.tint = 0xff0000;
+            presentation.alpha = 0.0;
+          }
+          if (this.pointSight) {
+            presentation.alpha = 0.2;
+          }
         }
       }
     }
@@ -282,6 +347,19 @@ class Lynx extends Ship {
       radius: 10,
       color: 0xffffff,
       fill: 0xffffff,
+    });
+    const pointSightMesh = new Mesh({
+      name: "pointSight",
+      kind: Meshes.kPoly,
+      vertices: [
+        [20000, 6],
+        [20000, -6],
+        [0, -6],
+        [0, 6],
+      ],
+      radius: 10,
+      color: 0x00ff00,
+      fill: 0x00ff00,
     });
     let weapons = props.weapons ?? [];
     let secondaryWeapons = props.secondaryWeapons ?? [];
@@ -337,7 +415,7 @@ class Lynx extends Ship {
 
     super({
       ...props,
-      meshes: [mesh, secondaryWeaponMesh],
+      meshes: [pointSightMesh, mesh, secondaryWeaponMesh],
       weapons: weapons,
       secondaryWeapons: secondaryWeapons,
     });

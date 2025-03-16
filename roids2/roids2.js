@@ -316,6 +316,8 @@ const player = new Lynx({
   secondaryWeapons: secondaryWeapons,
 });
 player.recoveryRate = 0.04;
+player.emergencyBrakes = false;
+player.pointSight = false;
 
 const resetPlayerPVA = () => {
   player.pos = {
@@ -554,6 +556,8 @@ const glass = document.getElementById("glass");
 const offerChoices = (options = []) => {
   // Options is a list of powerups, of the form
   // {id: "kPowerup", name: "Human name", description: "Description"}
+  console.log(options);
+
   glass.style.display = "block";
   const powerupContainer = document.getElementById("powerup-container");
 
@@ -571,7 +575,6 @@ const offerChoices = (options = []) => {
     );
     return;
   }
-
   const glyphElements = document.querySelectorAll(".choice-glyph");
   const descriptionElements = document.querySelectorAll(".choice-description");
 
@@ -579,17 +582,17 @@ const offerChoices = (options = []) => {
 
   choicesToRender.forEach((option, index) => {
     const choiceElement = choiceElements[index];
-    choiceElement.dataset.id = option.id;
+    console.log(choiceElement);
 
+    choiceElement.dataset.id = option.id;
+    console.log(index, glyphElements, option.glyph);
     const glyphElement = glyphElements[index];
     glyphElement.innerHTML = `<img src="media/glyphs/${option.glyph}"></img>`;
-
     const descriptionElement = descriptionElements[index];
     descriptionElement.innerHTML = option.description();
 
     choiceElement.addEventListener("click", () => {
       // You will fill this up later to handle the choice
-      console.log(`Power-up chosen with id: ${option.id}`);
       option.lambda();
       glass.style.display = "none";
       powerupContainer.style.display = "none";
@@ -599,8 +602,93 @@ const offerChoices = (options = []) => {
   });
 };
 
+const allPowerUpChoices = [
+  {
+    id: "kMassDriverWeapon",
+    name: "Mass Driver",
+    description: () => {
+      const title = "<h2>Primary weapon</h2>";
+      const htmlA = MassDriverGun.present();
+      const htmlB = player.weapons[0].present();
+      return `${title} ${htmlA} <h3>replace</h3> ${htmlB}`;
+    },
+    glyph: "massdriver.png",
+    lambda: () => {
+      const massDriverGun1 = new MassDriverGun({
+        pos: {
+          x: -40,
+          y: 40,
+        },
+      });
+      const massDriverGun2 = new MassDriverGun({
+        pos: {
+          x: -40,
+          y: -40,
+        },
+      });
+
+      player.weapons = [massDriverGun1, massDriverGun2];
+      player.ammo[MassDriverGun.kind] = {};
+      player.ammo[MassDriverGun.kind].count = 99;
+      player.ammo[MassDriverGun.kind].max = massDriverGun1.ammoMax;
+      for (let w of player.weapons) {
+        w.source = player._id;
+      }
+    },
+  },
+  {
+    id: "kGaussCannon",
+    name: "Gauss Cannon",
+    description: () => {
+      const title = "<h2>Secondary weapon</h2>";
+      const htmlA = GaussCannon.present();
+      const htmlB = player.secondaryWeapons[0].present();
+      return `${title} ${htmlA} <h3>replace</h3> ${htmlB}`;
+    },
+    glyph: "gausscannon.png",
+    lambda: () => {
+      const railGun = new GaussCannon({
+        pos: {
+          x: 0,
+          y: 0,
+        },
+      });
+      player.secondaryWeapons = [railGun];
+      player.ammo[GaussCannon.kind] = {};
+      player.ammo[GaussCannon.kind].count = 2;
+      player.ammo[GaussCannon.kind].max = 2;
+      for (let w of player.secondaryWeapons) {
+        w.source = player._id;
+      }
+    },
+  },
+  {
+    id: "kEmergencyBrakes",
+    name: "Emergency brakes",
+    description: () => {
+      const title = "<h2>Active utility</h2>";
+      return `${title}<p>Emergency brakes</p> Accelerate in the opposite direction of your travel to brake immediately.`;
+    },
+    glyph: "emergencybrakes.png",
+    lambda: () => {
+      player.emergencyBrakes = true;
+    },
+  },
+  {
+    id: "kPointSight",
+    name: "Point sight",
+    description: () => {
+      const title = "<h2>Passive utility</h2>";
+      return `${title}<p>Point sight</p> Show an overlay of where you are aiming at. Particularly useful for long range weapons`;
+    },
+    glyph: "pointsight.png",
+    lambda: () => {
+      player.pointSight = true;
+    },
+  },
+];
+
 app.ticker.add((delta) => {
-  //return;
   if (metaP.metaPGlass.style.display === "block") {
     return;
   }
@@ -647,67 +735,10 @@ app.ticker.add((delta) => {
   if (!chosePowerup && spaceScene.asteroids.length === 0) {
     // TODO
     choosing = true;
-    offerChoices([
-      {
-        id: "kMassDriverWeapon",
-        name: "Mass Driver",
-        description: () => {
-          const title = "<h2>Primary weapon</h2>";
-          const htmlA = MassDriverGun.present();
-          const htmlB = player.weapons[0].present();
-          return `${title} ${htmlA} <h3>replace</h3> ${htmlB}`;
-        },
-        glyph: "massdriver.svg",
-        lambda: () => {
-          const massDriverGun1 = new MassDriverGun({
-            pos: {
-              x: -40,
-              y: 40,
-            },
-          });
-          const massDriverGun2 = new MassDriverGun({
-            pos: {
-              x: -40,
-              y: -40,
-            },
-          });
+    const choices = [...allPowerUpChoices];
+    choices.sort(() => Math.random() - 0.5);
 
-          player.weapons = [massDriverGun1, massDriverGun2];
-          player.ammo[MassDriverGun.kind] = {};
-          player.ammo[MassDriverGun.kind].count = 99;
-          player.ammo[MassDriverGun.kind].max = massDriverGun1.ammoMax;
-          for (let w of player.weapons) {
-            w.source = player._id;
-          }
-        },
-      },
-      {
-        id: "kGaussCannon",
-        name: "Gauss Cannon",
-        description: () => {
-          const title = "<h2>Secondary weapon</h2>";
-          const htmlA = GaussCannon.present();
-          const htmlB = player.secondaryWeapons[0].present();
-          return `${title} ${htmlA} <h3>replace</h3> ${htmlB}`;
-        },
-        glyph: "gausscannon.svg",
-        lambda: () => {
-          const railGun = new GaussCannon({
-            pos: {
-              x: 0,
-              y: 0,
-            },
-          });
-          player.secondaryWeapons = [railGun];
-          player.ammo[GaussCannon.kind] = {};
-          player.ammo[GaussCannon.kind].count = 2;
-          player.ammo[GaussCannon.kind].max = 2;
-          for (let w of player.secondaryWeapons) {
-            w.source = player._id;
-          }
-        },
-      },
-    ]);
+    offerChoices(choices.slice(0, 2));
 
     return;
   }

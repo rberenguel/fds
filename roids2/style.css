@@ -2,14 +2,14 @@ html,
 body {
   margin: 0;
   padding: 0;
-  overflow: hidden; /* Prevent scrollbars */
+  overflow: hidden;
   background-color: black;
   width: 100vw;
   height: 100vh;
 }
 .landscape {
-  transform: rotate(90deg) translateY(-100vw); /* Rotate and reposition */
-  width: 100vh; /* Swap width and height */
+  transform: rotate(90deg) translateY(-100vw);
+  width: 100vh;
   height: 100vw;
 }
 canvas {
@@ -47,9 +47,9 @@ canvas {
   position: absolute;
   z-index: 1000;
   width: 100%;
-  display: flex; /* Use flexbox for layout */
-  align-items: center; /* Vertically center items */
-  box-sizing: border-box; /* Include padding and border in width */
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
   top: 0.2em;
   left: 0.2em;
   color: #cc0;
@@ -68,14 +68,14 @@ canvas {
 
 #right-container {
   display: flex;
-  flex-shrink: 0; /* Prevent shrinking */
+  flex-shrink: 0;
 }
 
 #lives,
 #score {
   font-size: 1rem;
   padding: 10px;
-  margin-left: 10px; /* Add space between lives and score */
+  margin-left: 10px;
 }
 
 #extra-info {
@@ -83,9 +83,9 @@ canvas {
   position: absolute;
   z-index: 1000;
   width: 100%;
-  display: flex; /* Use flexbox for layout */
-  align-items: center; /* Vertically center items */
-  box-sizing: border-box; /* Include padding and border in width */
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
   bottom: 0.2em;
   left: 0.2em;
   color: #cc0;
@@ -94,7 +94,7 @@ canvas {
 
 .right-container {
   display: flex;
-  flex-shrink: 0; /* Prevent shrinking */
+  flex-shrink: 0;
 }
 
 #hull {
@@ -152,25 +152,22 @@ canvas {
   flex-basis: 100%;
 }
 
-/* Styles for each power-up choice */
 .powerup-choice {
-  flex: 1; /* Each choice takes equal available space (50% in this case) */
+  flex: 1;
   display: flex;
-  flex-direction: column; /* Arrange glyph and description vertically */
-  align-items: center; /* Center content horizontally within each choice */
-  padding: 10px; /* Add some spacing */
-  box-sizing: border-box; /* Include padding in the element's total width and height */
+  flex-direction: column;
+  align-items: center;
+  padding: 10px;
+  box-sizing: border-box;
 }
 
-/* Styles for the square glyph container */
 .choice-glyph {
-  width: 50%; /* Adjust the size as needed */
-  height: 50%; /* Make it a square */
+  width: 50%;
   aspect-ratio: 1/1;
   border-radius: 1rem;
-  border: 1px solid #ccc; /* Optional: border for visual */
-  margin-bottom: 5px; /* Space between glyph and description */
-  display: flex; /* To easily center the glyph (if needed later) */
+  border: 1px solid #ccc;
+  margin-bottom: 5px;
+  display: flex;
   justify-content: center;
   align-items: center;
   margin-bottom: 2rem;
@@ -179,10 +176,9 @@ canvas {
 .choice-glyph img {
   width: 100%;
   height: 100%;
-  object-fit: contain; /* Or 'cover' depending on your desired behavior */
+  object-fit: contain;
 }
 
-/* Styles for the power-up description */
 .choice-description {
   text-align: center;
   color: white;

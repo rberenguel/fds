@@ -1,4 +1,13 @@
-export { dist, sqdist, sqnorm, rotate, easeInSq, wrap, wrapPos };
+export {
+  dist,
+  sqdist,
+  sqnorm,
+  rotate,
+  easeInSq,
+  wrap,
+  wrapPos,
+  normalizeAngle,
+};
 
 const rotate = (x1, x2, ang) => {
   const cos = Math.cos(ang);
@@ -7,6 +16,14 @@ const rotate = (x1, x2, ang) => {
   const y = x1 * sin + x2 * cos;
   return [x, y];
 };
+
+function normalizeAngle(angle) {
+  angle = angle % (2 * Math.PI);
+  if (angle < 0) {
+    angle += 2 * Math.PI;
+  }
+  return angle;
+}
 
 const sqnorm = (a, b) => a * a + b * b;
 
