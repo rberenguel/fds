@@ -1,7 +1,7 @@
 export { MassDriverGun, MassDriverBullet };
 
 import { Gun } from "./weaponBase.js";
-
+import { Flame } from "../flame.js";
 import { Base1 } from "../base.js";
 import { sqnorm, rotate } from "../math.js";
 import { Mesh, Meshes } from "../mesh.js";
@@ -81,7 +81,7 @@ class MassDriverBullet extends Base1 {
     const mesh = new Mesh({
       kind: Meshes.kCircle,
       center: [0, 0],
-      radius: 5,
+      radius: 6,
       color: 0xffffff,
       fill: 0xffffff,
     });
@@ -92,6 +92,7 @@ class MassDriverBullet extends Base1 {
     this._initial_e = this.e;
     this.mass = props.mass ?? 0.4;
     this.source = props.source ?? -1;
+    this.flameList = props.flameList;
   }
 
   generate() {
@@ -99,6 +100,24 @@ class MassDriverBullet extends Base1 {
   }
 
   update(delta) {
+    if (this.flameList) {
+      const fl = new Flame({
+        pos: {
+          x: this.pos.x,
+          y: this.pos.y,
+        },
+        vel: {
+          x: 0.2 * this.vel.x,
+          y: 0.2 * this.vel.y,
+        },
+        fill: 0xcccccc,
+        r: 0,
+        e: 2,
+        scale: 0.9,
+        decay: 0.2,
+      });
+      this.flameList.push(fl);
+    }
     super.update(delta);
     super.move(delta.deltaTime);
     this.e = this.f * sqnorm(this.vel.x, this.vel.y) * this.mass;

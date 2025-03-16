@@ -494,6 +494,47 @@ const commands = [
     },
   },
   {
+    title: "Gauss cannon",
+    lambda: () => {
+      const railGun = new GaussCannon({
+        pos: {
+          x: 0,
+          y: 0,
+        },
+      });
+
+      player.secondaryWeapons = [railGun];
+      player.ammo[GaussCannon.kind] = {};
+      player.ammo[GaussCannon.kind].count = 10;
+      player.ammo[GaussCannon.kind].max = railGun.ammoMax;
+      for (let w of player.secondaryWeapons) {
+        w.source = player._id;
+      }
+    },
+  },
+  {
+    title: "Photon torpedo",
+    lambda: () => {
+      const ptl = new PhotonTorpedoLauncher({
+        pos: {
+          x: 0,
+          y: 0,
+        },
+        color: 0x00ddff,
+        haloColor: 0x11ddff,
+      });
+
+      player.secondaryWeapons = [ptl];
+      player.ammo[PhotonTorpedoLauncher.kind] = {};
+      player.ammo[PhotonTorpedoLauncher.kind].count = 10;
+      player.ammo[PhotonTorpedoLauncher.kind].max = ptl.ammoMax;
+
+      for (let w of player.secondaryWeapons) {
+        w.source = player._id;
+      }
+    },
+  },
+  {
     title: "Pointsight",
 
     lambda: () => {
@@ -858,13 +899,13 @@ app.ticker.add((delta) => {
       const s = nextLevel.ships;
       let extra = "";
       if (s >= 1) {
-        extra = `<br/><span style='color: white'>DANGER<em> You will face ${s} ships </em>DANGER</span>`;
+        extra = `<br/><hr/><span style='color: white'>DANGER<em> You will face ${s} ships </em>DANGER</span>`;
       }
       if (s >= 2) {
-        extra = `<br/><span style='color: orange'>DANGER<em> You will face ${s} ships </em>DANGER</span>`;
+        extra = `<br/><hr/><span style='color: orange'>DANGER<em> You will face ${s} ships </em>DANGER</span>`;
       }
       if (s >= 4) {
-        extra = `<br/><span style='color: red'>DANGER<em> You will face ${s} ships </em>DANGER</span>`;
+        extra = `<br/><hr/><span style='color: red'>DANGER<em> You will face ${s} ships </em>DANGER</span>`;
       }
       msgs.html(
         `Wave ${level} in ${remainingTime} seconds<br\>You will face ${a} asteroids` +

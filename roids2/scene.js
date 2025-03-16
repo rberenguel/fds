@@ -468,9 +468,9 @@ class SpaceScene extends Scene {
           this.flameList.push(fl);
           if (this.player.e < 0) {
             this.player.lives -= 1;
-            this.player.explode();
+            this.player.explode({ e: -this.player.e });
             this.player.e = -1;
-            this.flameList = this.flameList.concat(this.player.flameList);
+            this.flameList.push(...this.player.flameList);
             //this.player.invulnerable = performance.now();
             //this.player.e = 1000;
             //livesDiv.textContent = this.player.lives;
@@ -505,9 +505,9 @@ class SpaceScene extends Scene {
             this.flameList.push(fl); // TODO this should be handled internally
             //o.transferMomentum(b); TODO momentum
             if (o.e < 0) {
-              o.e = -1;
               //this.score += 2000;
-              o.explode(); // TODO this should be handled internally
+              o.explode({ e: -o.e }); // TODO this should be handled internally
+              o.e = -1;
               //scoreDiv.textContent = this.score.toFixed(0);
             }
           }
@@ -523,9 +523,9 @@ class SpaceScene extends Scene {
         //this.player.invulnerable = performance.now();
         this.player.lives -= 1;
         //livesDiv.textContent = this.player.lives;
-        this.player.explode();
+        this.player.explode({ e: -this.player.e });
         this.player.e = -1;
-        this.flameList = this.flameList.concat(this.player.flameList);
+        this.flameList.push(...this.player.flameList);
         newAsteroids.push(...a.split(this.player.vel));
       }
       for (let o of this.otherShips) {
@@ -535,14 +535,14 @@ class SpaceScene extends Scene {
         }
         if (a.collision(o)) {
           a.e = -1;
+          o.explode({ e: -o.e });
           o.e = -1;
-          o.explode();
           newAsteroids.push(...a.split(o.vel));
         }
       }
     }
 
-    this.asteroids = this.asteroids.concat(newAsteroids);
+    this.asteroids.push(...newAsteroids);
 
     // Elastic collision across asteroids
     for (let i = 0; i < this.asteroids.length; i++) {

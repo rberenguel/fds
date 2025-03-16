@@ -7,6 +7,8 @@ import { rotate } from "../math.js";
 import { Base1 } from "../base.js";
 
 import { seededRnd } from "../rnd.js";
+import { Flame } from "../flame.js";
+
 
 class PhotonTorpedoLauncher extends Gun {
   static kind = "PhotonTorpedo"; // TODO make an object with these constants
@@ -70,6 +72,7 @@ class PhotonTorpedoLauncher extends Gun {
       haloColor: this.haloColor,
       scale: shooter.scale,
       source: this.source,
+      flameList: shooter.flameList
     });
     console.log(b);
     bulletList.push(b);
@@ -106,11 +109,12 @@ class PhotonTorpedo extends Base1 {
     this.minRange = props.minRange ?? 1500;
     this.moved = 0;
     this.source = props.source ?? -1;
+    this.flameList = props.flameList
   }
 
   generate() {
     let p = new Graphics();
-    p.circle(0, 0, 10);
+    p.circle(0, 0, 12);
     p.fill(this.color);
     this.presentations = [p];
     for (const mesh of this.meshes) {
@@ -133,6 +137,24 @@ class PhotonTorpedo extends Base1 {
   update(delta) {
     super.update(delta);
     super.move(delta.deltaTime);
+    if(this.flameList && this.e > 0){
+          const fl = new Flame({
+            pos: {
+              x: this.pos.x,
+              y: this.pos.y,
+            },
+            vel: {
+              x: 0.2*this.vel.x,
+              y: 0.2*this.vel.y
+            },
+            fill: this.haloColor,
+            r: 0,
+            e: 1,
+            scale: 0.8,
+            decay: 0.5
+          });
+          this.flameList.push(fl);
+    }
     this.e -= Math.random() * 0.1;
     const ne = Math.max(0, Math.min(1, this.e / 1000));
     this.moved += Math.abs(this.vel.x) + Math.abs(this.vel.y);

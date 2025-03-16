@@ -48,9 +48,10 @@ class Ship extends Base1 {
 
   explode(props = {}) {
     const minenergy = props.minenergy ?? 12;
+    const explenergy = Math.min(Math.max(props.e, 1), 5)
     const pos = props.pos ?? { x: 0, y: 0 };
     const [rpx, rpy] = rotate(pos.x, pos.y, this.r);
-    for (let i = 0; i < props.count ?? 12; i++) {
+    for (let i = 0; i < (props.count ?? 12)*explenergy; i++) {
       const m = 4 * Math.random();
       const a = Math.random() * 2 * Math.PI;
       const fl = new Flame({
