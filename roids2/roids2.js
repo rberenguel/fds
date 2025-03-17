@@ -1,5 +1,3 @@
-import { set, get } from "../libs/3rdparty/idb-keyval.js";
-
 import { Msgs } from "../libs/msgs/msgs.js";
 import { Application } from "../libs/3rdparty/pixi.mjs";
 
@@ -7,12 +5,20 @@ import {
   bindGamepadHandlers,
   bindKeyHandlers,
   handleControls,
+  resetKeys,
 } from "../libs/controller/controlHandling.js";
+
+import { presentKeyMap, keyMap, buttonMap } from "./setupControls.js";
 
 import { VirtualPad } from "../libs/controller/virtualPad.js";
 
-import { Bobcat, Lynx } from "../stardust/ship.js";
-
+import { Lynx } from "../stardust/ship.js";
+import {
+  offerChoices,
+  allPowerUpChoices,
+  currentPowerupsToDiv,
+  debugCommands,
+} from "./powerups.js";
 import { SpaceScene } from "./scene.js";
 
 import {
@@ -26,51 +32,22 @@ import {
 bindGamepadHandlers();
 bindKeyHandlers();
 
-let keyMap = await get("keyMap");
-
-if (keyMap === undefined) {
-  keyMap = {
-    ArrowUp: "moveUp",
-    ArrowDown: "moveDown",
-    ArrowLeft: "moveLeft",
-    ArrowRight: "moveRight",
-    Space: "shoot",
-    Enter: "secondaryShoot",
-    KeyQ: "menu",
-    KeyX: "weaponSwitch",
-  };
-}
-
-let buttonMap = await get("buttonMap");
-
-if (buttonMap === undefined) {
-  buttonMap = {
-    b15: "moveRight",
-    b14: "moveLeft",
-    b13: "moveDown",
-    b12: "moveUp",
-    b1: "shoot",
-    b2: "secondaryShoot",
-    b3: "weaponSwitch",
-  };
-}
-
-let prevshot = -1;
+let spaceScene;
 
 const gameActions = {
-  moveUp: (f = 1) => {
-    if (player.e < 10) {
-      return;
-    }
-
-    player.forwardThrust(1, 500);
-  },
   moveDown: (f = 1) => {
     if (player.e < 10) {
       return;
     }
 
     player.backThrust(1, 500);
+  },
+  moveUp: (f = 1) => {
+    if (player.e < 10) {
+      return;
+    }
+
+    player.forwardThrust(1, 500);
   },
   moveRight: (f = 1) => {
     player.yawRight(f);
@@ -84,10 +61,10 @@ const gameActions = {
     }
     const now = performance.now();
     const firerate = player.weapons[0 + player.primaryWeaponShift].firerate;
-    if (now - prevshot < firerate) {
+    if (now - player.prevshot < firerate) {
       return;
     }
-    prevshot = now;
+    player.prevshot = now;
     if (
       (player.ammo[player.weapons[0 + player.primaryWeaponShift].kind]?.count ??
         10) < 2
@@ -102,7 +79,6 @@ const gameActions = {
       player,
       player.bulletList,
     );
-    showHUDInfo();
   },
   secondaryShoot: () => {
     if (player.e < 10) {
@@ -111,10 +87,10 @@ const gameActions = {
     const firerate =
       player.secondaryWeapons[0 + player.secondaryWeaponShift].firerate;
     const now = performance.now();
-    if (now - prevshot < firerate) {
+    if (now - player.secondaryPrevshot < firerate) {
       return;
     }
-    prevshot = now;
+    player.secondaryPrevshot = now;
     try {
       player.secondaryWeapons[0 + player.secondaryWeaponShift].fire(
         player,
@@ -122,26 +98,30 @@ const gameActions = {
       );
     } catch {}
   },
-  weaponSwitch: () => {
-    const now = performance.now();
-    console.log(player.weapons.length);
-    if (now - prevshot < 100) {
-      return;
-    }
-    prevshot = now;
-    console.log("Shifted weapons");
-    player.primaryWeaponShift =
-      (player.primaryWeaponShift + 2) % player.weapons.length;
-    player.secondaryWeaponShift =
-      (player.secondaryWeaponShift + 1) % player.secondaryWeapons.length;
-    showHUDInfo();
-  },
   menu: () => {
     metaP.metaP();
   },
 };
 
 const showHUDInfo = () => {
+  const nextWaveCountdown = document.getElementById("next-wave-countdown");
+  const scoreDiv = document.getElementById("score");
+  const hull = document.getElementById("hull");
+  const containerPrimary = document.getElementById("primary-weapon-types");
+  const containerSecondary = document.getElementById("secondary-weapon-types");
+  const ammoPContainer = document.getElementById("primary-weapon-ammo");
+  const ammoSContainer = document.getElementById("secondary-weapon-ammo");
+  if (player.e < 0) {
+    hull.innerHTML = "";
+    containerPrimary.innerHTML = "";
+    containerSecondary.innerHTML = "";
+    ammoPContainer.innerHTML = "";
+    ammoSContainer.innerHTML = "";
+    scoreDiv.innerHTML = "";
+    nextWaveCountdown.innerHTML = "";
+    return;
+  }
+  scoreDiv.textContent = spaceScene?.score.toFixed(0);
   const wa = player.weapons[0 + player.primaryWeaponShift];
   const wb = player.weapons[1 + player.primaryWeaponShift];
   const wc = player.secondaryWeapons[0 + player.secondaryWeaponShift];
@@ -156,14 +136,13 @@ const showHUDInfo = () => {
   const a = wa.html;
   const b = wb.html;
   const c = wc.html;
-  const hull = document.getElementById("hull");
+
   hull.innerHTML = `H:${player.e.toFixed(0)}`;
-  const containerPrimary = document.getElementById("primary-weapon-types");
+
   containerPrimary.innerHTML = `W1: ${a}${b}`;
-  const containerSecondary = document.getElementById("secondary-weapon-types");
+
   containerSecondary.innerHTML = `W2: ${c}`;
-  const ammoPContainer = document.getElementById("primary-weapon-ammo");
-  const ammoSContainer = document.getElementById("secondary-weapon-ammo");
+
   if (ammoP) {
     ammoPContainer.textContent = `(${ammoP})`;
   } else {
@@ -222,7 +201,7 @@ app.stage.hitArea = app.screen;
 
 const vPadDisplacement = Math.min(app.renderer.width, app.renderer.height) / 30;
 
-const virtualPad = new VirtualPad({
+/*const virtualPad = new VirtualPad({
   gameActions: gameActions,
   debug: true,
   displacement: vPadDisplacement,
@@ -234,8 +213,8 @@ const virtualPad = new VirtualPad({
     ul: [app.renderer.width / 2, 0],
     lr: [app.renderer.width, app.renderer.height],
   },
-});
-// Prevent the default behavior of touch events
+});*/
+
 app.view.addEventListener(
   "touchstart",
   (e) => {
@@ -260,13 +239,13 @@ app.view.addEventListener(
   { passive: false },
 );
 app.stage.addEventListener("pointerdown", (e) => {
-  virtualPad.touchStart(e.global, e);
+  //virtualPad.touchStart(e.global, e);
 });
 app.stage.addEventListener("pointermove", (e) => {
-  virtualPad.touchMove(e.global, () => ship.r);
+  //virtualPad.touchMove(e.global, () => ship.r);
 });
 app.stage.addEventListener("pointerup", (e) => {
-  virtualPad.touchEnd(e.global);
+  //virtualPad.touchEnd(e.global);
 });
 
 const focusTrap = document.getElementById("focus-trap");
@@ -275,8 +254,6 @@ focusTrap.focus(); // Set focus to the hidden input
 const controller = handleControls(gameActions, keyMap, buttonMap);
 
 const scale = isMobile() ? 0.12 : SpaceScene.MAXSCALE;
-
-console.info("Generating player");
 
 const baseWeapons = () => {
   let weapons = [];
@@ -323,6 +300,7 @@ const player = new Lynx({
   secondaryWeapons: secondaryWeapons,
 });
 player.human = true;
+player.powerUps = {};
 player.recoveryRate = 0.04;
 player.emergencyBrakes = false;
 player.pointSight = false;
@@ -341,15 +319,17 @@ const resetPlayerPVA = (regenerate = false) => {
   player.lives = 1;
   if (player.weapons[0].ammo) {
     player.ammo[player.weapons[0].kind] = {};
-    player.ammo[player.weapons[0].kind].count = player.weapons[0].ammoMax;
-    player.ammo[player.weapons[0].kind].max = player.weapons[0].ammoMax;
+    player.ammo[player.weapons[0].kind].count =
+      player.weapons[0].ammoMax * player.extraAmmo;
+    player.ammo[player.weapons[0].kind].max =
+      player.weapons[0].ammoMax * player.extraAmmo;
   }
   if (player.secondaryWeapons[0].ammo) {
     player.ammo[player.secondaryWeapons[0].kind] = {};
     player.ammo[player.secondaryWeapons[0].kind].count =
-      player.secondaryWeapons[0].ammoMax;
+      player.secondaryWeapons[0].ammoMax * player.extraAmmo;
     player.ammo[player.secondaryWeapons[0].kind].max =
-      player.secondaryWeapons[0].ammoMax;
+      player.secondaryWeapons[0].ammoMax * player.extraAmmo;
   }
   spaceScene.player = player;
   player.e = 1000; // TODO: this should be the current player maximum instead
@@ -374,13 +354,12 @@ player.ammo[PhotonTorpedoLauncher.kind] = {};
 player.ammo[PhotonTorpedoLauncher.kind].count = 2;
 player.ammo[PhotonTorpedoLauncher.kind].max = 2;
 console.log(player.ammo);
-showHUDInfo();
 
 player.generate();
 
 player.lives = 1;
 
-let spaceScene = new SpaceScene({
+spaceScene = new SpaceScene({
   app: app,
   player: player,
   controller: controller,
@@ -391,7 +370,6 @@ let spaceScene = new SpaceScene({
 console.info("Scene constructed");
 
 const scoreDiv = document.getElementById("score");
-const livesDiv = document.getElementById("lives");
 
 const commands = [
   {
@@ -400,6 +378,7 @@ const commands = [
     lambda: () => {
       msgs.hide();
       resetPlayerPVA(true);
+      resetKeys();
       for (let a of spaceScene.asteroids) {
         a.e = -1;
       }
@@ -412,14 +391,24 @@ const commands = [
       for (let b of spaceScene.bulletList) {
         b.e = -1;
       }
-      level = 0;
+      level = 1;
+      const nextLevel = countsPerLevel(level);
+      spaceScene.addAsteroids(nextLevel.asteroids);
+      spaceScene.addEnemies(nextLevel.ships);
+      console.log(spaceScene.asteroids);
       spaceScene.score = 0;
       scoreDiv.textContent = 0;
-      chosePowerup = true;
+      powerUpChosen = true;
       finishCountdown = 0;
-      countDown = 0;
-      player.pointSight = false;
+      countdown = 0;
+      inGame = true;
+      gameOver = false;
+      player.powerUps = {};
+      player.pointSight = false; // TODO There are more things to reset
       player.emergencyBrakes = false;
+      player.extraAmmo = 1;
+      player.yawRate = 0.03;
+      player.accel = 0.1;
       const { weapons, secondaryWeapons } = baseWeapons();
       player.weapons = weapons;
       player.secondaryWeapons = secondaryWeapons;
@@ -452,123 +441,76 @@ const commands = [
       }
     },
   },
-  {
-    title: "Mass drivers",
-    lambda: () => {
-      const massDriverGun1 = new MassDriverGun({
-        pos: {
-          x: -40,
-          y: 40,
-        },
-      });
-      const massDriverGun2 = new MassDriverGun({
-        pos: {
-          x: -40,
-          y: -40,
-        },
-      });
-      player.weapons = [massDriverGun1, massDriverGun2];
-      player.ammo[MassDriverGun.kind] = {};
-      player.ammo[MassDriverGun.kind].count = 99;
-      player.ammo[MassDriverGun.kind].max = massDriverGun1.ammoMax;
-      console.log(player.ammo[MassDriverGun.kind].count);
-      for (let w of player.weapons) {
-        w.source = player._id;
-      }
-    },
-  },
-  {
-    title: "Laser guns",
-    lambda: () => {
-      const laserGun1 = new LaserGun({
-        pos: {
-          x: -40,
-          y: 40,
-        },
-      });
-      const laserGun2 = new LaserGun({
-        pos: {
-          x: -40,
-          y: -40,
-        },
-      });
-      player.weapons = [laserGun1, laserGun2];
-      player.ammo[LaserGun.kind] = {};
-      player.ammo[LaserGun.kind].count = 10;
-      player.ammo[LaserGun.kind].max = laserGun1.ammoMax;
-      for (let w of player.weapons) {
-        w.source = player._id;
-      }
-    },
-  },
-  {
-    title: "Gauss cannon",
-    lambda: () => {
-      const railGun = new GaussCannon({
-        pos: {
-          x: 0,
-          y: 0,
-        },
-      });
-
-      player.secondaryWeapons = [railGun];
-      player.ammo[GaussCannon.kind] = {};
-      player.ammo[GaussCannon.kind].count = 10;
-      player.ammo[GaussCannon.kind].max = railGun.ammoMax;
-      for (let w of player.secondaryWeapons) {
-        w.source = player._id;
-      }
-    },
-  },
-  {
-    title: "Photon torpedo",
-    lambda: () => {
-      const ptl = new PhotonTorpedoLauncher({
-        pos: {
-          x: 0,
-          y: 0,
-        },
-        color: 0x00ddff,
-        haloColor: 0x11ddff,
-      });
-
-      player.secondaryWeapons = [ptl];
-      player.ammo[PhotonTorpedoLauncher.kind] = {};
-      player.ammo[PhotonTorpedoLauncher.kind].count = 10;
-      player.ammo[PhotonTorpedoLauncher.kind].max = ptl.ammoMax;
-
-      for (let w of player.secondaryWeapons) {
-        w.source = player._id;
-      }
-    },
-  },
-  {
-    title: "Pointsight",
-
-    lambda: () => {
-      player.pointSight = true;
-    },
-  },
-  {
-    title: "Emergency brakes",
-
-    lambda: () => {
-      player.emergencyBrakes = true;
-    },
-  },
+  ...debugCommands(player),
 ];
-metaP.maxCommands = 10;
+metaP.maxCommands = 100;
 metaP.bind(commands);
 msgs.attach();
 
 document.getElementById("menu").addEventListener("click", (ev) => {
   metaP.metaP();
+  // TODO: freeze countdowns
+  if (Object.keys(player.powerUps).length > 0 && player.e > 0) {
+    const wrapper = document.createElement("DIV");
+    const div = document.createElement("DIV");
+    const p = document.createElement("P");
+    p.textContent = "Current powerups";
+    p.style.flexBasis = "100%";
+    div.appendChild(p);
+    div.style.display = "flex";
+    div.style.flexDirection = "row";
+    div.classList.add("current-powerups");
+    div.addEventListener("click", () => msgs.hide());
+    currentPowerupsToDiv(div, player);
+    wrapper.appendChild(div);
+    const backToGame = document.createElement("p");
+    backToGame.style.cursor = "pointer";
+    backToGame.addEventListener("click", () => {
+      msgs.hide();
+      metaP.toggle();
+    });
+    backToGame.textContent = "Back to the game";
+    wrapper.appendChild(backToGame);
+    msgs.div(wrapper);
+    msgs.show({ glass: 0, msgs: 1000000 });
+  }
 });
 
-let countDown = 0;
-let finishCountdown = 0;
-let level = 0;
-let chosePowerup = true;
+let showMainMenu = true;
+const controlsChanger = document.createElement("DIV");
+
+const menuP = new MetaP({ id: "main-menu" });
+presentKeyMap(controlsChanger, gameActions, msgs, menuP);
+
+const mainMenuCommands = [
+  {
+    title: "Play",
+    lambda: () => {
+      showMainMenu = false;
+    },
+  },
+  {
+    title: "Settings",
+    lambda: () => {
+      menuP.ignoreKeys();
+      msgs.div(controlsChanger);
+      msgs.show({ glass: 1000000, msgs: 1000001 }); // TODO Why does this need to be so high? Fix zindexing
+    },
+  },
+  {
+    title: "About",
+    lambda: () => {
+      const about = document.getElementById("about");
+      const clone = about.cloneNode(true);
+      clone.style.display = "block";
+      clone.addEventListener("click", () => msgs.hide());
+      msgs.div(clone);
+      msgs.show({ glass: 1000000, msgs: 1000001 });
+    },
+  },
+];
+
+menuP.bind(mainMenuCommands, { blur: 30 }, false);
 
 const countsPerLevel = (level) => {
   const obj = {
@@ -618,192 +560,68 @@ const countsPerLevel = (level) => {
   };
 };
 
-let choosing = false;
-
-const glass = document.getElementById("glass");
-
-const offerChoices = (options = []) => {
-  // Options is a list of powerups, of the form
-  // {id: "kPowerup", name: "Human name", description: "Description"}
-  console.log(options);
-
-  glass.style.display = "block";
-  const powerupContainer = document.getElementById("powerup-container");
-
-  if (!powerupContainer) {
-    console.error("Error: .powerup-container element not found in the HTML.");
-    return;
-  }
-
-  powerupContainer.style.display = "flex";
-
-  const choiceElements = document.querySelectorAll(".powerup-choice");
-  if (choiceElements.length !== 2) {
-    console.error(
-      "Error: Exactly two .powerup-choice elements are expected in the HTML.",
-    );
-    return;
-  }
-  const glyphElements = document.querySelectorAll(".choice-glyph");
-  const descriptionElements = document.querySelectorAll(".choice-description");
-
-  const choicesToRender = options.slice(0, 2);
-
-  choicesToRender.forEach((option, index) => {
-    const choiceElement = choiceElements[index];
-    console.log(choiceElement);
-
-    choiceElement.dataset.id = option.id;
-    console.log(index, glyphElements, option.glyph);
-    const glyphElement = glyphElements[index];
-    glyphElement.innerHTML = `<img src="media/glyphs/${option.glyph}"></img>`;
-    const descriptionElement = descriptionElements[index];
-    descriptionElement.innerHTML = option.description();
-
-    choiceElement.addEventListener("click", () => {
-      // You will fill this up later to handle the choice
-      option.lambda();
-      glass.style.display = "none";
-      powerupContainer.style.display = "none";
-      chosePowerup = true;
-      choosing = false;
-    });
-  });
-  const skipPowerup = document.getElementById("skip-powerup");
-  skipPowerup.textContent = "Skip the choice (-2000 points)";
-  skipPowerup.addEventListener("click", () => {
-    spaceScene.score -= 2000;
-    glass.style.display = "none";
-    powerupContainer.style.display = "none";
-    chosePowerup = true;
-    choosing = false;
-    showHUDInfo();
-  });
-};
-
-const allPowerUpChoices = [
-  {
-    id: "kMassDriverWeapon",
-    name: "Mass Driver",
-    description: () => {
-      const title = "<h2>Primary weapon</h2>";
-      const htmlA = MassDriverGun.present();
-      const htmlB = player.weapons[0].present();
-      return `${title} ${htmlA} <h3>replace</h3> ${htmlB}`;
-    },
-    glyph: "massdriver.png",
-    lambda: () => {
-      const massDriverGun1 = new MassDriverGun({
-        pos: {
-          x: -40,
-          y: 40,
-        },
-      });
-      const massDriverGun2 = new MassDriverGun({
-        pos: {
-          x: -40,
-          y: -40,
-        },
-      });
-
-      player.weapons = [massDriverGun1, massDriverGun2];
-      player.ammo[MassDriverGun.kind] = {};
-      player.ammo[MassDriverGun.kind].count = 99;
-      player.ammo[MassDriverGun.kind].max = massDriverGun1.ammoMax;
-      for (let w of player.weapons) {
-        w.source = player._id;
-      }
-    },
-  },
-  {
-    id: "kGaussCannon",
-    name: "Gauss Cannon",
-    description: () => {
-      const title = "<h2>Secondary weapon</h2>";
-      const htmlA = GaussCannon.present();
-      const htmlB = player.secondaryWeapons[0].present();
-      return `${title} ${htmlA} <h3>replace</h3> ${htmlB}`;
-    },
-    glyph: "gausscannon.png",
-    lambda: () => {
-      const railGun = new GaussCannon({
-        pos: {
-          x: 0,
-          y: 0,
-        },
-      });
-      player.secondaryWeapons = [railGun];
-      player.ammo[GaussCannon.kind] = {};
-      player.ammo[GaussCannon.kind].count = 2;
-      player.ammo[GaussCannon.kind].max = 2;
-      for (let w of player.secondaryWeapons) {
-        w.source = player._id;
-      }
-    },
-  },
-  {
-    id: "kLaserGun",
-    name: "Laser Gun",
-    description: () => {
-      const title = "<h2>Primary weapon</h2>";
-      const htmlA = LaserGun.present();
-      const htmlB = player.weapons[0].present();
-      return `${title} ${htmlA} <h3>replace</h3> ${htmlB}`;
-    },
-    glyph: "lasergun.png",
-    lambda: () => {
-      const laserGun1 = new LaserGun({
-        pos: {
-          x: -40,
-          y: 40,
-        },
-      });
-      const laserGun2 = new LaserGun({
-        pos: {
-          x: -40,
-          y: -40,
-        },
-      });
-      player.weapons = [laserGun1, laserGun2];
-      player.ammo[LaserGun.kind] = {};
-      player.ammo[LaserGun.kind].count = 10;
-      player.ammo[LaserGun.kind].max = laserGun1.ammoMax;
-      for (let w of player.weapons) {
-        w.source = player._id;
-      }
-    },
-  },
-  {
-    id: "kEmergencyBrakes",
-    name: "Emergency brakes",
-    description: () => {
-      const title = "<h2>Passive utility</h2>";
-      return `${title}<p>Emergency brakes</p> Accelerate in the opposite direction of your travel to brake immediately.`;
-    },
-    glyph: "emergencybrakes.png",
-    lambda: () => {
-      player.emergencyBrakes = true;
-    },
-  },
-  {
-    id: "kPointSight",
-    name: "Point sight",
-    description: () => {
-      const title = "<h2>Passive utility</h2>";
-      return `${title}<p>Point sight</p> Show an overlay of where you are aiming at. Particularly useful for long range weapons`;
-    },
-    glyph: "pointsight.png",
-    lambda: () => {
-      player.pointSight = true;
-    },
-  },
-];
+let powerUpChosen = true;
+let offerPowerUpChoices = false;
+let countdown = 0;
+let diffcountDown = 0;
+let finishCountdown = 0;
+let diffFinishCountdown = 0;
+let level = 0;
+let chosePowerup = true;
+let inGame = false;
+let gameOver = false;
 
 app.ticker.add((delta) => {
-  if (metaP.metaPGlass.style.display === "block") {
+  if (showMainMenu) {
+    if (!menuP.visible()) {
+      console.debug("Showing main menu");
+      menuP.metaP();
+    }
     return;
   }
-  if (choosing) {
+  if (metaP.metaPGlass.style.display === "block") {
+    // This implies pause menu is showing
+    if (diffFinishCountdown == 0) {
+      const now = performance.now();
+      diffFinishCountdown = finishCountdown - now;
+      console.log(diffFinishCountdown);
+    }
+    return;
+  } else {
+    if (diffFinishCountdown > 0) {
+      finishCountdown = performance.now() + diffFinishCountdown;
+      diffFinishCountdown = 0;
+    }
+  }
+
+  if (offerPowerUpChoices && !powerUpChosen) {
+    // Offer powerup choices
+    powerUpChosen = false;
+    offerPowerUpChoices = false;
+    inGame = false;
+    finishCountdown = 0; // Why here?
+    const choices = [...allPowerUpChoices(player)];
+    choices.sort(() => Math.random() - 0.5);
+
+    const globals = {
+      powerUpChosen: powerUpChosen,
+      setPowerUpChosen: (value) => {
+        powerUpChosen = value;
+      },
+      offerPowerUpChoices: offerPowerUpChoices,
+      setOfferPowerUpChoices: (value) => {
+        offerPowerUpChoices = value;
+      },
+      spaceScene: spaceScene,
+      showHUDInfo: showHUDInfo,
+      player: player,
+    };
+
+    offerChoices(choices.slice(0, 2), globals);
+    return;
+  }
+  if (!powerUpChosen) {
+    // This needs to be after setting up the chooser above
     return;
   }
   if (!isLandscape() && !msgs.visible) {
@@ -822,49 +640,21 @@ app.ticker.add((delta) => {
     app.canvas.style.display = "none";
     return;
   }
-  if (player.lives <= 0 && !msgs.visible && !choosing) {
+  if (player.lives <= 0 && !msgs.visible) {
     msgs.html(
       `Game over!<br/>Select <em>Play</em> in the upper-left menu to play again`,
     );
     msgs.showSmall();
     player.explode();
+    gameOver = true;
     for (let o of spaceScene.otherShips) {
       o.action = () => "kIdle";
     }
     return;
   }
-  /*
-  if (spaceScene.otherShips.length == 0 && level > 1) {
-    // Refill ammo immediately if there are no enemy ships. Why not?
-    if (player.weapons[0].ammo) {
-      player.ammo[player.weapons[0].kind].count = player.weapons[0].ammoMax;
-      // TODO this has to have the potential to be improved per-player
-    }
-    if (player.secondaryWeapons[0].ammo) {
-      player.ammo[player.secondaryWeapons[0].kind] = {};
-      player.ammo[player.secondaryWeapons[0].kind].count =
-        player.secondaryWeapons[0].ammoMax;
-      player.ammo[player.secondaryWeapons[0].kind].max =
-        player.secondaryWeapons[0].ammoMax;
-    }
-  }*/
-  if (!chosePowerup && spaceScene.asteroids.length === 0 && player.lives >= 1) {
-    // TODO
-    choosing = true;
-    finishCountdown = 0; // Why here?
-    const choices = [...allPowerUpChoices];
-    choices.sort(() => Math.random() - 0.5);
-
-    offerChoices(choices.slice(0, 2));
-
-    return;
-  }
-  if (
-    spaceScene.otherShips.length === 0 &&
-    spaceScene.asteroids.length > 0 &&
-    player.lives >= 1
-  ) {
+  if (spaceScene.otherShips.length === 0 && inGame && !gameOver) {
     if (finishCountdown === 0) {
+      console.log(spaceScene.asteroids.length);
       console.log("Setting the finish countdown");
       finishCountdown = performance.now() + 10000;
     } else if (performance.now() >= finishCountdown) {
@@ -873,6 +663,9 @@ app.ticker.add((delta) => {
       for (let a of spaceScene.asteroids) {
         a.e = -1;
       }
+      console.log("BREAKING IN HERE");
+      offerPowerUpChoices = true;
+      powerUpChosen = false;
     } else {
       const remainingTime = Math.ceil(
         (finishCountdown - performance.now()) / 1000,
@@ -881,33 +674,34 @@ app.ticker.add((delta) => {
         `Next wave in ${remainingTime} seconds`;
     }
   }
-  if (spaceScene.asteroids.length === 0 && player.lives >= 1) {
-    if (countDown === 0 && chosePowerup) {
-      // Asteroids just became empty and a powerup has been chosen
-      countDown = performance.now() + 3000; // Start the 3-second countdown
+  if (!inGame && !gameOver) {
+    if (countdown === 0 && chosePowerup) {
+      // We have chosen a powerup already
+      countdown = performance.now() + 3000; // Start the 3-second countdown
       document.getElementById("next-wave-countdown").innerText = "";
       msgs.text("");
       msgs.show();
       level++;
-    } else if (performance.now() >= countDown) {
+    } else if (performance.now() >= countdown) {
       // 3 seconds have passed
       msgs.hide();
       const nextLevel = countsPerLevel(level);
       resetPlayerPVA(false);
+      resetKeys();
       spaceScene.addAsteroids(nextLevel.asteroids);
       spaceScene.addEnemies(nextLevel.ships);
-      countDown = 0; // Reset the countdown
-      chosePowerup = false;
+      countdown = 0;
       finishCountdown === 0;
+      inGame = true;
     } else {
       // Update the countdown display
-      const remainingTime = Math.ceil((countDown - performance.now()) / 1000); // Calculate remaining seconds
+      const remainingTime = Math.ceil((countdown - performance.now()) / 1000); // Calculate remaining seconds
       const nextLevel = countsPerLevel(level);
       const a = nextLevel.asteroids;
       const s = nextLevel.ships;
       let extra = "";
-      if (s >= 1) {
-        extra = `<br/><hr/><span style='color: white'>DANGER<em> You will face ${s} ships </em>DANGER</span>`;
+      if (s == 1) {
+        extra = `<br/><hr/><span style='color: white'>DANGER<em> You will face ${s} ship </em>DANGER</span>`;
       }
       if (s >= 2) {
         extra = `<br/><hr/><span style='color: orange'>DANGER<em> You will face ${s} ships </em>DANGER</span>`;
@@ -920,19 +714,16 @@ app.ticker.add((delta) => {
           extra,
       );
     }
-  } else {
-    // Asteroids are present, reset the countdown
-    countDown = 0;
   }
   if (msgs.visible && player.lives > 0) {
+    // TODO What was this for again?
     return;
   }
   spaceScene.update(delta);
-  showHUDInfo(); // TODO: remove all the other calls
+  showHUDInfo();
 });
 
 function getLandscapeDimensions() {
-  // Renamed function
   const screenWidth = window.innerWidth;
   const screenHeight = window.innerHeight;
 

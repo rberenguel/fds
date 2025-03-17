@@ -4,6 +4,7 @@ export {
   handleControls,
   touchZoneHandler,
   getDeviceInput,
+  resetKeys,
 };
 
 const keys = {};
@@ -56,11 +57,32 @@ const bindGamepadHandlers = () => {
 };
 
 const glassVisible = () =>
-  document.getElementById("metap-glass")?.style?.display === "block";
+  Array.from(document.getElementsByClassName("glass")).filter(
+    (g) => g.style.display === "block",
+  ).length > 0;
+
+const _skipModifiers = (event) => {
+  if (event.code.startsWith("Meta")) {
+    return true;
+  }
+  if (event.code.startsWith("Control")) {
+    return true;
+  }
+  if (event.code.startsWith("Alt")) {
+    return true;
+  }
+  if (event.code.startsWith("Shift")) {
+    return true;
+  }
+  return false;
+};
 
 const bindKeyHandlers = () => {
   document.addEventListener("keydown", (event) => {
-    if (glassVisible()) {
+    /*if (glassVisible()) {
+      return;
+    }*/
+    if (_skipModifiers(event)) {
       return;
     }
     keys[event.code] = true; // Mark the key as pressed
@@ -68,7 +90,10 @@ const bindKeyHandlers = () => {
   });
 
   document.addEventListener("keyup", (event) => {
-    if (glassVisible()) {
+    /*if (glassVisible()) {
+      return;
+    }*/
+    if (_skipModifiers(event)) {
       return;
     }
     keys[event.code] = false; // Mark the key as released
@@ -140,6 +165,13 @@ const _getDeviceInput = (kind) => {
       }
     }
     return null;
+  }
+};
+
+const resetKeys = () => {
+  // Reset the controller
+  for (let key in keys) {
+    keys[key] = false;
   }
 };
 

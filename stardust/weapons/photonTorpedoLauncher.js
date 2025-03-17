@@ -37,8 +37,8 @@ class PhotonTorpedoLauncher extends Gun {
   constructor(props) {
     super({ ...props });
     this.stats = { ...this.constructor.baseStats };
-    this.color = props.color ?? 0xff0000;
-    this.haloColor = props.haloColor ?? 0xff0000;
+    this.color = props.color ?? 0xffcc33;
+    this.haloColor = props.haloColor ?? 0xffcc33;
   }
 
   fire(shooter, bulletList) {
@@ -73,7 +73,6 @@ class PhotonTorpedoLauncher extends Gun {
       source: this.source,
       flameList: shooter.flameList,
     });
-    console.log(b);
     bulletList.push(b);
     if (window.drumSampler && shooter.human) {
       window.drumSampler.triggerAttackRelease("b0", 0.5); // Hihat foot stomp
@@ -86,7 +85,7 @@ class PhotonTorpedo extends Base1 {
   constructor(props) {
     const numMeshes = 10;
     let meshes = [];
-    const baseColor = props.haloColor ?? 0xffee77;
+    const baseColor = props.haloColor ?? 0xffaa33;
     for (let i = 0; i < numMeshes; i++) {
       const radius = Math.random() * 10 + 15;
       let vertices = [];
@@ -105,7 +104,7 @@ class PhotonTorpedo extends Base1 {
     }
 
     super({ ...props, meshes: meshes });
-    this.color = props.color ?? 0xff0000;
+    this.color = props.color ?? 0xffaa33;
     this.e = props.e ?? 10;
     this.mass = props.mass ?? 3;
     this.minRange = props.minRange ?? 1500;
@@ -165,10 +164,6 @@ class PhotonTorpedo extends Base1 {
     }
 
     for (let i = 0; i < this.presentations.length; i++) {
-      const red = ne * (0.9 + 0.1 * Math.random()) * 0xff; // Cools to red
-      const green = ne * (0.6 + 0.2 * Math.random()) * 0xff;
-      const blue = ne * (0.3 + 0.5 * Math.random()) * 0xff;
-      const hexColor = (red << 16) | (green << 8) | blue;
       const presentation = this.presentations[i];
       const alpha = 0.3 + 0.7 * Math.random();
       if (!presentation || presentation.destroyed) {
@@ -177,7 +172,6 @@ class PhotonTorpedo extends Base1 {
       }
       presentation.rotation = Math.random() * Math.PI * 2;
 
-      presentation.tint = hexColor;
       presentation.alpha = alpha;
     }
   }

@@ -1,0 +1,31 @@
+# Roids2 state machine
+
+// zoom: 0.5 pan: -282.80005152754967 -460.0000884682982
+
+
+
+- dark
+
+
+Menu
+
+
+Menu -> Menu until\ndismissed
+
+
+Menu -> Play play
+
+
+Play -> NoEnemies
+
+
+CountdownAsteroids
+
+
+NoEnemies -> CountdownAsteroids
+
+
+CountdownAsteroids -> ChoosePowerup 10 sec
+
+
+ChoosePowerup -> CountdownNextLevel 3 sec

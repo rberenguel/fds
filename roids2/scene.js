@@ -24,9 +24,6 @@ class Scene {
   constructor() {}
 }
 
-const scoreDiv = document.getElementById("score");
-const livesDiv = document.getElementById("lives");
-
 // TODO: this will go with a separate "HUD"
 const niceDistance = (dist) => {
   if (dist < 1000) {
@@ -138,11 +135,16 @@ class SpaceScene extends Scene {
       const m = 2000 + Math.random() * 2000;
       const x = this.player.pos.x + Math.cos(a) * m;
       const y = this.player.pos.y + Math.sin(a) * m;
+      let retry = false;
       for (let a of this.asteroids) {
         if (dist({ x, y }, a.pos) < a.size + 300) {
-          --i;
-          continue;
+          retry = true;
+          break;
         }
+      }
+      if (retry) {
+        --i;
+        continue;
       }
       const other = new Bobcat({
         pos: {
@@ -153,7 +155,8 @@ class SpaceScene extends Scene {
       });
 
       other.prevShot = -1;
-      if (Math.random() < 2.5) {
+      if (Math.random() < 0.8) {
+        // Most have laser guns
         other.ammo[LaserGun.kind] = {};
         other.ammo[LaserGun.kind].count = 10;
         other.ammo[LaserGun.kind].max = 30;
@@ -437,7 +440,6 @@ class SpaceScene extends Scene {
             a.addFlame(b.pos, b.vel);
             if (a.e < 0 && b.source === this.player._id) {
               this.score += Math.round(a.size);
-              scoreDiv.textContent = this.score.toFixed(0);
               newAsteroids.push(...a.split(b.vel));
             } else {
               a.addCrack(b);
@@ -511,10 +513,8 @@ class SpaceScene extends Scene {
             this.flameList.push(fl); // TODO this should be handled internally
             //o.transferMomentum(b); TODO momentum
             if (o.e < 0) {
-              //this.score += 2000;
               o.explode({ e: -o.e }); // TODO this should be handled internally
               o.e = -1;
-              //scoreDiv.textContent = this.score.toFixed(0);
             }
           }
         }

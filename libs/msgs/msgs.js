@@ -20,23 +20,25 @@ class Msgs {
   }
 
   hide() {
-    console.log("HIDING THE THING");
-    console.log(this._div);
     this._div.classList.remove("glass");
     this._glass.style.display = "none";
     this._div.style.display = "none";
     this.visible = false;
+    this._glass.style.zIndex = this._zIndex;
+    this._div.style.zIndex = this._zIndex;
   }
 
-  show() {
-    console.log("SHOWING THE THING");
+  show(props = {}) {
     this._glass.style.display = "block";
     this._div.style.display = "block";
     this.visible = true;
+    if (props) {
+      this._glass.style.zIndex = props.glass ?? this._zIndex;
+      this._div.style.zIndex = props.msgs ?? this._zIndex;
+    }
   }
 
   showSmall() {
-    console.log("SHOWING THE SMALL THING");
     this._div.style.display = "block";
     this._div.classList.add("glass");
     this.visible = true;
@@ -56,5 +58,10 @@ class Msgs {
 
   text(content) {
     this._div.textContent = content;
+  }
+
+  div(d) {
+    this._div.innerHTML = "";
+    this._div.appendChild(d);
   }
 }

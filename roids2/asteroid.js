@@ -74,7 +74,7 @@ class Asteroid extends Base1 {
   split(vel) {
     // vel is the incoming vector (say, bullet)
     // We want them to separate fast, but not very fast
-    const nv = 0.1 * sqnorm(vel.x, vel.y) + 0.1;
+    const nv = sqnorm(vel.x, vel.y) + 0.1;
     if (this.size / 2 < 40) {
       for (let i = 0; i < 20; i++) {
         this.addFlame(this.pos, this.vel, true);
@@ -83,12 +83,12 @@ class Asteroid extends Base1 {
     }
     const a1 = new Asteroid({
       pos: {
-        x: this.pos.x - this.size * (-vel.y / nv),
-        y: this.pos.y + this.size * (+vel.x / nv),
+        x: this.pos.x - 25 * this.size * (-vel.y / nv),
+        y: this.pos.y + 25 * this.size * (+vel.x / nv),
       },
       vel: {
-        x: -this.vel.x - vel.y / nv,
-        y: this.vel.y + vel.x / nv,
+        x: -this.vel.x - (100 * vel.y) / nv,
+        y: this.vel.y + (100 * vel.x) / nv,
       },
 
       sides: this.sides,
@@ -97,12 +97,12 @@ class Asteroid extends Base1 {
     });
     const a2 = new Asteroid({
       pos: {
-        x: this.pos.x + this.size * (-vel.y / nv),
-        y: this.pos.y - this.size * (+vel.x / nv),
+        x: this.pos.x + 25 * this.size * (-vel.y / nv),
+        y: this.pos.y - 25 * this.size * (+vel.x / nv),
       },
       vel: {
-        x: this.vel.x + vel.y / nv,
-        y: this.vel.y - vel.x / nv,
+        x: this.vel.x + (100 * vel.y) / nv,
+        y: this.vel.y - (100 * vel.x) / nv,
       },
       sides: this.sides,
       size: this.size / 2,
@@ -111,7 +111,6 @@ class Asteroid extends Base1 {
     for (let i = 0; i < 20 + rnd() * 10; i++) {
       this.addFlame(this.pos, this.vel, true);
     }
-    console.log(a1, a2);
     return [a1, a2];
   }
 
@@ -168,6 +167,9 @@ class Asteroid extends Base1 {
       this.explode();
       return false;
     }
+    if (!this.presentations || this.presentations?.length == 0) {
+      return false;
+    }
     /*if (rnd() > from.e) {
       return false;
     }*/
@@ -184,8 +186,8 @@ class Asteroid extends Base1 {
       p0y = from.pos.y - this.pos.y;
     const q0x = from.pos.x - this.pos.x + s * vx,
       q0y = from.pos.y - this.pos.y + s * vy;
-    const [p1x, p1y] = rotate(p0x, p0y, -this.presentations[0].rotation);
-    const [q1x, q1y] = rotate(q0x, q0y, -this.presentations[0].rotation);
+    const [p1x, p1y] = rotate(p0x, p0y, -this.presentations[0].rotation ?? 0);
+    const [q1x, q1y] = rotate(q0x, q0y, -this.presentations[0].rotation ?? 0);
     const verts = [p1x, p1y, p1x + 8, p1y + 8, q1x, q1y];
     this.presentations[0].poly(verts);
     const red = Math.floor(10 + 80 * rnd());

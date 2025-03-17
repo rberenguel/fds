@@ -32,6 +32,7 @@
       <div id="secondary-weapon-ammo"></div>
     </div>
     <div id="powerup-container" style="display: none">
+      <div id="current-powerups" class="current-powerups"></div>
       <h2>Choose one</h2>
       <hr style="flex-basis: 100%" />
       <div class="powerup-choice">
@@ -51,6 +52,32 @@
       id="focus-trap"
       style="opacity: 0; position: absolute; z-index: -1"
     />
+    <div id="about" style="display: none">
+      <h3><em>Still unnamed Asteroids-like game</em></h3>
+      <hr />
+      <p>
+        This is a <em>wave shooter</em>, inspired by Hyperoid by Edward Hutchins
+        and my own tinkering.
+      </p>
+      <p>
+        Survive as many waves as you can handle: you only earn points by
+        destroying asteroids, but only have 10 seconds to do so before a new
+        wave (with new enemies) starts.
+      </p>
+      <p>
+        A circle inside your ship or the enemy ships indicates ammunition for
+        the secondary weapon. Don't get too close if they have, it can get
+        nasty.
+      </p>
+      <p>
+        Currently it never ends, although <em>for now</em> it peaks in
+        difficulty at wave 20.
+      </p>
+      <p>
+        You can find the acknowledgements for the libraries, fonts and resources
+        I have used in my Github (rberenguel).
+      </p>
+    </div>
   </body>
   <script type="module" src="roids2.js"></script>
 </html>

@@ -10,6 +10,7 @@ const drumSampler = new Tone.Sampler({
     d0: "hihatClosed_OH_F_1.mp3",
     e0: "snare_OH_F_1.mp3",
     e1: "snare2_OH_Ghost_1.mp3", // Emergency brake
+    e2: "wind.mp3", // Thrust
     f0: "crash1_OH_FF_1.mp3",
     f1: "crash2_OH_FF_1.mp3",
     f2: "crash2_OH_FF_3.mp3",

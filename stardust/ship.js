@@ -22,6 +22,12 @@ function shortestAngleDifference(angle1, angle2) {
   return difference;
 }
 
+let shipIdCounter = 0;
+
+function getShipId() {
+  return shipIdCounter++;
+}
+
 class Ship extends Base1 {
   static kind = "kShip";
 
@@ -39,7 +45,12 @@ class Ship extends Base1 {
     this.flameList = []; // TODO: careful with this as a dangling reference
     this.bulletList = [];
     this.recoveryRate = props.recoveryRate ?? 0;
-    this._id = performance.now();
+    this._id = getShipId();
+    this.prevShot = -1;
+    this.secondaryPrevShot = -1;
+    this.yawRate = props.yawRate ?? 0.03;
+    this.accel = props.accel ?? 0.1;
+    this.extraAmmo = 1;
   }
 
   action() {
@@ -127,10 +138,13 @@ class Ship extends Base1 {
       return;
     }
 
-    const _vx = this.vel.x + 0.1 * Math.cos(this.r) * f;
-    const _vy = this.vel.y + 0.1 * Math.sin(this.r) * f;
+    const _vx = this.vel.x + this.accel * Math.cos(this.r) * f;
+    const _vy = this.vel.y + this.accel * Math.sin(this.r) * f;
     const _nv = sqnorm(_vx, _vy);
     if (_nv < limit) {
+      if (window.drumSampler && this.human && Math.random() < 0.05) {
+        window.drumSampler.triggerAttackRelease("e2", 0.3); // Wind
+      }
       this.vel.x = _vx;
       this.vel.y = _vy;
       for (let i = 0; i < 3; i++) {
@@ -189,14 +203,17 @@ class Ship extends Base1 {
       return;
     }
 
-    const _vx = this.vel.x - 0.1 * Math.cos(this.r) * f;
-    const _vy = this.vel.y - 0.1 * Math.sin(this.r) * f;
+    const _vx = this.vel.x - this.accel * Math.cos(this.r) * f;
+    const _vy = this.vel.y - this.accel * Math.sin(this.r) * f;
     const _nv = sqnorm(_vx, _vy);
     if (_nv < limit) {
       this.vel.x = _vx;
       this.vel.y = _vy;
       for (let i = 0; i < 3; i++) {
         this._forwardThrust();
+      }
+      if (window.drumSampler && this.human && Math.random() < 0.05) {
+        window.drumSampler.triggerAttackRelease("e2", 0.3); // Wind
       }
     } else {
       if (Math.random() < 0.2) {
@@ -231,11 +248,11 @@ class Ship extends Base1 {
   }
 
   yawRight(f = 1) {
-    this.r += 0.03 * f;
+    this.r += this.yawRate * f;
   }
 
   yawLeft(f = 1) {
-    this.r -= 0.03 * f;
+    this.r -= this.yawRate * f;
   }
 
   generate() {

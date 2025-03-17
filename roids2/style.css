@@ -28,7 +28,16 @@ canvas {
   backdrop-filter: blur(5px);
 }
 
-#metap-modal {
+#main-menu {
+  font-size: 2rem;
+  top: 35%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 30%;
+  text-align: center;
+}
+
+.metap-modal {
   font-size: 1rem;
   top: 2rem;
   left: 2rem;
@@ -163,6 +172,33 @@ canvas {
   flex-basis: 100%;
 }
 
+#current-powerups {
+  display: flex;
+  width: 100%;
+  flex-basis: 100%;
+  cursor: help;
+}
+
+.current-powerups {
+  flex-wrap: wrap;
+}
+
+.current-powerups > div {
+  width: 3rem;
+  aspect-ratio: 1/1;
+  border-radius: 1rem;
+  border: 1px solid #ccc;
+  display: flex;
+  overflow: hidden;
+  margin: 0.5rem;
+}
+
+.current-powerups > div > img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
 .powerup-choice {
   flex: 1;
   display: flex;
@@ -182,6 +218,7 @@ canvas {
   justify-content: center;
   align-items: center;
   margin-bottom: 2rem;
+  overflow: hidden;
 }
 
 .choice-glyph img {
@@ -198,4 +235,17 @@ canvas {
 .choice-description table {
   text-align: center;
   color: white;
+}
+
+/* TODO: to move out */
+
+.control-list-wrapper {
+  color: white;
+}
+
+.control-list-wrapper > table {
+  color: white;
+  margin: 1em;
+  border-collapse: separate;
+  border-spacing: 2rem;
 }
