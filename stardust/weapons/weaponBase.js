@@ -7,7 +7,6 @@ class Gun {
       x: props.pos?.x ?? 0,
       y: props.pos?.y ?? 0,
     };
-    console.log(props.source);
     this.source = props.source ?? -1;
   }
 }

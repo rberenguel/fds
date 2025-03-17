@@ -13,9 +13,7 @@ const currentPowerupsToDiv = (div, player) => {
     if (!player.powerUps[pup]) {
       continue;
     }
-    console.log("Handling powerup");
     const props = allPowerUpChoices(player).filter((p) => p.id === pup);
-    console.log(props);
     if (!props) {
       continue;
     }
@@ -39,7 +37,6 @@ const offerChoices = (options = [], globals = {}) => {
 
   const currentPowerups = document.getElementById("current-powerups");
   currentPowerups.innerHTML = "";
-  console.log(globals.player.powerUps);
 
   currentPowerupsToDiv(currentPowerups, globals.player);
 
@@ -53,27 +50,26 @@ const offerChoices = (options = [], globals = {}) => {
   const glyphElements = document.querySelectorAll(".choice-glyph");
   const descriptionElements = document.querySelectorAll(".choice-description");
 
-  const choicesToRender = options.slice(0, 2);
-
-  choicesToRender.forEach((option, index) => {
-    const choiceElement = choiceElements[index];
-
+  for (let i = 0; i < 2; i++) {
+    const option = options[i];
+    const choiceElement = choiceElements[i];
     choiceElement.dataset.id = option.id;
-    const glyphElement = glyphElements[index];
+    const glyphElement = glyphElements[i];
     glyphElement.innerHTML = `<img src="media/glyphs/${option.glyph}"></img>`;
-    const descriptionElement = descriptionElements[index];
+    const descriptionElement = descriptionElements[i];
     descriptionElement.innerHTML = option.description();
-
-    choiceElement.addEventListener("click", () => {
+    // To avoid having a million powerups on the same one
+    choiceElement.onclick = () => {
       // You will fill this up later to handle the choice
       option.lambda();
       glass.style.display = "none";
       powerupContainer.style.display = "none";
       globals.setPowerUpChosen(true);
+      console.info(`Setting ${option.id} to true`);
       globals.player.powerUps[option.id] = true;
       //globals.setChoosing(false);
-    });
-  });
+    };
+  }
   const skipPowerup = document.getElementById("skip-powerup");
   skipPowerup.textContent = "Skip the choice (-2000 points)";
   skipPowerup.addEventListener("click", () => {

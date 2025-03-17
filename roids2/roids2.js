@@ -371,53 +371,61 @@ console.info("Scene constructed");
 
 const scoreDiv = document.getElementById("score");
 
+const fullRestart = () => {
+  msgs.hide();
+  resetPlayerPVA(true);
+  resetKeys();
+  for (let a of spaceScene.asteroids) {
+    a.e = -1;
+  }
+  for (let o of spaceScene.otherShips) {
+    o.e = -1;
+  }
+  for (let f of spaceScene.flameList) {
+    f.e = -1;
+  }
+  for (let b of spaceScene.bulletList) {
+    b.e = -1;
+  }
+  level = 1;
+  const nextLevel = countsPerLevel(level);
+  spaceScene.addAsteroids(nextLevel.asteroids);
+  spaceScene.addEnemies(nextLevel.ships);
+  spaceScene.score = 0;
+  scoreDiv.textContent = 0;
+  powerUpChosen = true;
+  finishCountdown = 0;
+  countdown = 0;
+  inGame = true;
+  gameOver = false;
+  player.powerUps = undefined;
+  player.powerUps = {};
+  player.pointSight = false; // TODO There are more things to reset
+  player.emergencyBrakes = false;
+  player.extraAmmo = 1;
+  player.yawRate = 0.03;
+  player.accel = 0.1;
+  const { weapons, secondaryWeapons } = baseWeapons();
+  player.weapons = weapons;
+  player.secondaryWeapons = secondaryWeapons;
+  for (let w of player.weapons) {
+    w.source = player._id;
+  }
+  for (let w of player.secondaryWeapons) {
+    w.source = player._id;
+  }
+};
+
 const commands = [
   {
     title: "Play",
-
+    lambda: fullRestart,
+  },
+  {
+    title: "Back to main menu",
     lambda: () => {
-      msgs.hide();
-      resetPlayerPVA(true);
-      resetKeys();
-      for (let a of spaceScene.asteroids) {
-        a.e = -1;
-      }
-      for (let o of spaceScene.otherShips) {
-        o.e = -1;
-      }
-      for (let f of spaceScene.flameList) {
-        f.e = -1;
-      }
-      for (let b of spaceScene.bulletList) {
-        b.e = -1;
-      }
-      level = 1;
-      const nextLevel = countsPerLevel(level);
-      spaceScene.addAsteroids(nextLevel.asteroids);
-      spaceScene.addEnemies(nextLevel.ships);
-      console.log(spaceScene.asteroids);
-      spaceScene.score = 0;
-      scoreDiv.textContent = 0;
-      powerUpChosen = true;
-      finishCountdown = 0;
-      countdown = 0;
-      inGame = true;
-      gameOver = false;
-      player.powerUps = {};
-      player.pointSight = false; // TODO There are more things to reset
-      player.emergencyBrakes = false;
-      player.extraAmmo = 1;
-      player.yawRate = 0.03;
-      player.accel = 0.1;
-      const { weapons, secondaryWeapons } = baseWeapons();
-      player.weapons = weapons;
-      player.secondaryWeapons = secondaryWeapons;
-      for (let w of player.weapons) {
-        w.source = player._id;
-      }
-      for (let w of player.secondaryWeapons) {
-        w.source = player._id;
-      }
+      showMainMenu = true;
+      fullRestart();
     },
   },
   {
@@ -584,7 +592,6 @@ app.ticker.add((delta) => {
     if (diffFinishCountdown == 0) {
       const now = performance.now();
       diffFinishCountdown = finishCountdown - now;
-      console.log(diffFinishCountdown);
     }
     return;
   } else {
@@ -654,16 +661,12 @@ app.ticker.add((delta) => {
   }
   if (spaceScene.otherShips.length === 0 && inGame && !gameOver) {
     if (finishCountdown === 0) {
-      console.log(spaceScene.asteroids.length);
-      console.log("Setting the finish countdown");
       finishCountdown = performance.now() + 10000;
     } else if (performance.now() >= finishCountdown) {
       // Finish countdown has ended
-      console.log("Removing all asteroids, " + finishCountdown);
       for (let a of spaceScene.asteroids) {
         a.e = -1;
       }
-      console.log("BREAKING IN HERE");
       offerPowerUpChoices = true;
       powerUpChosen = false;
     } else {
