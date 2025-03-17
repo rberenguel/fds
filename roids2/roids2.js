@@ -18,6 +18,7 @@ import {
   allPowerUpChoices,
   currentPowerupsToDiv,
   debugCommands,
+  shieldPowerups,
 } from "./powerups.js";
 import { SpaceScene } from "./scene.js";
 
@@ -98,6 +99,19 @@ const gameActions = {
       );
     } catch {}
   },
+  shield: () => {
+    if (player.shield && player.shieldEnergy >= 1) {
+      const now = performance.now();
+      if (player.shield === "kDeflectorShield") {
+        player.deflectorShield = now + 3000;
+        player.shieldEnergy = 0;
+      }
+      if (player.shield === "kEnergyShield") {
+        player.energyShield = now + 3000;
+        player.shieldEnergy = 0;
+      }
+    }
+  },
   menu: () => {
     metaP.metaP();
   },
@@ -107,12 +121,14 @@ const showHUDInfo = () => {
   const nextWaveCountdown = document.getElementById("next-wave-countdown");
   const scoreDiv = document.getElementById("score");
   const hull = document.getElementById("hull");
+  const shieldEnergy = document.getElementById("shield-energy");
   const containerPrimary = document.getElementById("primary-weapon-types");
   const containerSecondary = document.getElementById("secondary-weapon-types");
   const ammoPContainer = document.getElementById("primary-weapon-ammo");
   const ammoSContainer = document.getElementById("secondary-weapon-ammo");
   if (player.e < 0) {
     hull.innerHTML = "";
+    shieldEnergy.innerHTML = "";
     containerPrimary.innerHTML = "";
     containerSecondary.innerHTML = "";
     ammoPContainer.innerHTML = "";
@@ -138,7 +154,17 @@ const showHUDInfo = () => {
   const c = wc.html;
 
   hull.innerHTML = `H:${player.e.toFixed(0)}`;
-
+  let S = "";
+  if (player.shield === "kDeflectorShield") {
+    S = "(d):";
+  }
+  if (player.shield === "kEnergyShield") {
+    S = "(e):";
+  }
+  shieldEnergy.innerHTML = `${S}${player.shieldEnergy.toFixed(2)}`;
+  if (S === "") {
+    shieldEnergy.innerHTML = "";
+  }
   containerPrimary.innerHTML = `W1: ${a}${b}`;
 
   containerSecondary.innerHTML = `W2: ${c}`;
@@ -300,10 +326,18 @@ const player = new Lynx({
   secondaryWeapons: secondaryWeapons,
 });
 player.human = true;
+player.shieldEnergy = 1;
+player.shieldEnergyRecoveryRate = 0.0005;
 player.powerUps = {};
 player.recoveryRate = 0.04;
 player.emergencyBrakes = false;
+player.energyShield = 0;
+player.deflectorShield = 0;
 player.pointSight = false;
+
+if (location.href.startsWith("http")) {
+  //player.shield = "kEnergyShield"
+}
 
 const resetPlayerPVA = (regenerate = false) => {
   player.human = true;
@@ -331,6 +365,7 @@ const resetPlayerPVA = (regenerate = false) => {
     player.ammo[player.secondaryWeapons[0].kind].max =
       player.secondaryWeapons[0].ammoMax * player.extraAmmo;
   }
+  player.shieldEnergy = 1;
   spaceScene.player = player;
   player.e = 1000; // TODO: this should be the current player maximum instead
   if (regenerate) {
@@ -405,6 +440,8 @@ const fullRestart = () => {
   player.extraAmmo = 1;
   player.yawRate = 0.03;
   player.accel = 0.1;
+  player.energyShield = 1;
+  player.deflectorShield = 0;
   const { weapons, secondaryWeapons } = baseWeapons();
   player.weapons = weapons;
   player.secondaryWeapons = secondaryWeapons;
@@ -437,7 +474,7 @@ const commands = [
     title: "To level",
     inputs: [{ title: "Which?", default: "10" }],
     lambda: (lev) => {
-      level = lev;
+      level = parseInt(lev);
       for (let a of spaceScene.asteroids) {
         a.e = -1;
       }
@@ -485,10 +522,13 @@ document.getElementById("menu").addEventListener("click", (ev) => {
 });
 
 let showMainMenu = true;
-const controlsChanger = document.createElement("DIV");
+const controlsChanger = () => {
+  const div = document.createElement("DIV");
+  presentKeyMap(div, gameActions, msgs, menuP);
+  return div;
+};
 
 const menuP = new MetaP({ id: "main-menu" });
-presentKeyMap(controlsChanger, gameActions, msgs, menuP);
 
 const mainMenuCommands = [
   {
@@ -501,7 +541,7 @@ const mainMenuCommands = [
     title: "Settings",
     lambda: () => {
       menuP.ignoreKeys();
-      msgs.div(controlsChanger);
+      msgs.div(controlsChanger());
       msgs.show({ glass: 1000000, msgs: 1000001 }); // TODO Why does this need to be so high? Fix zindexing
     },
   },
@@ -623,8 +663,13 @@ app.ticker.add((delta) => {
       showHUDInfo: showHUDInfo,
       player: player,
     };
+    if (level === 5) {
+      console.log("Offering only shields!");
+      offerChoices(shieldPowerups(player), globals);
+    } else {
+      offerChoices(choices.slice(0, 2), globals);
+    }
 
-    offerChoices(choices.slice(0, 2), globals);
     return;
   }
   if (!powerUpChosen) {

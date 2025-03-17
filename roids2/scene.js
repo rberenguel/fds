@@ -132,7 +132,7 @@ class SpaceScene extends Scene {
   addEnemies(n) {
     for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2;
-      const m = 2000 + Math.random() * 2000;
+      const m = 2500 + Math.random() * 2000;
       const x = this.player.pos.x + Math.cos(a) * m;
       const y = this.player.pos.y + Math.sin(a) * m;
       let retry = false;

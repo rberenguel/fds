@@ -17,7 +17,7 @@ class GaussCannon extends Gun {
     ACCEL: 80,
     f: 1,
     decay: 0.01,
-    ammoRefreshRate: 0.00001,
+    ammoRefreshRate: 0.0005,
   };
   ammo = true;
   ammoMax = 2;
@@ -70,6 +70,7 @@ class GaussCannon extends Gun {
       flameList: shooter.bulletList,
     });
     shooter.ammo[GaussCannon.kind].count--;
+    b.kind = "kGaussCannonBullet"; // TODO: unify these constants somewhere
     bulletList.push(b);
     if (window.drumSampler && shooter.human) {
       window.drumSampler.triggerAttackRelease("f0", 0.5); // Crash

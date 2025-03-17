@@ -79,25 +79,24 @@ const _skipModifiers = (event) => {
 
 const bindKeyHandlers = () => {
   document.addEventListener("keydown", (event) => {
-    /*if (glassVisible()) {
-      return;
-    }*/
+    //console.log("Captured here")
     if (_skipModifiers(event)) {
       return;
     }
     keys[event.code] = true; // Mark the key as pressed
-    event.preventDefault();
+    if (!glassVisible()) {
+      event.preventDefault();
+    }
   });
 
   document.addEventListener("keyup", (event) => {
-    /*if (glassVisible()) {
-      return;
-    }*/
     if (_skipModifiers(event)) {
       return;
     }
     keys[event.code] = false; // Mark the key as released
-    event.preventDefault();
+    if (!glassVisible()) {
+      event.preventDefault();
+    }
   });
 };
 

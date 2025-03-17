@@ -96,6 +96,7 @@ class MassDriverBullet extends Base1 {
     this.mass = props.mass ?? 0.4;
     this.source = props.source ?? -1;
     this.flameList = props.flameList;
+    this.kind = "kMassDriverBullet";
   }
 
   generate() {

@@ -87,8 +87,8 @@ class Asteroid extends Base1 {
         y: this.pos.y + 25 * this.size * (+vel.x / nv),
       },
       vel: {
-        x: -this.vel.x - (100 * vel.y) / nv,
-        y: this.vel.y + (100 * vel.x) / nv,
+        x: -this.vel.x - (25 * vel.y) / nv,
+        y: this.vel.y + (25 * vel.x) / nv,
       },
 
       sides: this.sides,
@@ -101,8 +101,8 @@ class Asteroid extends Base1 {
         y: this.pos.y - 25 * this.size * (+vel.x / nv),
       },
       vel: {
-        x: this.vel.x + (100 * vel.y) / nv,
-        y: this.vel.y - (100 * vel.x) / nv,
+        x: this.vel.x + (25 * vel.y) / nv,
+        y: this.vel.y - (25 * vel.x) / nv,
       },
       sides: this.sides,
       size: this.size / 2,

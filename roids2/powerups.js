@@ -1,4 +1,10 @@
-export { offerChoices, allPowerUpChoices, currentPowerupsToDiv, debugCommands };
+export {
+  offerChoices,
+  allPowerUpChoices,
+  currentPowerupsToDiv,
+  debugCommands,
+  shieldPowerups,
+};
 
 import {
   GaussCannon,
@@ -9,11 +15,12 @@ import {
 const glass = document.getElementById("glass");
 
 const currentPowerupsToDiv = (div, player) => {
+  const allChoices = allPowerUpChoices(player).concat(shieldPowerups(player));
   for (let pup of Object.keys(player.powerUps ?? {})) {
     if (!player.powerUps[pup]) {
       continue;
     }
-    const props = allPowerUpChoices(player).filter((p) => p.id === pup);
+    const props = allChoices.filter((p) => p.id === pup);
     if (!props) {
       continue;
     }
@@ -90,7 +97,7 @@ const allPowerUpChoices = (player) => [
       const title = "<h2>Primary weapon</h2>";
       const htmlA = MassDriverGun.present();
       const htmlB = player.weapons[0].present();
-      return `${title} ${htmlA} <h3>replace</h3> ${htmlB}`;
+      return `${title} ${htmlA} <h3>replaces</h3> ${htmlB}`;
     },
     glyph: "massdriver.png",
     lambda: () => {
@@ -123,7 +130,7 @@ const allPowerUpChoices = (player) => [
       const title = "<h2>Secondary weapon</h2>";
       const htmlA = GaussCannon.present();
       const htmlB = player.secondaryWeapons[0].present();
-      return `${title} ${htmlA} <h3>replace</h3> ${htmlB}`;
+      return `${title} ${htmlA} <h3>replaces</h3> ${htmlB}`;
     },
     glyph: "gausscannon.png",
     lambda: () => {
@@ -149,7 +156,7 @@ const allPowerUpChoices = (player) => [
       const title = "<h2>Primary weapon</h2>";
       const htmlA = LaserGun.present();
       const htmlB = player.weapons[0].present();
-      return `${title} ${htmlA} <h3>replace</h3> ${htmlB}`;
+      return `${title} ${htmlA} <h3>replaces</h3> ${htmlB}`;
     },
     glyph: "lasergun.png",
     lambda: () => {
@@ -236,8 +243,50 @@ const allPowerUpChoices = (player) => [
   },
 ];
 
+const shieldPowerups = (player) => [
+  {
+    id: "kDeflectorShield",
+    name: "Deflector shield",
+    description: () => {
+      const title = "<h2>Active ability</h2>";
+      let html = `${title}${shieldDescs["kDeflectorShield"]}`;
+      if (player.shield) {
+        html += `<h3>replaces</h3> ${shieldDescs[player.shield]}`;
+      }
+      return html;
+    },
+    glyph: "deflectorshield.png",
+    lambda: () => {
+      player.shield = "kDeflectorShield";
+    },
+  },
+  {
+    id: "kEnergy shield",
+    name: "Energy shield",
+    description: () => {
+      const title = "<h2>Active ability</h2>";
+      let html = `${title}${shieldDescs["kEnergyShield"]}`;
+      if (player.shield) {
+        html += `<h3>replaces</h3> ${shieldDescs[player.shield]}`;
+      }
+      return html;
+    },
+    glyph: "energyshield.png",
+    lambda: () => {
+      player.shield = "kDeflectorShield";
+    },
+  },
+];
+
+const shieldDescs = {
+  kDeflectorShield:
+    "<p>Deflector shield</p><hr/>Deflects strongly kinetic weapons for 3 seconds, affects mildly energy weapons.",
+  kEnergyShield:
+    "<p>Energy shield</p><hr/>Stops completely energy weapons for 3 seconds, no effect on kinetic weapons.",
+};
+
 const debugCommands = (player) => {
-  const choices = allPowerUpChoices(player);
+  const choices = allPowerUpChoices(player).concat(shieldPowerups(player));
   return choices.map((c) => {
     return {
       title: c.name,

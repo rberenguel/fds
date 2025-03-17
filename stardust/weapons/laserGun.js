@@ -6,8 +6,6 @@ import { Base1 } from "../base.js";
 import { Mesh, Meshes } from "../mesh.js";
 import { seededRnd } from "../rnd.js";
 
-const rnd = seededRnd(performance.now());
-
 class LaserGun extends Gun {
   static kind = "LaserGun";
   kind = "LaserGun";
@@ -102,6 +100,7 @@ class LaserGunShot extends Base1 {
     this.source = props.source ?? -1;
     this.minRange = props.minRange ?? 2000;
     this.moved = 0;
+    this.kind = "kLaserGunShot";
   }
 
   generate() {

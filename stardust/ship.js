@@ -45,6 +45,9 @@ class Ship extends Base1 {
     this.flameList = []; // TODO: careful with this as a dangling reference
     this.bulletList = [];
     this.recoveryRate = props.recoveryRate ?? 0;
+    this.shieldEnergyRecoveryRate = props.shieldEnergyRecoveryRate ?? 0;
+    this.shieldEnergy = 1;
+    this.maxShieldEnergy = 1;
     this._id = getShipId();
     this.prevShot = -1;
     this.secondaryPrevShot = -1;
@@ -86,6 +89,109 @@ class Ship extends Base1 {
   collision(other) {
     // TODO: This could be in Base, somehow?
     // TODO For ship, this is totally made up
+    const energyShots = ["kPlasmaBullet", "kLaserGunShot", "kPhotonTorpedo"];
+    const massShots = ["kGaussCannonBullet", "kMassDriverBullet"];
+    const shieldRadius = 130;
+    if (this.energyShield > performance.now()) {
+      const distToOther = Math.sqrt(
+        Math.pow(other.pos.x - this.pos.x, 2) +
+          Math.pow(other.pos.y - this.pos.y, 2),
+      );
+      // Energy shields null all energy weapons
+      if (distToOther <= 1.3 * shieldRadius + (other.radius || 0)) {
+        if (this.energyShield && energyShots.includes(other.kind)) {
+          other.e = 0;
+          return false;
+        }
+      }
+    }
+    if (this.deflectorShield > performance.now()) {
+      let refractionFactor = -0.9; // For energy stuff
+      if (massShots.includes(other.kind)) {
+        refractionFactor = 0.6;
+      }
+      const shieldRadius = 130;
+      const distToOther = Math.sqrt(
+        Math.pow(other.pos.x - this.pos.x, 2) +
+          Math.pow(other.pos.y - this.pos.y, 2),
+      );
+
+      if (distToOther <= 1.3 * shieldRadius + (other.radius || 0)) {
+        const collisionVector = {
+          x: other.pos.x - this.pos.x,
+          y: other.pos.y - this.pos.y,
+        };
+        const collisionNormalMagnitude = Math.sqrt(
+          Math.pow(collisionVector.x, 2) + Math.pow(collisionVector.y, 2),
+        );
+        const collisionNormal = {
+          x: collisionVector.x / collisionNormalMagnitude,
+          y: collisionVector.y / collisionNormalMagnitude,
+        };
+
+        const velocity = { x: other.vel.x, y: other.vel.y };
+        const dotProduct =
+          velocity.x * collisionNormal.x + velocity.y * collisionNormal.y;
+
+        // Only refract if the object is moving towards the shield
+        if (dotProduct < 0) {
+          const tangent = { x: -collisionNormal.y, y: collisionNormal.x };
+          const tangentMagnitude = Math.sqrt(
+            Math.pow(tangent.x, 2) + Math.pow(tangent.y, 2),
+          );
+          const unitTangent = {
+            x: tangent.x / tangentMagnitude,
+            y: tangent.y / tangentMagnitude,
+          };
+
+          const velocityNormalScalar =
+            velocity.x * collisionNormal.x + velocity.y * collisionNormal.y;
+          const velocityNormal = {
+            x: velocityNormalScalar * collisionNormal.x,
+            y: velocityNormalScalar * collisionNormal.y,
+          };
+
+          const velocityTangentScalar =
+            velocity.x * unitTangent.x + velocity.y * unitTangent.y;
+          const velocityTangent = {
+            x: velocityTangentScalar * unitTangent.x,
+            y: velocityTangentScalar * unitTangent.y,
+          };
+
+          const refractedVelocityNormal = {
+            x: -velocityNormal.x * refractionFactor,
+            y: -velocityNormal.y * refractionFactor,
+          };
+          const refractedVelocity = {
+            x: refractedVelocityNormal.x + velocityTangent.x,
+            y: refractedVelocityNormal.y + velocityTangent.y,
+          };
+
+          other.vel.x = refractedVelocity.x;
+          other.vel.y = refractedVelocity.y;
+
+          if (typeof other.angle !== "undefined") {
+            other.angle = Math.atan2(refractedVelocity.y, refractedVelocity.x);
+          }
+
+          const speed = Math.sqrt(
+            Math.pow(velocity.x, 2) + Math.pow(velocity.y, 2),
+          );
+          const pushFactor = Math.max(0.1, Math.abs(dotProduct) / speed);
+          const pushVector = {
+            x: collisionNormal.x * pushFactor * 5,
+            y: collisionNormal.y * pushFactor * 5,
+          };
+
+          other.vel.x += pushVector.x;
+          other.vel.y += pushVector.y;
+
+          // Removed the overlap correction here, as the refraction should handle the change in direction
+
+          return false;
+        }
+      }
+    }
     if (dist(other.pos, this.pos) < 50) {
       return true;
     }
@@ -267,6 +373,8 @@ class Ship extends Base1 {
     super.move(delta.deltaTime);
     this.e += this.recoveryRate * delta.deltaTime;
     this.e = Math.min(this.e, this.initialE);
+    this.shieldEnergy += this.shieldEnergyRecoveryRate * delta.deltaTime;
+    this.shieldEnergy = Math.min(this.shieldEnergy, this.maxShieldEnergy);
     let w = this.weapons[0];
     if (w) {
       const rr = w.stats.ammoRefreshRate;
@@ -336,6 +444,21 @@ class Ship extends Base1 {
             presentation.alpha = 0.2;
           }
         }
+        if (presentation.name == "shield") {
+          if (this.deflectorShield > performance.now()) {
+            presentation.alpha = 0.3 + Math.random() * 0.3;
+            presentation.tint = null;
+          } else if (this.energyShield > performance.now()) {
+            const red = Math.floor(120 * Math.random());
+            const green = Math.floor(255 * Math.random()); // Green-blue hue
+            const blue = Math.floor(255 * Math.random());
+            const hexColor = (red << 16) | (green << 8) | blue;
+            presentation.alpha = 0.3 + Math.random() * 0.3;
+            presentation.tint = hexColor;
+          } else {
+            presentation.alpha = 0;
+          }
+        }
       }
     }
   }
@@ -363,6 +486,14 @@ class Lynx extends Ship {
       radius: 10,
       color: 0xffffff,
       fill: 0xffffff,
+    });
+    const shieldMesh = new Mesh({
+      name: "shield",
+      kind: Meshes.kCircle,
+      center: [0, 0],
+      radius: 130,
+      color: 0xcccccc,
+      width: 10,
     });
     const pointSightMesh = new Mesh({
       name: "pointSight",
@@ -431,7 +562,7 @@ class Lynx extends Ship {
 
     super({
       ...props,
-      meshes: [pointSightMesh, mesh, secondaryWeaponMesh],
+      meshes: [shieldMesh, pointSightMesh, mesh, secondaryWeaponMesh],
       weapons: weapons,
       secondaryWeapons: secondaryWeapons,
     });

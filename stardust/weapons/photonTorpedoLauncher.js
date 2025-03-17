@@ -111,6 +111,7 @@ class PhotonTorpedo extends Base1 {
     this.moved = 0;
     this.source = props.source ?? -1;
     this.flameList = props.flameList;
+    this.kind = "kPhotonTorpedo";
   }
 
   generate() {

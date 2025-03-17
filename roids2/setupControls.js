@@ -13,6 +13,7 @@ const commandNames = {
   moveRight: "Rotate right",
   shoot: "Fire primary weapon",
   secondaryShoot: "Fire secondary weapon",
+  shield: "Turn on shields briefly",
   menu: "Open pause menu",
 };
 
@@ -20,30 +21,44 @@ const commandNames = {
    model of the game is because this is what people
    seem to expect */
 
-if (keyMap === undefined) {
-  keyMap = {
-    ArrowUp: "moveDown",
-    ArrowDown: "moveUp",
-    ArrowLeft: "moveLeft",
-    ArrowRight: "moveRight",
-    Space: "shoot",
-    Enter: "secondaryShoot",
-    KeyQ: "menu",
-  };
+const defaultKeyboardControls = {
+  ArrowUp: "moveDown",
+  ArrowDown: "moveUp",
+  ArrowLeft: "moveLeft",
+  ArrowRight: "moveRight",
+  Space: "shoot",
+  Enter: "secondaryShoot",
+  KeyX: "shield",
+  KeyQ: "menu",
+};
+
+if (
+  keyMap === undefined ||
+  Object.keys(keyMap).length != Object.keys(defaultKeyboardControls).length
+) {
+  keyMap = defaultKeyboardControls;
 }
 
 let buttonMap = await get("buttonMap");
 
-if (buttonMap === undefined) {
-  buttonMap = {
-    b15: "moveRight",
-    b14: "moveLeft",
-    b13: "moveUp",
-    b12: "moveDown",
-    b1: "shoot",
-    b2: "secondaryShoot",
-  };
+const defaultPadControls = {
+  b15: "moveRight",
+  b14: "moveLeft",
+  b13: "moveUp",
+  b12: "moveDown",
+  b1: "shoot",
+  b2: "secondaryShoot",
+  b3: "shield",
+};
+
+if (
+  buttonMap === undefined ||
+  Object.keys(buttonMap).length != Object.keys(defaultPadControls).length
+) {
+  buttonMap = defaultPadControls;
 }
+
+console.log(keyMap);
 
 const rmap = (m) => {
   let reversed = {};
@@ -91,8 +106,8 @@ const presentKeyMap = (d, gameActions, msgs, menu) => {
         tdk.innerText = "???";
         const nk = await getDeviceInput("keyboard");
         tdk.innerText = nk;
+        //delete keyMap[oldkey]; TODO This is problematic AF
         keyMap[nk] = action;
-        delete keyMap[oldkey];
         await set("keyMap", keyMap);
         setTimeout(() => (menu.ignoresKeys = false), 100);
       });
@@ -100,8 +115,8 @@ const presentKeyMap = (d, gameActions, msgs, menu) => {
         tdb.innerText = "???";
         const nb = await getDeviceInput("gamepad");
         tdb.innerText = `b${nb}`;
+        //delete buttonMap[oldbutton]; TODO This is problematic AF
         buttonMap[`b${nb}`] = action;
-        delete buttonMap[oldbutton];
         await set("buttonMap", buttonMap);
         setTimeout(() => (menu.ignoresKeys = false), 100);
       });
