@@ -41,6 +41,9 @@ class PlasmaGun extends Gun {
   fire(shooter, bulletList) {
     // Shooter is a reference to whoever is shooting, so we can take
     // direction and velocity vector.
+    if (shooter.disabled > performance.now()) {
+      return;
+    }
     const rf = rnd();
     const spread = -0.01 + 0.02 * rf;
     const ivx = Math.cos(shooter.r + spread);

@@ -47,6 +47,9 @@ class LaserGun extends Gun {
     if ((shooter.ammo[LaserGun.kind].count ?? 0) <= 1) {
       return;
     }
+    if (shooter.disabled > performance.now()) {
+      return;
+    }
     const spread = 0;
     const ivx = Math.cos(shooter.r + spread);
     const ivy = Math.sin(shooter.r + spread);

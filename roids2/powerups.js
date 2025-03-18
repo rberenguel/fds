@@ -4,6 +4,7 @@ export {
   currentPowerupsToDiv,
   debugCommands,
   shieldPowerups,
+  superPowerups,
 };
 
 import {
@@ -15,7 +16,9 @@ import {
 const glass = document.getElementById("glass");
 
 const currentPowerupsToDiv = (div, player) => {
-  const allChoices = allPowerUpChoices(player).concat(shieldPowerups(player));
+  const allChoices = allPowerUpChoices(player)
+    .concat(shieldPowerups(player))
+    .concat(superPowerups(player));
   for (let pup of Object.keys(player.powerUps ?? {})) {
     if (!player.powerUps[pup]) {
       continue;
@@ -78,7 +81,7 @@ const offerChoices = (options = [], globals = {}) => {
     };
   }
   const skipPowerup = document.getElementById("skip-powerup");
-  skipPowerup.textContent = "Skip the choice (-2000 points)";
+  skipPowerup.textContent = "Skip the choice (very bad idea, and -2000 points)";
   skipPowerup.addEventListener("click", () => {
     globals().spaceScene.score -= 2000;
     glass.style.display = "none";
@@ -250,14 +253,14 @@ const shieldPowerups = (player) => [
     description: () => {
       const title = "<h2>Active ability</h2>";
       let html = `${title}${shieldDescs["kDeflectorShield"]}`;
-      if (player.shield) {
-        html += `<h3>replaces</h3> ${shieldDescs[player.shield]}`;
+      if (player.activeAbility) {
+        html += `<h3>replaces</h3> ${shieldDescs[player.activeAbility]}`;
       }
       return html;
     },
     glyph: "deflectorshield.png",
     lambda: () => {
-      player.shield = "kDeflectorShield";
+      player.activeAbility = "kDeflectorShield";
     },
   },
   {
@@ -266,14 +269,49 @@ const shieldPowerups = (player) => [
     description: () => {
       const title = "<h2>Active ability</h2>";
       let html = `${title}${shieldDescs["kEnergyShield"]}`;
-      if (player.shield) {
-        html += `<h3>replaces</h3> ${shieldDescs[player.shield]}`;
+      if (player.activeAbility) {
+        html += `<h3>replaces</h3> ${shieldDescs[player.activeAbility]}`;
       }
       return html;
     },
     glyph: "energyshield.png",
     lambda: () => {
-      player.shield = "kDeflectorShield";
+      player.activeAbility = "kDeflectorShield";
+    },
+  },
+];
+
+const superPowerups = (player) => [
+  {
+    id: "kPhaseShield",
+    name: "Phase shield",
+    description: () => {
+      const title = "<h2>Active ability</h2>";
+      let html = `${title}${shieldDescs["kPhaseShield"]}`;
+      if (player.activeAbility) {
+        html += `<h3>replaces</h3> ${shieldDescs[player.activeAbility]}`;
+      }
+      return html;
+    },
+    glyph: "phaseshield.png",
+    lambda: () => {
+      player.activeAbility = "kPhaseShield";
+    },
+  },
+  {
+    id: "kEmp",
+    name: "EMP pulse",
+    description: () => {
+      const title = "<h2>Active ability</h2>";
+      let html = `${title}${shieldDescs["kEmp"]}`;
+      if (player.activeAbility) {
+        html += `<h3>replaces</h3> ${shieldDescs[player.activeAbility]}`;
+      }
+      return html;
+    },
+    glyph: "emp.png",
+    lambda: () => {
+      player.activeAbility = "kEmp";
     },
   },
 ];
@@ -283,10 +321,15 @@ const shieldDescs = {
     "<p>Deflector shield</p><hr/>Deflects strongly kinetic weapons for 3 seconds, affects mildly energy weapons.",
   kEnergyShield:
     "<p>Energy shield</p><hr/>Stops completely energy weapons for 3 seconds, no effect on kinetic weapons.",
+  kPhaseShield:
+    "<p>Phase shield</p><hr/>Let's you pass through asteroids, projectiles and beams for 3 seconds.",
+  kEmp: "<p>EMP pulse</p><hr/>Creates an EMP pulse around you, disabling enemy ships for 3 seconds.",
 };
 
 const debugCommands = (player) => {
-  const choices = allPowerUpChoices(player).concat(shieldPowerups(player));
+  const choices = allPowerUpChoices(player)
+    .concat(shieldPowerups(player))
+    .concat(superPowerups(player));
   return choices.map((c) => {
     return {
       title: c.name,

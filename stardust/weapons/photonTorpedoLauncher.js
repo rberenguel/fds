@@ -47,6 +47,9 @@ class PhotonTorpedoLauncher extends Gun {
     if ((shooter.ammo[PhotonTorpedoLauncher.kind].count ?? 0) < 1) {
       return;
     }
+    if (shooter.disabled > performance.now()) {
+      return;
+    }
     // Photon torpedos will eventually be tracking, so this will need more information somehow.
     const spread = 0;
     const ivx = Math.cos(shooter.r + spread);

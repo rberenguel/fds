@@ -46,6 +46,9 @@ class MassDriverGun extends Gun {
     if ((shooter.ammo[MassDriverGun.kind].count ?? 0) < 1) {
       return;
     }
+    if (shooter.disabled > performance.now()) {
+      return;
+    }
     const rf = rnd();
     const spread = -0.005 + 0.01 * rf;
     const ivx = Math.cos(shooter.r + spread);

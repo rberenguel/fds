@@ -115,6 +115,10 @@ class Base1 {
         if (mesh.width) {
           p.stroke({ color: mesh.color, width: mesh.width ?? 0 });
         }
+        if (mesh.gradienter) {
+          mesh.gradienter(mesh, p)();
+          p.gradienter = mesh.gradienter(mesh, p);
+        }
       }
       if (mesh.kind === Meshes.kCircle) {
         p.circle(mesh.center[0], mesh.center[1], mesh.radius);
@@ -123,6 +127,10 @@ class Base1 {
         }
         if (mesh.fill !== undefined) {
           p.fill(mesh.fill);
+        }
+        if (mesh.gradienter) {
+          mesh.gradienter(mesh, p)();
+          p.gradienter = mesh.gradienter(mesh, p);
         }
       }
       p.name = mesh.name;

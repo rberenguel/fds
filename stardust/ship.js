@@ -8,6 +8,7 @@ import {
   PhotonTorpedoLauncher,
   PlasmaGun,
 } from "./weapons/weapons.js";
+import { FillGradient } from "../libs/3rdparty/pixi.mjs";
 import { dist, sqnorm, rotate } from "../stardust/math.js";
 import { Flame } from "./flame.js";
 import { seededRnd } from "./rnd.js";
@@ -45,15 +46,18 @@ class Ship extends Base1 {
     this.flameList = []; // TODO: careful with this as a dangling reference
     this.bulletList = [];
     this.recoveryRate = props.recoveryRate ?? 0;
-    this.shieldEnergyRecoveryRate = props.shieldEnergyRecoveryRate ?? 0;
-    this.shieldEnergy = 1;
-    this.maxShieldEnergy = 1;
+    this.activeAbilityEnergyRecoveryRate =
+      props.activeAbilityEnergyRecoveryRate ?? 0;
+    this.activeAbilityEnergy = 1;
+    this.maxActiveAbilityEnergy = 1;
     this._id = getShipId();
     this.prevShot = -1;
     this.secondaryPrevShot = -1;
     this.yawRate = props.yawRate ?? 0.03;
     this.accel = props.accel ?? 0.1;
     this.extraAmmo = 1;
+    this._magicalCounter = 0;
+    this.disabled = 0;
   }
 
   action() {
@@ -92,6 +96,9 @@ class Ship extends Base1 {
     const energyShots = ["kPlasmaBullet", "kLaserGunShot", "kPhotonTorpedo"];
     const massShots = ["kGaussCannonBullet", "kMassDriverBullet"];
     const shieldRadius = 130;
+    if (this.phaseShield > performance.now()) {
+      return false;
+    }
     if (this.energyShield > performance.now()) {
       const distToOther = Math.sqrt(
         Math.pow(other.pos.x - this.pos.x, 2) +
@@ -195,6 +202,13 @@ class Ship extends Base1 {
     if (dist(other.pos, this.pos) < 50) {
       return true;
     }
+    if (dist(other.pos, this.pos) < (other.radius ?? 50) + 50) {
+      return true;
+    }
+
+    if (dist(other.pos, this.pos) < (other.size ?? 0) + 50) {
+      return true;
+    }
     return false;
   }
 
@@ -218,6 +232,9 @@ class Ship extends Base1 {
   }
 
   backThrust(f = 1, limit = 1e6) {
+    if (this.disabled > performance.now()) {
+      return;
+    }
     this.actions.push("backThrust");
     const nv = sqnorm(this.vel.x, this.vel.y);
     const velocityAngle = Math.atan2(this.vel.y, this.vel.x);
@@ -289,6 +306,9 @@ class Ship extends Base1 {
   }
 
   forwardThrust(f = 1, limit = 1e6) {
+    if (this.disabled > performance.now()) {
+      return;
+    }
     this.actions.push("forwardThrust");
     const nv = sqnorm(this.vel.x, this.vel.y);
     const velocityAngle = Math.atan2(this.vel.y, this.vel.x);
@@ -354,10 +374,16 @@ class Ship extends Base1 {
   }
 
   yawRight(f = 1) {
+    if (this.disabled > performance.now()) {
+      return;
+    }
     this.r += this.yawRate * f;
   }
 
   yawLeft(f = 1) {
+    if (this.disabled > performance.now()) {
+      return;
+    }
     this.r -= this.yawRate * f;
   }
 
@@ -373,8 +399,12 @@ class Ship extends Base1 {
     super.move(delta.deltaTime);
     this.e += this.recoveryRate * delta.deltaTime;
     this.e = Math.min(this.e, this.initialE);
-    this.shieldEnergy += this.shieldEnergyRecoveryRate * delta.deltaTime;
-    this.shieldEnergy = Math.min(this.shieldEnergy, this.maxShieldEnergy);
+    this.activeAbilityEnergy +=
+      this.activeAbilityEnergyRecoveryRate * delta.deltaTime;
+    this.activeAbilityEnergy = Math.min(
+      this.activeAbilityEnergy,
+      this.maxActiveAbilityEnergy,
+    );
     let w = this.weapons[0];
     if (w) {
       const rr = w.stats.ammoRefreshRate;
@@ -400,8 +430,8 @@ class Ship extends Base1 {
 
     // TODO this is repeated EVERYWHERE
     const ne = Math.max(0, Math.min(1, this.e / this.initialE));
-    const red = 255; // Red decreases from 255 to 0
-    const green = Math.floor(255 * ne); // Green decreases faster
+    const red = 255;
+    const green = Math.floor(255 * ne);
     const blue = Math.floor(255 * ne);
     const hexColor = (red << 16) | (green << 8) | blue;
     if (isNaN(this.vel.x) || isNaN(this.vel.y)) {
@@ -424,6 +454,16 @@ class Ship extends Base1 {
       presentation.rotation = this.r;
       if (presentation.name == "") {
         presentation.tint = hexColor;
+        if (this.disabled > performance.now()) {
+          const red = Math.floor(200 * ne);
+          const green = 255;
+          const blue = Math.floor(200 * ne);
+          presentation.tint = (red << 16) | (green << 8) | blue;
+        }
+        presentation.alpha = 1;
+        if (this.phaseShield > performance.now()) {
+          presentation.alpha = 0.2;
+        }
       } else {
         if (presentation.name == "secondaryWeapon") {
           if (
@@ -459,6 +499,18 @@ class Ship extends Base1 {
             presentation.alpha = 0;
           }
         }
+        if (presentation.name == "phaseShield") {
+          if (this.phaseShield > performance.now()) {
+            this._magicalCounter = (this._magicalCounter + 1) % 100;
+            presentation.gradienter(
+              Math.cos((Math.PI * 2 * this._magicalCounter) / 100),
+              Math.cos((Math.PI * 2 * this._magicalCounter) / 100),
+            );
+            presentation.alpha = 0.8;
+          } else {
+            presentation.alpha = 0;
+          }
+        }
       }
     }
   }
@@ -466,15 +518,16 @@ class Ship extends Base1 {
 
 class Lynx extends Ship {
   constructor(props) {
+    const vertices = [
+      [-70, 50],
+      [70, 0],
+      [-70, -50],
+      [-30, 0],
+      [-70, 50],
+    ];
     const mesh = new Mesh({
       kind: Meshes.kPoly,
-      vertices: [
-        [-70, 50],
-        [70, 0],
-        [-70, -50],
-        [-30, 0],
-        [-70, 50],
-      ],
+      vertices: vertices,
       color: 0xffffff,
       width: 10,
       fill: 0x000000,
@@ -494,6 +547,29 @@ class Lynx extends Ship {
       radius: 130,
       color: 0xcccccc,
       width: 10,
+    });
+    const phaseShieldMesh = new Mesh({
+      name: "phaseShield",
+      kind: Meshes.kPoly,
+      vertices: vertices,
+      color: 0xcccccc,
+      gradienter:
+        (mesh, p) =>
+        (s1 = 1, s2 = 1) => {
+          const colorStops = [0x00ff00, 0x000000];
+          const gradientFill = new FillGradient(
+            -50 * s1,
+            -50 * s2,
+            50 * s1,
+            50 * s2,
+          );
+          colorStops.forEach((number, index) => {
+            const ratio = index / colorStops.length;
+
+            gradientFill.addColorStop(ratio, number);
+          });
+          p.clear().poly(mesh.flatten()).fill({ fill: gradientFill }); //, width: mesh.width ?? 4 });
+        },
     });
     const pointSightMesh = new Mesh({
       name: "pointSight",
@@ -562,7 +638,13 @@ class Lynx extends Ship {
 
     super({
       ...props,
-      meshes: [shieldMesh, pointSightMesh, mesh, secondaryWeaponMesh],
+      meshes: [
+        shieldMesh,
+        pointSightMesh,
+        mesh,
+        phaseShieldMesh,
+        secondaryWeaponMesh,
+      ],
       weapons: weapons,
       secondaryWeapons: secondaryWeapons,
     });

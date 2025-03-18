@@ -14,6 +14,7 @@ class Mesh {
     this.color = props.color;
     this.width = props.width;
     this.fill = props.fill;
+    this.gradienter = props.gradienter;
     this.center = props.center;
     this.radius = props.radius;
     this.texture = props.texture;

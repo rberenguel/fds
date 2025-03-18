@@ -19,6 +19,7 @@ import {
   currentPowerupsToDiv,
   debugCommands,
   shieldPowerups,
+  superPowerups,
 } from "./powerups.js";
 import { SpaceScene } from "./scene.js";
 
@@ -29,6 +30,7 @@ import {
   PhotonTorpedoLauncher,
   LaserGun,
 } from "../stardust/weapons/weapons.js";
+import { dropEmp } from "../stardust/weapons/empBlast.js";
 
 bindGamepadHandlers();
 bindKeyHandlers();
@@ -100,15 +102,23 @@ const gameActions = {
     } catch {}
   },
   shield: () => {
-    if (player.shield && player.shieldEnergy >= 1) {
+    if (player.activeAbility && player.activeAbilityEnergy >= 1) {
       const now = performance.now();
-      if (player.shield === "kDeflectorShield") {
+      if (player.activeAbility === "kDeflectorShield") {
         player.deflectorShield = now + 3000;
-        player.shieldEnergy = 0;
+        player.activeAbilityEnergy = 0;
       }
-      if (player.shield === "kEnergyShield") {
+      if (player.activeAbility === "kEnergyShield") {
         player.energyShield = now + 3000;
-        player.shieldEnergy = 0;
+        player.activeAbilityEnergy = 0;
+      }
+      if (player.activeAbility === "kPhaseShield") {
+        player.phaseShield = now + 3000;
+        player.activeAbilityEnergy = 0;
+      }
+      if (player.activeAbility === "kEmp") {
+        dropEmp(player, player.bulletList);
+        player.activeAbilityEnergy = 0;
       }
     }
   },
@@ -121,14 +131,14 @@ const showHUDInfo = () => {
   const nextWaveCountdown = document.getElementById("next-wave-countdown");
   const scoreDiv = document.getElementById("score");
   const hull = document.getElementById("hull");
-  const shieldEnergy = document.getElementById("shield-energy");
+  const activeAbilityEnergy = document.getElementById("shield-energy");
   const containerPrimary = document.getElementById("primary-weapon-types");
   const containerSecondary = document.getElementById("secondary-weapon-types");
   const ammoPContainer = document.getElementById("primary-weapon-ammo");
   const ammoSContainer = document.getElementById("secondary-weapon-ammo");
   if (player.e < 0) {
     hull.innerHTML = "";
-    shieldEnergy.innerHTML = "";
+    activeAbilityEnergy.innerHTML = "";
     containerPrimary.innerHTML = "";
     containerSecondary.innerHTML = "";
     ammoPContainer.innerHTML = "";
@@ -155,15 +165,21 @@ const showHUDInfo = () => {
 
   hull.innerHTML = `H:${player.e.toFixed(0)}`;
   let S = "";
-  if (player.shield === "kDeflectorShield") {
+  if (player.activeAbility === "kDeflectorShield") {
     S = "(d):";
   }
-  if (player.shield === "kEnergyShield") {
+  if (player.activeAbility === "kEnergyShield") {
     S = "(e):";
   }
-  shieldEnergy.innerHTML = `${S}${player.shieldEnergy.toFixed(2)}`;
+  if (player.activeAbility === "kPhaseShield") {
+    S = "(p):";
+  }
+  if (player.activeAbility === "kEmp") {
+    S = "(m):";
+  }
+  activeAbilityEnergy.innerHTML = `${S}${player.activeAbilityEnergy.toFixed(2)}`;
   if (S === "") {
-    shieldEnergy.innerHTML = "";
+    activeAbilityEnergy.innerHTML = "";
   }
   containerPrimary.innerHTML = `W1: ${a}${b}`;
 
@@ -326,8 +342,8 @@ const player = new Lynx({
   secondaryWeapons: secondaryWeapons,
 });
 player.human = true;
-player.shieldEnergy = 1;
-player.shieldEnergyRecoveryRate = 0.0005;
+player.activeAbilityEnergy = 1;
+player.activeAbilityEnergyRecoveryRate = 0.0005;
 player.powerUps = {};
 player.recoveryRate = 0.04;
 player.emergencyBrakes = false;
@@ -335,8 +351,12 @@ player.energyShield = 0;
 player.deflectorShield = 0;
 player.pointSight = false;
 
+player.emp = true;
+//player.shield = "kPhaseShield"
+player.phaseShield = 0;
 if (location.href.startsWith("http")) {
   //player.shield = "kEnergyShield"
+  //player.emp = true
 }
 
 const resetPlayerPVA = (regenerate = false) => {
@@ -365,7 +385,7 @@ const resetPlayerPVA = (regenerate = false) => {
     player.ammo[player.secondaryWeapons[0].kind].max =
       player.secondaryWeapons[0].ammoMax * player.extraAmmo;
   }
-  player.shieldEnergy = 1;
+  player.activeAbilityEnergy = 1;
   spaceScene.player = player;
   player.e = 1000; // TODO: this should be the current player maximum instead
   if (regenerate) {
@@ -579,7 +599,7 @@ const countsPerLevel = (level) => {
     };
   }
   if (level <= 1) {
-    return { ...obj, asteroids: 2, ships: 0 };
+    return { ...obj, asteroids: 4, ships: 0 };
   }
   if (level < 5) {
     return { ...obj, asteroids: 5, ships: 1 };
@@ -664,8 +684,11 @@ app.ticker.add((delta) => {
       player: player,
     };
     if (level === 5) {
-      console.log("Offering only shields!");
+      console.info("Offering only shields!");
       offerChoices(shieldPowerups(player), globals);
+    } else if (level === 15) {
+      console.info("Offering the good stuff");
+      offerChoices(superPowerups(player), globals);
     } else {
       offerChoices(choices.slice(0, 2), globals);
     }
@@ -693,9 +716,11 @@ app.ticker.add((delta) => {
     return;
   }
   if (player.lives <= 0 && !msgs.visible) {
-    msgs.html(
-      `Game over!<br/>Select <em>Play</em> in the upper-left menu to play again`,
-    );
+    const div = document.createElement("DIV");
+    (div.innerHTML = `Game over!<br/>Click here to play again`),
+      div.addEventListener("click", fullRestart);
+    div.style.cursor = "pointer";
+    msgs.div(div);
     msgs.showSmall();
     player.explode();
     gameOver = true;

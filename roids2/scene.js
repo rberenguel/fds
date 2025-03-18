@@ -495,8 +495,15 @@ class SpaceScene extends Scene {
           }
           if (o.collision(b)) {
             const oe = o.e;
-            o.e -= b.e;
-            b.e -= oe;
+            if (b.kind === "kEmpBlast") {
+              // Note that this can be used for mine/bomb too
+              // This could be temporary at some point
+              o.disabled = performance.now() + 3000;
+              console.log(`${o} is disabled`);
+            } else {
+              o.e -= b.e;
+              b.e -= oe;
+            }
             const fl = new Flame({
               pos: {
                 x: b.pos.x,
@@ -524,7 +531,7 @@ class SpaceScene extends Scene {
       if (a.e < 0) {
         continue;
       }
-      if (this.player.e > 0 && a.collision(this.player)) {
+      if (this.player.e > 0 && this.player.collision(a)) {
         a.e = -1;
         //this.player.invulnerable = performance.now();
         this.player.lives -= 1;

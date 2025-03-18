@@ -43,6 +43,9 @@ class GaussCannon extends Gun {
     if ((shooter.ammo[GaussCannon.kind].count ?? 0) < 1) {
       return;
     }
+    if (shooter.disabled > performance.now()) {
+      return;
+    }
     const rf = rnd();
     const spread = -0.0005 + 0.001 * rf;
     const ivx = Math.cos(shooter.r + spread);
