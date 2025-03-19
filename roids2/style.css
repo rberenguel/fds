@@ -37,10 +37,23 @@ canvas {
   text-align: center;
 }
 
+#pause-menu {
+  font-size: 1rem;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+  margin-right: auto;
+  padding: 10px;
+  cursor: pointer;
+  padding: 0.5rem;
+  cursor: default;
+  width: fit-content;
+  margin-top: -0.3em;
+}
+
 .metap-modal {
   font-size: 1rem;
   top: 2rem;
-  left: 2rem;
+  right: 2rem;
   transform: none;
 }
 
@@ -65,14 +78,18 @@ canvas {
   font-size: 2vh;
 }
 
-#menu {
-  font-size: 1rem;
+#debug-menu {
+  font-size: 0.75rem;
   flex-shrink: 0;
   margin-right: auto;
-  padding: 10px;
-  cursor: pointer;
+  padding: 0.5rem;
+  cursor: default;
   width: fit-content;
-  margin-top: -0.3em;
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.5rem;
+  z-index: 10000;
+  color: #777;
 }
 
 #right-container {
@@ -172,6 +189,12 @@ canvas {
   flex-basis: 100%;
 }
 
+.powerup-selected {
+  background-color: #555;
+  border-radius: 1rem;
+  border: 1px solid #ccc;
+}
+
 #current-powerups {
   display: flex;
   width: 100%;
@@ -181,6 +204,9 @@ canvas {
 
 .current-powerups {
   flex-wrap: wrap;
+  border: 1px solid #ccc;
+  min-height: 3rem;
+  border-radius: 1rem;
 }
 
 .current-powerups > div {
@@ -235,6 +261,20 @@ canvas {
 .choice-description table {
   text-align: center;
   color: white;
+}
+
+.player-stats {
+  border: 1px solid #ccc;
+  border-radius: 1rem;
+  border-collapse: separate;
+  color: white;
+  text-align: center;
+  padding: 0.5rem;
+  margin-top: 1rem;
+}
+
+.player-stats-title {
+  text-align: left;
 }
 
 /* TODO: to move out */

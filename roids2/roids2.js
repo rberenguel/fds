@@ -177,7 +177,9 @@ const showHUDInfo = () => {
   if (player.activeAbility === "kEmp") {
     S = "(m):";
   }
-  activeAbilityEnergy.innerHTML = `${S}${player.activeAbilityEnergy.toFixed(2)}`;
+  activeAbilityEnergy.innerHTML = `${S}${player.activeAbilityEnergy.toFixed(
+    2,
+  )}`;
   if (S === "") {
     activeAbilityEnergy.innerHTML = "";
   }
@@ -197,7 +199,7 @@ const showHUDInfo = () => {
   }
 };
 
-const msgs = new Msgs();
+const msgs = new Msgs({ blur: 50, sepia: 50 });
 
 const isLandscape = () =>
   window.screen.orientation.angle === 90 ||
@@ -342,6 +344,100 @@ const player = new Lynx({
   secondaryWeapons: secondaryWeapons,
 });
 player.human = true;
+
+const resetStats = (player) => {
+  player.stats = {
+    powerups: {
+      chosen: 0,
+      skipped: 0,
+    },
+    shots: {
+      kPlasmaGun: {
+        fired: 0,
+        hitsAsteroid: 0,
+        hitsShip: 0,
+      },
+      kLaserGun: {
+        fired: 0,
+        hitsAsteroid: 0,
+        hitsShip: 0,
+      },
+      kMassDriverGun: {
+        fired: 0,
+        hitsAsteroid: 0,
+        hitsShip: 0,
+      },
+      kGaussCannon: {
+        fired: 0,
+        hitsAsteroid: 0,
+        hitsShip: 0,
+      },
+      kPhotonTorpedoLauncher: {
+        fired: 0,
+        hitsAsteroid: 0,
+        hitsShip: 0,
+      },
+      kEmp: {
+        fired: 0,
+        hitsAsteroid: 0,
+        hitsShip: 0,
+      },
+    },
+  };
+};
+
+const presentStats = (player) => {
+  const stats = player.stats.shots;
+  const table = document.createElement("table");
+  table.classList.add("player-stats");
+  table.style.width = "100%";
+
+  // Create table header
+  const headerRow = table.insertRow();
+  const headers = [
+    "Gun type",
+    "Shots fired",
+    "Asteroid hits",
+    "Ship hits",
+    "Hit %",
+  ];
+  for (const headerText of headers) {
+    const th = document.createElement("th");
+    th.textContent = headerText;
+    headerRow.appendChild(th);
+  }
+
+  // Create table rows
+  for (const gunType in stats) {
+    const row = table.insertRow();
+    const gunData = stats[gunType];
+
+    const gunTypeCell = row.insertCell();
+    gunTypeCell.textContent = gunType.substring(1); // Remove the "k" prefix
+    gunTypeCell.classList.add("player-stats-title");
+
+    const shotsFiredCell = row.insertCell();
+    shotsFiredCell.textContent = gunData.fired;
+
+    const asteroidHitsCell = row.insertCell();
+    asteroidHitsCell.textContent = gunData.hitsAsteroid;
+
+    const shipHitsCell = row.insertCell();
+    shipHitsCell.textContent = gunData.hitsShip;
+
+    const hitPercentageCell = row.insertCell();
+    const totalHits = gunData.hitsAsteroid + gunData.hitsShip;
+    const hitPercentage =
+      gunData.fired > 0
+        ? ((totalHits / gunData.fired) * 100).toFixed(2)
+        : "0.00";
+    hitPercentageCell.textContent = `${hitPercentage}%`;
+  }
+  return table;
+};
+
+resetStats(player);
+
 player.activeAbilityEnergy = 1;
 player.activeAbilityEnergyRecoveryRate = 0.0005;
 player.powerUps = {};
@@ -453,6 +549,7 @@ const fullRestart = () => {
   countdown = 0;
   inGame = true;
   gameOver = false;
+  resetStats(player);
   player.powerUps = undefined;
   player.powerUps = {};
   player.pointSight = false; // TODO There are more things to reset
@@ -474,7 +571,7 @@ const fullRestart = () => {
 };
 
 const commands = [
-  {
+  /*{
     title: "Play",
     lambda: fullRestart,
   },
@@ -484,7 +581,7 @@ const commands = [
       showMainMenu = true;
       fullRestart();
     },
-  },
+  },*/
   {
     title: "Debug commands:",
     lambda: () => {},
@@ -519,33 +616,53 @@ metaP.maxCommands = 100;
 metaP.bind(commands);
 msgs.attach();
 
-document.getElementById("menu").addEventListener("click", (ev) => {
+let paused = false;
+
+const pauseMenu = () => {
+  console.log(player.stats);
+  const statsTable = presentStats(player);
+  const wrapper = document.createElement("DIV");
+  const div = document.createElement("DIV");
+  const p = document.createElement("P");
+  p.textContent = "Current powerups";
+  p.style.flexBasis = "100%";
+  div.appendChild(p);
+  div.style.display = "flex";
+  div.style.flexDirection = "row";
+  div.classList.add("current-powerups");
+  div.addEventListener("click", () => msgs.hide());
+  currentPowerupsToDiv(div, player);
+  wrapper.appendChild(div);
+  wrapper.appendChild(statsTable);
+  const backToGame = document.createElement("DIV");
+  backToGame.style.cursor = "pointer";
+  backToGame.addEventListener("click", () => {
+    msgs.hide();
+    paused = false;
+  });
+  backToGame.textContent = "Back to the game";
+  const backToMainMenu = document.createElement("DIV");
+  backToMainMenu.style.cursor = "pointer";
+  backToMainMenu.addEventListener("click", () => {
+    msgs.hide();
+    paused = false;
+    showMainMenu = true;
+    fullRestart();
+  });
+  backToMainMenu.textContent = "Back to the main menu";
+  wrapper.appendChild(backToGame);
+  wrapper.appendChild(backToMainMenu);
+  msgs.div(wrapper);
+  msgs.show({ glass: 0, msgs: 1000 });
+  paused = true;
+};
+
+document.getElementById("debug-menu").addEventListener("click", (ev) => {
   metaP.metaP();
-  // TODO: freeze countdowns
-  if (Object.keys(player.powerUps).length > 0 && player.e > 0) {
-    const wrapper = document.createElement("DIV");
-    const div = document.createElement("DIV");
-    const p = document.createElement("P");
-    p.textContent = "Current powerups";
-    p.style.flexBasis = "100%";
-    div.appendChild(p);
-    div.style.display = "flex";
-    div.style.flexDirection = "row";
-    div.classList.add("current-powerups");
-    div.addEventListener("click", () => msgs.hide());
-    currentPowerupsToDiv(div, player);
-    wrapper.appendChild(div);
-    const backToGame = document.createElement("p");
-    backToGame.style.cursor = "pointer";
-    backToGame.addEventListener("click", () => {
-      msgs.hide();
-      metaP.toggle();
-    });
-    backToGame.textContent = "Back to the game";
-    wrapper.appendChild(backToGame);
-    msgs.div(wrapper);
-    msgs.show({ glass: 0, msgs: 1000000 });
-  }
+});
+
+document.getElementById("pause-menu").addEventListener("click", (ev) => {
+  pauseMenu();
 });
 
 let showMainMenu = true;
@@ -569,7 +686,7 @@ const mainMenuCommands = [
     lambda: () => {
       menuP.ignoreKeys();
       msgs.div(controlsChanger());
-      msgs.show({ glass: 1000000, msgs: 1000001 }); // TODO Why does this need to be so high? Fix zindexing
+      msgs.show({ glass: 1001, msgs: 1002 });
     },
   },
   {
@@ -580,7 +697,7 @@ const mainMenuCommands = [
       clone.style.display = "block";
       clone.addEventListener("click", () => msgs.hide());
       msgs.div(clone);
-      msgs.show({ glass: 1000000, msgs: 1000001 });
+      msgs.show({ glass: 1001, msgs: 1002 });
     },
   },
 ];
@@ -654,8 +771,7 @@ app.ticker.add((delta) => {
     }
     return;
   }
-  if (metaP.metaPGlass.style.display === "block") {
-    // This implies pause menu is showing
+  if (paused) {
     if (diffFinishCountdown == 0) {
       const now = performance.now();
       diffFinishCountdown = finishCountdown - now;
@@ -727,6 +843,8 @@ app.ticker.add((delta) => {
     (div.innerHTML = `Game over!<br/>Click here to play again`),
       div.addEventListener("click", fullRestart);
     div.style.cursor = "pointer";
+    const statsTable = presentStats(player);
+    div.appendChild(statsTable);
     msgs.div(div);
     msgs.showSmall();
     player.explode();

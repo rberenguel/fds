@@ -9,8 +9,8 @@ import { seededRnd } from "../rnd.js";
 const rnd = seededRnd(performance.now());
 
 class PlasmaGun extends Gun {
-  static kind = "PlasmaGun";
-  kind = "PlasmaGun";
+  static kind = "kPlasmaGun";
+  kind = "kPlasmaGun";
   firerate = 50;
   html = "Pg";
   static baseStats = {
@@ -39,6 +39,7 @@ class PlasmaGun extends Gun {
   }
 
   fire(shooter, bulletList) {
+    super.fire(shooter, bulletList);
     // Shooter is a reference to whoever is shooting, so we can take
     // direction and velocity vector.
     if (shooter.disabled > performance.now()) {
@@ -66,6 +67,8 @@ class PlasmaGun extends Gun {
       scale: shooter.scale,
       source: this.source,
     });
+    b.shooter = shooter;
+    b.firedBy = "kPlasmaGun";
     bulletList.push(b);
     if (window.drumSampler && shooter.human) {
       window.drumSampler.triggerAttackRelease("g0", 0.5); // Snarestick

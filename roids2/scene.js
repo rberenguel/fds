@@ -438,6 +438,9 @@ class SpaceScene extends Scene {
             const ae = a.e;
             a.e = b.e > 0 ? a.e - b.e : a.e; // Strange situations
             b.e -= ae;
+            if (b.shooter?.human) {
+              b.shooter.stats.shots[b.firedBy].hitsAsteroid++;
+            }
             a.transferMomentum(b);
             a.addFlame(b.pos, b.vel);
             if (a.e < 0 && b.source === this.player._id) {
@@ -495,8 +498,12 @@ class SpaceScene extends Scene {
           if (b.source === o._id) {
             continue;
           }
+
           if (o.collision(b)) {
             const oe = o.e;
+            if (b.shooter?.human) {
+              b.shooter.stats.shots[b.firedBy].hitsShip++;
+            }
             if (b.kind === "kEmpBlast") {
               // Note that this can be used for mine/bomb too
               // This could be temporary at some point

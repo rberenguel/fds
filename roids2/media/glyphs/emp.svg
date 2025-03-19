@@ -90,6 +90,97 @@
        y1="734.80676"
        x2="966.37262"
        y2="734.80676" />
+    <filter
+       style="color-interpolation-filters:sRGB;"
+       inkscape:label="Color Shift"
+       id="filter74"
+       x="-0.010836889"
+       y="-0.010836889"
+       width="1.0216738"
+       height="1.0216738">
+      <feColorMatrix
+         type="hueRotate"
+         values="110"
+         result="color1"
+         id="feColorMatrix73" />
+      <feColorMatrix
+         type="saturate"
+         values="0.96"
+         result="color2"
+         id="feColorMatrix74" />
+    </filter>
+    <filter
+       style="color-interpolation-filters:sRGB;"
+       inkscape:label="Color Shift"
+       id="filter76"
+       x="-0.03726763"
+       y="-0.03726763"
+       width="1.0745353"
+       height="1.0745353">
+      <feColorMatrix
+         type="hueRotate"
+         values="110"
+         result="color1"
+         id="feColorMatrix75" />
+      <feColorMatrix
+         type="saturate"
+         values="0.96"
+         result="color2"
+         id="feColorMatrix76" />
+    </filter>
+    <filter
+       style="color-interpolation-filters:sRGB;"
+       inkscape:label="Color Shift"
+       id="filter78"
+       x="-0.019314869"
+       y="-0.019314869"
+       width="1.0386297"
+       height="1.0386297">
+      <feColorMatrix
+         type="hueRotate"
+         values="110"
+         result="color1"
+         id="feColorMatrix77" />
+      <feColorMatrix
+         type="saturate"
+         values="0.96"
+         result="color2"
+         id="feColorMatrix78" />
+    </filter>
+    <filter
+       style="color-interpolation-filters:sRGB;"
+       inkscape:label="Color Shift"
+       id="filter80"
+       x="-0.013423265"
+       y="-0.013423265"
+       width="1.0268465"
+       height="1.0268465">
+      <feColorMatrix
+         type="hueRotate"
+         values="110"
+         result="color1"
+         id="feColorMatrix79" />
+      <feColorMatrix
+         type="saturate"
+         values="0.96"
+         result="color2"
+         id="feColorMatrix80" />
+    </filter>
+    <filter
+       style="color-interpolation-filters:sRGB;"
+       inkscape:label="Color Shift"
+       id="filter82">
+      <feColorMatrix
+         type="hueRotate"
+         values="110"
+         result="color1"
+         id="feColorMatrix81" />
+      <feColorMatrix
+         type="saturate"
+         values="0.96"
+         result="color2"
+         id="feColorMatrix82" />
+    </filter>
   </defs>
   <g
      inkscape:label="Layer 1"
@@ -99,30 +190,31 @@
        id="g4"
        transform="translate(-43.885035,-194.80674)">
       <g
-         id="g3" />
+         id="g3"
+         style="filter:url(#filter82)" />
       <circle
-         style="fill:none;fill-opacity:1;stroke:url(#linearGradient2329);stroke-width:20;stroke-dasharray:none"
+         style="fill:none;fill-opacity:1;stroke:url(#linearGradient2329);stroke-width:20;stroke-dasharray:none;filter:url(#filter80)"
          id="path1"
          cx="911.61475"
          cy="-223.20679"
          r="372.48761"
          transform="rotate(65.287055)" />
       <circle
-         style="fill:none;fill-opacity:1;stroke:url(#linearGradient2330);stroke-width:20;stroke-dasharray:none;stroke-opacity:1"
+         style="fill:none;fill-opacity:1;stroke:url(#linearGradient2330);stroke-width:20;stroke-dasharray:none;stroke-opacity:1;filter:url(#filter78)"
          id="path1-1"
          cx="-322.1178"
          cy="881.53436"
          r="258.86792"
          transform="rotate(-58.543613)" />
       <circle
-         style="fill:none;fill-opacity:1;stroke:url(#linearGradient2331);stroke-width:20;stroke-dasharray:none;stroke-opacity:1"
+         style="fill:none;fill-opacity:1;stroke:url(#linearGradient2331);stroke-width:20;stroke-dasharray:none;stroke-opacity:1;filter:url(#filter76)"
          id="path1-1-2"
          cx="-934.867"
          cy="-82.984016"
          r="134.16469"
          transform="rotate(-133.54361)" />
       <circle
-         style="fill:none;fill-opacity:1;stroke:url(#linearGradient2332);stroke-width:20;stroke-dasharray:none;stroke-opacity:1"
+         style="fill:none;fill-opacity:1;stroke:url(#linearGradient2332);stroke-width:20;stroke-dasharray:none;stroke-opacity:1;filter:url(#filter74)"
          id="path1-1-4"
          cx="-322.11777"
          cy="881.53436"

@@ -9,4 +9,10 @@ class Gun {
     };
     this.source = props.source ?? -1;
   }
+
+  fire(shooter, bulletList) {
+    if (shooter.human) {
+      shooter.stats.shots[this.kind].fired++;
+    }
+  }
 }

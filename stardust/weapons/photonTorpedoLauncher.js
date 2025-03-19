@@ -10,7 +10,7 @@ import { seededRnd } from "../rnd.js";
 import { Flame } from "../flame.js";
 
 class PhotonTorpedoLauncher extends Gun {
-  static kind = "PhotonTorpedo"; // TODO make an object with these constants
+  static kind = "kPhotonTorpedoLauncher"; // TODO make an object with these constants
   kind = PhotonTorpedoLauncher.kind;
   firerate = 1000; // It's not really a rate and it is annoying me
   html = "Pt"; // Asterisk alignment
@@ -42,12 +42,16 @@ class PhotonTorpedoLauncher extends Gun {
   }
 
   fire(shooter, bulletList) {
+    super.fire(shooter, bulletList);
     // Shooter is a reference to whoever is shooting, so we can take
     // direction and velocity vector.
     if ((shooter.ammo[PhotonTorpedoLauncher.kind].count ?? 0) < 1) {
       return;
     }
     if (shooter.disabled > performance.now()) {
+      return;
+    }
+    if (shooter.shieldsOn()) {
       return;
     }
     // Photon torpedos will eventually be tracking, so this will need more information somehow.
@@ -76,6 +80,8 @@ class PhotonTorpedoLauncher extends Gun {
       source: this.source,
       flameList: shooter.flameList,
     });
+    b.shooter = shooter;
+    b.firedBy = "kPhotonTorpedoLauncher";
     bulletList.push(b);
     if (window.drumSampler && shooter.human) {
       window.drumSampler.triggerAttackRelease("b0", 0.5); // Hihat foot stomp

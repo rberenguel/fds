@@ -11,6 +11,7 @@ import {
   GaussCannon,
   MassDriverGun,
   LaserGun,
+  PhotonTorpedoLauncher,
 } from "../stardust/weapons/weapons.js";
 
 const glass = document.getElementById("glass");
@@ -19,10 +20,12 @@ const currentPowerupsToDiv = (div, player) => {
   const allChoices = allPowerUpChoices(player)
     .concat(shieldPowerups(player))
     .concat(superPowerups(player));
+  let added = 0;
   for (let pup of Object.keys(player.powerUps ?? {})) {
     if (!player.powerUps[pup]) {
       continue;
     }
+    added++;
     const props = allChoices.filter((p) => p.id === pup);
     if (!props) {
       continue;
@@ -34,16 +37,71 @@ const currentPowerupsToDiv = (div, player) => {
     d.title = props[0].name;
     div.appendChild(d);
   }
+  if (added == 0) {
+    const d = document.createElement("DIV");
+    const i = document.createElement("IMG");
+    i.src = "media/glyphs/none.png";
+    d.appendChild(i);
+    d.title = "None";
+    div.appendChild(d);
+  }
 };
+
+const powerupContainer = document.getElementById("powerup-container");
+
+let selection = null;
+
+document.addEventListener("keydown", (ev) => {
+  if (powerupContainer.style.display != "flex") {
+    return;
+  }
+  const isH2 = selection.tagName === "H2";
+  const isChoice = selection.classList.contains("powerup-choice");
+  const isSkip = selection.id === "skip-powerup";
+  // TODO: these should be the real controls, including the gamepad
+  if (ev.key == "ArrowLeft" || ev.key == "ArrowRight") {
+    if (isChoice) {
+      const other = Array.from(
+        powerupContainer.querySelectorAll(".powerup-choice"),
+      ).filter((s) => !s.classList.contains("powerup-selected"))[0];
+      selection.classList.remove("powerup-selected");
+      selection = other;
+    }
+  }
+  if (ev.key == "ArrowDown") {
+    if (isH2) {
+      selection.classList.remove("powerup-selected");
+      selection = powerupContainer.querySelector(".powerup-choice");
+    } else if (isChoice) {
+      selection.classList.remove("powerup-selected");
+      selection = powerupContainer.querySelector("#skip-powerup");
+    }
+  }
+  if (ev.key == "ArrowUp") {
+    if (isChoice) {
+      selection.classList.remove("powerup-selected");
+      selection = powerupContainer.querySelector("h2");
+    } else if (isSkip) {
+      selection.classList.remove("powerup-selected");
+      selection = powerupContainer.querySelector(".powerup-choice");
+    }
+  }
+  if (ev.key === "Enter") {
+    selection.click();
+    selection.classList.remove("powerup-selected");
+    selection = null;
+  }
+  selection?.classList.add("powerup-selected");
+});
 
 const offerChoices = (options = [], globals = {}) => {
   // Options is a list of powerups, of the form
   // {id: "kPowerup", name: "Human name", description: "Description"}
 
   glass.style.display = "block";
-  const powerupContainer = document.getElementById("powerup-container");
-
   powerupContainer.style.display = "flex";
+  selection = powerupContainer.querySelector("h2");
+  selection.classList.add("powerup-selected");
 
   const currentPowerups = document.getElementById("current-powerups");
   currentPowerups.innerHTML = "";
@@ -77,19 +135,32 @@ const offerChoices = (options = [], globals = {}) => {
       globals.setPowerUpChosen(true);
       console.info(`Setting ${option.id} to true`);
       globals.player.powerUps[option.id] = true;
-      //globals.setChoosing(false);
+      globals.player.stats.powerups.chosen++;
     };
   }
   const skipPowerup = document.getElementById("skip-powerup");
   skipPowerup.textContent = "Skip the choice (very bad idea, and -2000 points)";
   skipPowerup.addEventListener("click", () => {
-    globals().spaceScene.score -= 2000;
+    globals.spaceScene.score -= 2000;
     glass.style.display = "none";
     powerupContainer.style.display = "none";
     globals.setPowerUpChosen(true);
-    //globals.setChoosing(false);
     globals.showHUDInfo();
+    globals.player.stats.powerups.skipped++;
   });
+};
+
+const setWeaponPowerup = (player, weapon) => {
+  player.powerUps["kLaserGun"] = false;
+  player.powerUps["kPlasmaGun"] = false;
+  player.powerUps["kMassDriverGun"] = false;
+  player.powerUps[weapon] = true;
+};
+
+const setSecondaryWeaponPowerup = (player, weapon) => {
+  player.powerUps["kGaussCannon"] = false;
+  player.powerUps["kTorpedoLauncher"] = false;
+  player.powerUps[weapon] = true;
 };
 
 const allPowerUpChoices = (player) => [
@@ -124,6 +195,7 @@ const allPowerUpChoices = (player) => [
       for (let w of player.weapons) {
         w.source = player._id;
       }
+      setWeaponPowerup(player, "kMassDriverGun");
     },
   },
   {
@@ -150,6 +222,34 @@ const allPowerUpChoices = (player) => [
       for (let w of player.secondaryWeapons) {
         w.source = player._id;
       }
+      setSecondaryWeaponPowerup(player, "kGaussCannon");
+    },
+  },
+  {
+    id: "kPhotonTorpedoLauncher",
+    name: "Photon torpedo launcher",
+    description: () => {
+      const title = "<h2>Secondary weapon</h2>";
+      const htmlA = PhotonTorpedoLauncher.present();
+      const htmlB = player.secondaryWeapons[0].present();
+      return `${title} ${htmlA} <h3>replaces</h3> ${htmlB}`;
+    },
+    glyph: "photontorpedo.png",
+    lambda: () => {
+      const torpedo = new PhotonTorpedoLauncher({
+        pos: {
+          x: 0,
+          y: 0,
+        },
+      });
+      player.secondaryWeapons = [torpedo];
+      player.ammo[PhotonTorpedoLauncher.kind] = {};
+      player.ammo[PhotonTorpedoLauncher.kind].count = 2;
+      player.ammo[PhotonTorpedoLauncher.kind].max = 2;
+      for (let w of player.secondaryWeapons) {
+        w.source = player._id;
+      }
+      setSecondaryWeaponPowerup(player, "kPhotonTorpedoLauncher");
     },
   },
   {
@@ -182,6 +282,7 @@ const allPowerUpChoices = (player) => [
       for (let w of player.weapons) {
         w.source = player._id;
       }
+      setWeaponPowerup(player, "kLaserGun");
     },
   },
   {
@@ -206,6 +307,7 @@ const allPowerUpChoices = (player) => [
     glyph: "pointsight.png",
     lambda: () => {
       player.pointSight = true;
+      console.log(player);
     },
   },
   {
@@ -237,11 +339,11 @@ const allPowerUpChoices = (player) => [
     name: "Additional ammunition/energy",
     description: () => {
       const title = "<h2>Passive ability</h2>";
-      return `${title}<p>Additional ammunition/energy</p>2 your storage. Does not accumulate.`;
+      return `${title}<p>Additional ammunition/energy</p>x1.5 your storage. Does not accumulate.`;
     },
     glyph: "extraammo.png",
     lambda: () => {
-      player.extraAmmo = 2;
+      player.extraAmmo = 1.5;
     },
   },
 ];
@@ -260,6 +362,9 @@ const shieldPowerups = (player) => [
     },
     glyph: "deflectorshield.png",
     lambda: () => {
+      if (player.activeAbility) {
+        player.powerUps[player.activeAbility] = false;
+      }
       player.activeAbility = "kDeflectorShield";
     },
   },
@@ -276,6 +381,9 @@ const shieldPowerups = (player) => [
     },
     glyph: "energyshield.png",
     lambda: () => {
+      if (player.activeAbility) {
+        player.powerUps[player.activeAbility] = false;
+      }
       player.activeAbility = "kDeflectorShield";
     },
   },
@@ -295,6 +403,9 @@ const superPowerups = (player) => [
     },
     glyph: "phaseshield.png",
     lambda: () => {
+      if (player.activeAbility) {
+        player.powerUps[player.activeAbility] = false;
+      }
       player.activeAbility = "kPhaseShield";
     },
   },
@@ -311,6 +422,9 @@ const superPowerups = (player) => [
     },
     glyph: "emp.png",
     lambda: () => {
+      if (player.activeAbility) {
+        player.powerUps[player.activeAbility] = false;
+      }
       player.activeAbility = "kEmp";
     },
   },
@@ -318,12 +432,12 @@ const superPowerups = (player) => [
 
 const shieldDescs = {
   kDeflectorShield:
-    "<p>Deflector shield</p><hr/>Deflects strongly kinetic weapons for 3 seconds, affects mildly energy weapons.",
+    "<p>Deflector shield</p><hr/>Deflects strongly kinetic weapons for 3 seconds, affects mildly energy weapons.<br/><em>You can't fire your secondary weapon while the shield is on</em>",
   kEnergyShield:
-    "<p>Energy shield</p><hr/>Stops completely energy weapons for 3 seconds, no effect on kinetic weapons.",
+    "<p>Energy shield</p><hr/>Stops completely energy weapons for 3 seconds, no effect on kinetic weapons.<br/><em>You can't fire your secondary weapon while the shield is on</em>",
   kPhaseShield:
-    "<p>Phase shield</p><hr/>Let's you pass through asteroids, projectiles and beams for 3 seconds.",
-  kEmp: "<p>EMP pulse</p><hr/>Creates an EMP pulse around you, disabling enemy ships for 3 seconds.",
+    "<p>Phase shield</p><hr/>Let's you pass through asteroids, projectiles and beams for 3 seconds.<br/><em>You can't fire your secondary weapon while the shield is on</em>",
+  kEmp: "<p>EMP pulse</p><hr/>Generates an EMP pulse where you are, disabling enemy ships for 3 seconds.",
 };
 
 const debugCommands = (player) => {

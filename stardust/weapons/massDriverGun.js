@@ -12,8 +12,8 @@ const rnd = seededRnd(performance.now());
 class MassDriverGun extends Gun {
   static ACCEL = 50;
   firerate = 100;
-  kind = "MassDriverGun";
-  static kind = "MassDriverGun";
+  kind = "kMassDriverGun";
+  static kind = "kMassDriverGun";
   html = "Md"; // Dot
   static baseStats = {
     // Mass, no energy use really
@@ -41,6 +41,7 @@ class MassDriverGun extends Gun {
   }
 
   fire(shooter, bulletList) {
+    super.fire(shooter, bulletList);
     // Shooter is a reference to whoever is shooting, so we can take
     // direction and velocity vector.
     if ((shooter.ammo[MassDriverGun.kind].count ?? 0) < 1) {
@@ -73,6 +74,8 @@ class MassDriverGun extends Gun {
       scale: shooter.scale,
       source: this.source,
     });
+    b.shooter = shooter;
+    b.firedBy = "kMassDriverGun";
     bulletList.push(b);
     shooter.ammo[MassDriverGun.kind].count--;
     if (window.drumSampler && shooter.human) {

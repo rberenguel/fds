@@ -7,8 +7,8 @@ import { Mesh, Meshes } from "../mesh.js";
 import { seededRnd } from "../rnd.js";
 
 class LaserGun extends Gun {
-  static kind = "LaserGun";
-  kind = "LaserGun";
+  static kind = "kLaserGun";
+  kind = "kLaserGun";
   firerate = 50;
   html = "Lg";
   static baseStats = {
@@ -42,6 +42,7 @@ class LaserGun extends Gun {
   }
 
   fire(shooter, bulletList) {
+    super.fire(shooter, bulletList);
     // Shooter is a reference to whoever is shooting, so we can take
     // direction and velocity vector.
     if ((shooter.ammo[LaserGun.kind].count ?? 0) <= 1) {
@@ -73,6 +74,8 @@ class LaserGun extends Gun {
       color: this.color,
       source: this.source,
     });
+    b.shooter = shooter;
+    b.firedBy = "kLaserGun";
     bulletList.push(b);
     shooter.ammo[LaserGun.kind].count--;
     if (window.drumSampler && shooter.human) {

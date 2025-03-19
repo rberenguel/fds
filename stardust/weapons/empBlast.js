@@ -6,6 +6,9 @@ import { seededRnd } from "../rnd.js";
 import { Base1 } from "../base.js";
 import { FillGradient } from "../../libs/3rdparty/pixi.mjs";
 const dropEmp = (shooter, bulletList) => {
+  if (shooter.human) {
+    shooter.stats.shots[this.kind].fired++;
+  }
   const b = new EmpBlast({
     pos: shooter.pos,
     vel: {
@@ -15,6 +18,8 @@ const dropEmp = (shooter, bulletList) => {
     scale: shooter.scale,
     source: shooter._id,
   });
+  b.shooter = shooter;
+  b.firedBy = "kEmp";
   bulletList.push(b);
 };
 
@@ -27,12 +32,12 @@ class EmpBlast extends Base1 {
         kind: Meshes.kCircle,
         center: [0, 0],
         radius: 10 * i,
-        color: 0x838ff7,
+        color: 0x2089d9,
         width: 2,
         gradienter:
           (mesh, p) =>
           (s1 = 1, s2 = 1) => {
-            const colorStops = [0x00ff00, 0x000000];
+            const colorStops = [0x2089d9, 0x000000];
             const gradientFill = new FillGradient(
               -50 * s1,
               -50 * s2,

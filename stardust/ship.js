@@ -391,6 +391,19 @@ class Ship extends Base1 {
     super.generate();
   }
 
+  shieldsOn() {
+    if (this.phaseShield > performance.now()) {
+      return true;
+    }
+    if (this.energyShield > performance.now()) {
+      return true;
+    }
+    if (this.deflectorShield > performance.now()) {
+      return true;
+    }
+    return false;
+  }
+
   /* pos would be universe coordinates, then here I need to use screen coordinates */
 
   update(delta) {
@@ -456,8 +469,8 @@ class Ship extends Base1 {
         presentation.tint = hexColor;
         if (this.disabled > performance.now()) {
           const red = Math.floor(200 * ne);
-          const green = 255;
-          const blue = Math.floor(200 * ne);
+          const blue = 255;
+          const green = Math.floor(200 * ne);
           presentation.tint = (red << 16) | (green << 8) | blue;
         }
         presentation.alpha = 1;
@@ -476,11 +489,13 @@ class Ship extends Base1 {
           }
         }
         if (presentation.name == "pointSight") {
+          console.log(this.pointSight);
           if (!this.pointSight) {
             presentation.tint = 0xff0000;
             presentation.alpha = 0.0;
           }
           if (this.pointSight) {
+            presentation.tint = 0x00ff00;
             presentation.alpha = 0.2;
           }
         }
@@ -580,8 +595,6 @@ class Lynx extends Ship {
         [0, -6],
         [0, 6],
       ],
-      radius: 10,
-      color: 0x00ff00,
       fill: 0x00ff00,
     });
     let weapons = props.weapons ?? [];

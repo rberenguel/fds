@@ -8,8 +8,8 @@ import { seededRnd } from "../rnd.js";
 const rnd = seededRnd(performance.now());
 
 class GaussCannon extends Gun {
-  kind = "GaussCannon"; // TODO make an object with these constants
-  static kind = "GaussCannon"; // TODO make an object with these constants
+  kind = "kGaussCannon"; // TODO make an object with these constants
+  static kind = "kGaussCannon"; // TODO make an object with these constants
   firerate = 1000;
   html = "Gc"; // Fisheye
   static baseStats = {
@@ -38,12 +38,16 @@ class GaussCannon extends Gun {
   }
 
   fire(shooter, bulletList) {
+    super.fire(shooter, bulletList);
     // Shooter is a reference to whoever is shooting, so we can take
     // direction and velocity vector.
     if ((shooter.ammo[GaussCannon.kind].count ?? 0) < 1) {
       return;
     }
     if (shooter.disabled > performance.now()) {
+      return;
+    }
+    if (shooter.shieldsOn()) {
       return;
     }
     const rf = rnd();
@@ -74,6 +78,8 @@ class GaussCannon extends Gun {
     });
     shooter.ammo[GaussCannon.kind].count--;
     b.kind = "kGaussCannonBullet"; // TODO: unify these constants somewhere
+    b.shooter = shooter;
+    b.firedBy = "kGaussCannon";
     bulletList.push(b);
     if (window.drumSampler && shooter.human) {
       window.drumSampler.triggerAttackRelease("f0", 0.5); // Crash

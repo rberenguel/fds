@@ -9,8 +9,9 @@ class Msgs {
     this.visible = false;
     this.hide();
     this._blur = props.blur ?? 10;
+    this._sepia = props.sepia ?? 0;
     this._zIndex = props.zIndex ?? 3;
-    this._glass.style.backdropFilter = `blur(${this._blur}px)`;
+    this._glass.style.backdropFilter = `blur(${this._blur}px) sepia(${this._sepia}%)`;
     this._glass.style.zIndex = this._zIndex;
   }
 

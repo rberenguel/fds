@@ -18,9 +18,10 @@
     <style></style>
   </head>
   <body>
+    <div id="debug-menu">&pi;</div>
     <div id="glass" style="display: none"></div>
     <div id="info">
-      <div id="menu">☰</div>
+      <div id="pause-menu">☰</div>
       <div id="next-wave-countdown"></div>
       <div id="score">0</div>
     </div>
@@ -34,7 +35,12 @@
     </div>
     <div id="powerup-container" style="display: none">
       <div id="current-powerups" class="current-powerups"></div>
-      <h2>Choose one</h2>
+      <h2 style="flex-basis: 100%">Choose one</h2>
+      <p>
+        <span style="font-size: 70%; font-style: italic"
+          >WIP: Use arrow keys and enter to choose</span
+        >
+      </p>
       <hr style="flex-basis: 100%" />
       <div class="powerup-choice">
         <div class="choice-glyph"></div>
