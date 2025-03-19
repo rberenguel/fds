@@ -155,6 +155,8 @@ class SpaceScene extends Scene {
       });
 
       other.prevShot = -1;
+      other.disabled = performance.now() + 500;
+      // They start 100ms later
       if (Math.random() < 0.8) {
         // Most have laser guns
         other.ammo[LaserGun.kind] = {};

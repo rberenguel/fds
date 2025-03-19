@@ -506,6 +506,13 @@ const commands = [
       }
     },
   },
+  {
+    title: "Skip to level end",
+    lambda: () => {
+      offerPowerUpChoices = true;
+      powerUpChosen = false;
+    },
+  },
   ...debugCommands(player),
 ];
 metaP.maxCommands = 100;
