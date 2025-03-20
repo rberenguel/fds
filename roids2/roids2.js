@@ -539,9 +539,9 @@ const fullRestart = () => {
     b.e = -1;
   }
   level = 1;
-  const nextLevel = countsPerLevel(level);
+  const nextLevel = enemiesPerLevel(level);
   spaceScene.addAsteroids(nextLevel.asteroids);
-  spaceScene.addEnemies(nextLevel.ships);
+  spaceScene.addEnemies(nextLevel.ships, nextLevel.shipLoadouts);
   spaceScene.score = 0;
   scoreDiv.textContent = 0;
   powerUpChosen = true;
@@ -704,7 +704,7 @@ const mainMenuCommands = [
 
 menuP.bind(mainMenuCommands, { blur: 30 }, false);
 
-const countsPerLevel = (level) => {
+const enemiesPerLevel = (level) => {
   const obj = {
     level: level,
   };
@@ -725,8 +725,55 @@ const countsPerLevel = (level) => {
   if (level <= 1) {
     return { ...obj, asteroids: 4, ships: 0 };
   }
-  if (level < 5) {
-    return { ...obj, asteroids: 5, ships: 1 };
+  if (level == 2) {
+    return {
+      ...obj,
+      asteroids: 5,
+      ships: 1,
+      shipLoadouts: [
+        {
+          weapon: "kLaserGun",
+        },
+      ],
+    };
+  }
+  if (level == 3) {
+    return {
+      ...obj,
+      asteroids: 5,
+      ships: 1,
+      shipLoadouts: [
+        {
+          weapon: "kMassDriverGun",
+        },
+      ],
+    };
+  }
+  if (level == 4) {
+    return {
+      ...obj,
+      asteroids: 5,
+      ships: 1,
+      shipLoadouts: [
+        {
+          weapon: "kLaserGun",
+          secondary: "kPhotonTorpedoLauncher",
+        },
+      ],
+    };
+  }
+  if (level == 5) {
+    return {
+      ...obj,
+      asteroids: 5,
+      ships: 1,
+      shipLoadouts: [
+        {
+          weapon: "kMassDriverGun",
+          secondary: "kGaussCannon",
+        },
+      ],
+    };
   }
   if (level < 9) {
     return { ...obj, asteroids: 6, ships: 2 };
@@ -743,12 +790,14 @@ const countsPerLevel = (level) => {
   if (level == 20) {
     return { ...obj, asteroids: 7, ships: 6 };
   }
-  const a = countsPerLevel(level - 20).asteroids;
-  const s = countsPerLevel(level - 20).ships + 1;
+  const a = enemiesPerLevel(level - 20).asteroids;
+  const s = enemiesPerLevel(level - 20).ships + 1;
+  const l = enemiesPerLevel(level - 20).shipLoadouts;
   return {
     asteroids: a,
     ships: s,
     level: level,
+    shipLoadouts: l,
   };
 };
 
@@ -883,18 +932,18 @@ app.ticker.add((delta) => {
     } else if (performance.now() >= countdown) {
       // 3 seconds have passed
       msgs.hide();
-      const nextLevel = countsPerLevel(level);
+      const nextLevel = enemiesPerLevel(level);
       resetPlayerPVA(false);
       resetKeys();
       spaceScene.addAsteroids(nextLevel.asteroids);
-      spaceScene.addEnemies(nextLevel.ships);
+      spaceScene.addEnemies(nextLevel.ships, nextLevel.shipLoadouts);
       countdown = 0;
       finishCountdown === 0;
       inGame = true;
     } else {
       // Update the countdown display
       const remainingTime = Math.ceil((countdown - performance.now()) / 1000); // Calculate remaining seconds
-      const nextLevel = countsPerLevel(level);
+      const nextLevel = enemiesPerLevel(level);
       const a = nextLevel.asteroids;
       const s = nextLevel.ships;
       let extra = "";

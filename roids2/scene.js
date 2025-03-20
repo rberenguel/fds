@@ -129,7 +129,66 @@ class SpaceScene extends Scene {
     this.player.viewframe = this.viewframe; // Linking to have zoom
   }
 
-  addEnemies(n) {
+  addEnemies(n, loadouts = []) {
+    console.log(loadouts);
+    let localLoadouts = [...loadouts];
+    const otherLaser = (other) => {
+      other.ammo[LaserGun.kind] = {};
+      other.ammo[LaserGun.kind].count = 10;
+      other.ammo[LaserGun.kind].max = 30;
+      const laserGun1 = new LaserGun({
+        pos: {
+          x: -30,
+          y: 50,
+        },
+        color: 0xff2200,
+      });
+      const laserGun2 = new LaserGun({
+        pos: {
+          x: -30,
+          y: -50,
+        },
+        color: 0xff2200,
+      });
+      laserGun1.stats.baseE = LaserGun.baseStats.baseE * 1.7;
+      laserGun2.stats.baseE = LaserGun.baseStats.baseE * 1.7; // 2 was way too much, 1.2 too little
+      other.weapons = [laserGun1, laserGun2];
+    };
+    const otherPhoton = (other) => {
+      const photonTorpedo = new PhotonTorpedoLauncher({
+        pos: {
+          x: 0,
+          y: 0,
+        },
+        source: this._id,
+      });
+      photonTorpedo.stats.ammoRefreshRate =
+        PhotonTorpedoLauncher.baseStats.ammoRefreshRate * 2;
+      other.secondaryWeapons = [photonTorpedo];
+      other.ammo[PhotonTorpedoLauncher.kind] = {};
+      other.ammo[PhotonTorpedoLauncher.kind].count = 2;
+      other.ammo[PhotonTorpedoLauncher.kind].max = 2;
+    };
+    const otherMassDriver = (other) => {
+      // By default a Bobcat comes with mass drivers
+      other.ammo[MassDriverGun.kind] = {};
+      other.ammo[MassDriverGun.kind].count = 300000000000000;
+      other.ammo[MassDriverGun.kind].max = 300000000000000;
+    };
+    const otherGaussCannon = (other) => {
+      const railGun = new GaussCannon({
+        pos: {
+          x: 0,
+          y: 0,
+        },
+        source: this._id,
+      });
+      railGun.stats.ammoRefreshRate = GaussCannon.baseStats.ammoRefreshRate * 2;
+      other.secondaryWeapons = [railGun];
+      other.ammo[GaussCannon.kind] = {};
+      other.ammo[GaussCannon.kind].count = 2;
+      other.ammo[GaussCannon.kind].max = 2;
+    };
     for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2;
       const m = 2500 + Math.random() * 2000;
@@ -156,81 +215,44 @@ class SpaceScene extends Scene {
 
       other.prevShot = -1;
       other.disabled = performance.now() + 500;
-      // They start 100ms later
-      if (Math.random() < 0.8) {
-        // Most have laser guns
-        other.ammo[LaserGun.kind] = {};
-        other.ammo[LaserGun.kind].count = 10;
-        other.ammo[LaserGun.kind].max = 30;
-        const laserGun1 = new LaserGun({
-          pos: {
-            x: -30,
-            y: 50,
-          },
-          color: 0xff2200,
-        });
-        const laserGun2 = new LaserGun({
-          pos: {
-            x: -30,
-            y: -50,
-          },
-          color: 0xff2200,
-        });
-        laserGun1.stats.baseE = LaserGun.baseStats.baseE * 1.7;
-        laserGun2.stats.baseE = LaserGun.baseStats.baseE * 1.7; // 2 was way too much, 1.2 too little
-        other.weapons = [laserGun1, laserGun2];
-        if (Math.random() < 0.5) {
-          const photonTorpedo = new PhotonTorpedoLauncher({
-            pos: {
-              x: 0,
-              y: 0,
-            },
-            source: this._id,
-          });
-          photonTorpedo.stats.ammoRefreshRate =
-            PhotonTorpedoLauncher.baseStats.ammoRefreshRate * 2;
-          other.secondaryWeapons = [photonTorpedo];
-          other.ammo[PhotonTorpedoLauncher.kind] = {};
-          other.ammo[PhotonTorpedoLauncher.kind].count = 2;
-          other.ammo[PhotonTorpedoLauncher.kind].max = 2;
-          for (let w of other.secondaryWeapons) {
-            w.source = other._id;
-          }
-        }
+      // They start 500ms later
 
-        for (let w of other.weapons) {
-          w.source = other._id;
+      if (localLoadouts) {
+        const loadout = localLoadouts[0];
+        console.log(loadout);
+        if (loadout?.weapon === "kLaserGun") {
+          otherLaser(other);
         }
+        if (loadout?.secondary === "kPhotonTorpedoLauncher") {
+          otherPhoton(other);
+        }
+        if (loadout?.weapon === "kMassDriverGun") {
+          otherMassDriver(other);
+        }
+        if (loadout?.secondary === "kGaussCannon") {
+          otherGaussCannon(other);
+        }
+        localLoadouts = localLoadouts.slice(1);
       } else {
-        other.ammo[MassDriverGun.kind] = {};
-        other.ammo[MassDriverGun.kind].count = 300000000000000;
-        other.ammo[MassDriverGun.kind].max = 300000000000000;
-        if (Math.random() < 0.5) {
-          const railGun = new GaussCannon({
-            pos: {
-              x: 0,
-              y: 0,
-            },
-            source: this._id,
-          });
-          railGun.stats.ammoRefreshRate =
-            GaussCannon.baseStats.ammoRefreshRate * 2;
-          other.secondaryWeapons = [railGun];
-          other.ammo[GaussCannon.kind] = {};
-          other.ammo[GaussCannon.kind].count = 2;
-          other.ammo[GaussCannon.kind].max = 2;
-          for (let w of other.secondaryWeapons) {
-            w.source = other._id;
+        if (Math.random() < 0.8) {
+          // Most have laser guns
+          otherLaser(other);
+          if (Math.random() < 0.5) {
+            otherPhoton(other);
           }
-        }
-        for (let w of other.weapons) {
-          w.source = other._id;
-        }
-        for (let w of other.secondaryWeapons) {
-          w.source = other._id;
+        } else {
+          otherMassDriver(other);
+          if (Math.random() < 0.5) {
+            otherGaussCannon(other);
+          }
         }
       }
-
+      for (let w of other.weapons) {
+        w.source = other._id;
+      }
+      for (let w of other.secondaryWeapons) {
+        w.source = other._id;
+      }
       other.action = () => "kChase";
       other.generate();
       other.attach(this.viewframe);
