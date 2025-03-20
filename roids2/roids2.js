@@ -20,6 +20,7 @@ import {
   debugCommands,
   shieldPowerups,
   superPowerups,
+  powerupControls,
 } from "./powerups.js";
 import { SpaceScene } from "./scene.js";
 
@@ -31,6 +32,8 @@ import {
   LaserGun,
 } from "../stardust/weapons/weapons.js";
 import { dropEmp } from "../stardust/weapons/empBlast.js";
+
+const globalCanvasScale = 0.95;
 
 bindGamepadHandlers();
 bindKeyHandlers();
@@ -125,6 +128,48 @@ const gameActions = {
   menu: () => {
     metaP.metaP();
   },
+};
+
+const inMenuActions = {
+  moveDown: (f = 1) => {
+    if (inMenuActions.debounce > performance.now()) {
+      return;
+    }
+    powerupControls("GoDown");
+    inMenuActions.debounce = performance.now() + 100;
+  },
+  moveUp: (f = 1) => {
+    if (inMenuActions.debounce > performance.now()) {
+      return;
+    }
+    powerupControls("GoUp");
+    inMenuActions.debounce = performance.now() + 100;
+  },
+  moveRight: (f = 1) => {
+    if (inMenuActions.debounce > performance.now()) {
+      return;
+    }
+    powerupControls("GoRight");
+    inMenuActions.debounce = performance.now() + 100;
+  },
+  moveLeft: (f = 1) => {
+    if (inMenuActions.debounce > performance.now()) {
+      return;
+    }
+    powerupControls("GoLeft");
+    inMenuActions.debounce = performance.now() + 100;
+  },
+  shoot: () => {},
+  secondaryShoot: () => {
+    if (inMenuActions.debounce > performance.now()) {
+      return;
+    }
+    powerupControls("Accept");
+    inMenuActions.debounce = performance.now() + 100;
+  },
+  shield: () => {},
+  menu: () => {},
+  debounce: 0,
 };
 
 const showHUDInfo = () => {
@@ -296,6 +341,7 @@ const focusTrap = document.getElementById("focus-trap");
 focusTrap.focus(); // Set focus to the hidden input
 
 const controller = handleControls(gameActions, keyMap, buttonMap);
+const menuController = handleControls(inMenuActions, keyMap, buttonMap);
 
 const scale = isMobile() ? 0.12 : SpaceScene.MAXSCALE;
 
@@ -869,6 +915,8 @@ app.ticker.add((delta) => {
   }
   if (!powerUpChosen) {
     // This needs to be after setting up the chooser above
+    // It is the wait loop in the powerup screen
+    menuController();
     return;
   }
   if (!isLandscape() && !msgs.visible) {
@@ -936,6 +984,7 @@ app.ticker.add((delta) => {
       resetPlayerPVA(false);
       resetKeys();
       spaceScene.addAsteroids(nextLevel.asteroids);
+      console.log(nextLevel.shipLoadouts);
       spaceScene.addEnemies(nextLevel.ships, nextLevel.shipLoadouts);
       countdown = 0;
       finishCountdown === 0;
@@ -971,19 +1020,29 @@ app.ticker.add((delta) => {
 });
 
 function getLandscapeDimensions() {
-  const screenWidth = window.innerWidth;
-  const screenHeight = window.innerHeight;
+  const rootFontSize = parseFloat(
+    getComputedStyle(document.documentElement).fontSize,
+  );
+  const marginInPixels = rootFontSize; // 1rem of additional margin
+  const totalMarginWidth = marginInPixels * 2;
+  const totalMarginHeight = marginInPixels * 2;
 
-  if (screenWidth >= screenHeight) {
-    return { width: screenWidth, height: screenHeight };
+  const availableScreenWidth = window.innerWidth - totalMarginWidth;
+  const availableScreenHeight = window.innerHeight - totalMarginHeight;
+
+  const scaledAvailableWidth = availableScreenWidth * globalCanvasScale;
+  const scaledAvailableHeight = availableScreenHeight * globalCanvasScale;
+
+  if (scaledAvailableWidth >= scaledAvailableHeight) {
+    return { width: scaledAvailableWidth, height: scaledAvailableHeight };
   } else {
-    return { width: screenHeight, height: screenWidth };
+    return { width: scaledAvailableHeight, height: scaledAvailableWidth };
   }
 }
 
 function resizeForLandscape() {
   // Renamed function
-  const landscapeDimensions = getLandscapeDimensions(); // Using renamed function
+  let landscapeDimensions = getLandscapeDimensions();
   app.renderer.resize(landscapeDimensions.width, landscapeDimensions.height); // Using renamed variable
   console.log(
     `Resized for Landscape: Width: ${landscapeDimensions.width}, Height: ${landscapeDimensions.height}`,

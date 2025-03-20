@@ -217,7 +217,7 @@ class SpaceScene extends Scene {
       other.disabled = performance.now() + 500;
       // They start 500ms later
 
-      if (localLoadouts) {
+      if (localLoadouts.length > 0) {
         const loadout = localLoadouts[0];
         console.log(loadout);
         if (loadout?.weapon === "kLaserGun") {
@@ -290,8 +290,8 @@ class SpaceScene extends Scene {
 
   // TODO: will need a destructor for all the created objects
   update(delta) {
-    const nv = sqnorm(this.player.vel.x, this.player.vel.y);
-    // TODO: speed limit
+    this.app.canvas.style.translate = `0px 0px`;
+    document.body.style.backgroundColor = "black";
     this.starfield.update(this.player.vel);
     this.viewframe.update();
 
@@ -478,6 +478,12 @@ class SpaceScene extends Scene {
           if (b.source === this.player._id) {
             continue;
           }
+          // AAAA
+          const rx = -2 + Math.floor(Math.random() * 4);
+          const ry = -2 + Math.floor(Math.random() * 4);
+          this.app.canvas.style.translate = `${rx}px ${ry}px`;
+          document.body.style.backgroundColor = "#211";
+
           if (window.drumSampler) {
             window.drumSampler.triggerAttackRelease("a4", 0.5); // Cowbell
           }

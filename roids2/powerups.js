@@ -5,6 +5,7 @@ export {
   debugCommands,
   shieldPowerups,
   superPowerups,
+  powerupControls,
 };
 
 import {
@@ -12,6 +13,7 @@ import {
   MassDriverGun,
   LaserGun,
   PhotonTorpedoLauncher,
+  PlasmaGun,
 } from "../stardust/weapons/weapons.js";
 
 const glass = document.getElementById("glass");
@@ -51,7 +53,8 @@ const powerupContainer = document.getElementById("powerup-container");
 
 let selection = null;
 
-document.addEventListener("keydown", (ev) => {
+const powerupControls = (ev) => {
+  console.log(ev);
   if (powerupContainer.style.display != "flex") {
     return;
   }
@@ -59,7 +62,7 @@ document.addEventListener("keydown", (ev) => {
   const isChoice = selection.classList.contains("powerup-choice");
   const isSkip = selection.id === "skip-powerup";
   // TODO: these should be the real controls, including the gamepad
-  if (ev.key == "ArrowLeft" || ev.key == "ArrowRight") {
+  if (ev == "GoLeft" || ev == "GoRight") {
     if (isChoice) {
       const other = Array.from(
         powerupContainer.querySelectorAll(".powerup-choice"),
@@ -68,7 +71,7 @@ document.addEventListener("keydown", (ev) => {
       selection = other;
     }
   }
-  if (ev.key == "ArrowDown") {
+  if (ev == "GoDown") {
     if (isH2) {
       selection.classList.remove("powerup-selected");
       selection = powerupContainer.querySelector(".powerup-choice");
@@ -77,7 +80,7 @@ document.addEventListener("keydown", (ev) => {
       selection = powerupContainer.querySelector("#skip-powerup");
     }
   }
-  if (ev.key == "ArrowUp") {
+  if (ev == "GoUp") {
     if (isChoice) {
       selection.classList.remove("powerup-selected");
       selection = powerupContainer.querySelector("h2");
@@ -86,13 +89,13 @@ document.addEventListener("keydown", (ev) => {
       selection = powerupContainer.querySelector(".powerup-choice");
     }
   }
-  if (ev.key === "Enter") {
+  if (ev === "Accept") {
     selection.click();
     selection.classList.remove("powerup-selected");
     selection = null;
   }
   selection?.classList.add("powerup-selected");
-});
+};
 
 const offerChoices = (options = [], globals = {}) => {
   // Options is a list of powerups, of the form
@@ -196,6 +199,38 @@ const allPowerUpChoices = (player) => [
         w.source = player._id;
       }
       setWeaponPowerup(player, "kMassDriverGun");
+    },
+  },
+  {
+    id: "kPlasmaGun",
+    name: "Plasma gun",
+    description: () => {
+      const title = "<h2>Primary weapon</h2>";
+      const htmlA = PlasmaGun.present();
+      const htmlB = player.weapons[0].present();
+      return `${title} ${htmlA} <h3>replaces</h3> ${htmlB}`;
+    },
+    glyph: "plasmagun.png",
+    lambda: () => {
+      const plasmaGun1 = new PlasmaGun({
+        pos: {
+          x: -40,
+          y: 40,
+        },
+      });
+      const plasmaGun2 = new PlasmaGun({
+        pos: {
+          x: -40,
+          y: -40,
+        },
+      });
+
+      player.weapons = [plasmaGun1, plasmaGun2];
+
+      for (let w of player.weapons) {
+        w.source = player._id;
+      }
+      setWeaponPowerup(player, "kPlasmaGun");
     },
   },
   {
