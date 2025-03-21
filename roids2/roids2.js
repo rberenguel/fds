@@ -208,7 +208,8 @@ const showHUDInfo = () => {
   const b = wb.html;
   const c = wc.html;
 
-  hull.innerHTML = `H:${player.e.toFixed(0)}`;
+  hull.innerHTML = `H:${((player.e / 1000) * 100).toFixed(0)}%`;
+  // TODO: use a maxE instead
   let S = "";
   if (player.activeAbility === "kDeflectorShield") {
     S = "(d):";
@@ -390,6 +391,7 @@ const player = new Lynx({
   secondaryWeapons: secondaryWeapons,
 });
 player.human = true;
+player.e = 1500;
 
 const resetStats = (player) => {
   player.stats = {
@@ -501,18 +503,7 @@ if (location.href.startsWith("http")) {
   //player.emp = true
 }
 
-const resetPlayerPVA = (regenerate = false) => {
-  player.human = true;
-  player.pos = {
-    x: (0.5 * app.renderer.width) / scale,
-    y: (0.5 * app.renderer.height) / scale,
-  };
-  player.vel = {
-    x: 0,
-    y: 0,
-  };
-  player.r = 0;
-  player.lives = 1;
+const resetPlayerAmmo = (player) => {
   if (player.weapons[0].ammo) {
     player.ammo[player.weapons[0].kind] = {};
     player.ammo[player.weapons[0].kind].count =
@@ -527,9 +518,24 @@ const resetPlayerPVA = (regenerate = false) => {
     player.ammo[player.secondaryWeapons[0].kind].max =
       player.secondaryWeapons[0].ammoMax * player.extraAmmo;
   }
+};
+
+const resetPlayerPVA = (regenerate = false) => {
+  player.human = true;
+  player.pos = {
+    x: (0.5 * app.renderer.width) / scale,
+    y: (0.5 * app.renderer.height) / scale,
+  };
+  player.vel = {
+    x: 0,
+    y: 0,
+  };
+  player.r = 0;
+  player.lives = 1;
+  resetPlayerAmmo(player);
   player.activeAbilityEnergy = 1;
   spaceScene.player = player;
-  player.e = 1000; // TODO: this should be the current player maximum instead
+  player.e = 1500; // TODO: this should be the current player maximum instead
   if (regenerate) {
     player.generate(true);
     spaceScene.bindPlayer(); // This is like very disconnected?
@@ -600,14 +606,18 @@ const fullRestart = () => {
   player.powerUps = {};
   player.pointSight = false; // TODO There are more things to reset
   player.emergencyBrakes = false;
+  player.activeAbility = undefined;
+
   player.extraAmmo = 1;
   player.yawRate = 0.03;
   player.accel = 0.1;
-  player.energyShield = 1;
+  player.energyShield = 0;
   player.deflectorShield = 0;
+  player.phaseShield = 0;
   const { weapons, secondaryWeapons } = baseWeapons();
   player.weapons = weapons;
   player.secondaryWeapons = secondaryWeapons;
+  resetPlayerAmmo(player);
   for (let w of player.weapons) {
     w.source = player._id;
   }
@@ -901,15 +911,28 @@ app.ticker.add((delta) => {
       showHUDInfo: showHUDInfo,
       player: player,
     };
-    if (level === 5) {
+    if (level === 3) {
       console.info("Offering only shields!");
       offerChoices(shieldPowerups(player), globals);
-    } else if (level === 15) {
+      return;
+    }
+    if (level === 15) {
       console.info("Offering the good stuff");
       offerChoices(superPowerups(player), globals);
-    } else {
-      offerChoices(choices.slice(0, 2), globals);
+      return;
     }
+    if (level < 3) {
+      offerChoices(choices.slice(0, 2), globals);
+      return;
+    } else {
+      const choices = [
+        ...allPowerUpChoices(player).concat(shieldPowerups(player)),
+      ];
+      choices.sort(() => Math.random() - 0.5);
+      offerChoices(choices.slice(0, 2), globals);
+      return;
+    }
+    // Leaving the unused return while I sort out the options above better.
 
     return;
   }
@@ -1016,6 +1039,7 @@ app.ticker.add((delta) => {
     return;
   }
   spaceScene.update(delta);
+  // TODO: Game over loop lands around here.
   showHUDInfo();
 });
 
