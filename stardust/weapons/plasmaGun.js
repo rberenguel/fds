@@ -36,6 +36,7 @@ class PlasmaGun extends Gun {
   constructor(props) {
     super({ ...props });
     this.stats = { ...this.constructor.baseStats };
+    this.color = 0x00ffff;
   }
 
   fire(shooter, bulletList) {
@@ -71,7 +72,7 @@ class PlasmaGun extends Gun {
     b.firedBy = "kPlasmaGun";
     bulletList.push(b);
     if (window.drumSampler && shooter.human) {
-      window.drumSampler.triggerAttackRelease("g0", 0.5); // Snarestick
+      window.drumSampler.triggerAttackRelease("c0", 0.5); // Plasma, based on Ride1_OH_FF_1
     }
   }
 }

@@ -37,7 +37,7 @@ class PhotonTorpedoLauncher extends Gun {
   constructor(props) {
     super({ ...props });
     this.stats = { ...this.constructor.baseStats };
-    this.color = props.color ?? 0xffcc33;
+    this.color = props.color ?? 0xff0000;
     this.haloColor = props.haloColor ?? 0xffcc33;
   }
 
@@ -84,7 +84,7 @@ class PhotonTorpedoLauncher extends Gun {
     b.firedBy = "kPhotonTorpedoLauncher";
     bulletList.push(b);
     if (window.drumSampler && shooter.human) {
-      window.drumSampler.triggerAttackRelease("b0", 0.5); // Hihat foot stomp
+      window.drumSampler.triggerAttackRelease("b0", 0.8); // Torpedo, based on Hihat foot stomp
     }
     shooter.ammo[PhotonTorpedoLauncher.kind].count--;
   }
@@ -113,7 +113,7 @@ class PhotonTorpedo extends Base1 {
     }
 
     super({ ...props, meshes: meshes });
-    this.color = props.color ?? 0xffaa33;
+    this.color = props.color ?? 0xff0000;
     this.e = props.e ?? 10;
     this.mass = props.mass ?? 3;
     this.minRange = props.minRange ?? 1500;

@@ -536,7 +536,8 @@ class SpaceScene extends Scene {
               // Note that this can be used for mine/bomb too
               // This could be temporary at some point
               o.disabled = performance.now() + 3000;
-              console.log(`${o} is disabled`);
+            } else if (b.kind === "kBombBlast") {
+              o.e -= b.e;
             } else {
               o.e -= b.e;
               b.e -= oe;

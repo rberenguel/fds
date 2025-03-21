@@ -38,6 +38,7 @@ class MassDriverGun extends Gun {
   constructor(props) {
     super({ ...props });
     this.stats = { ...this.constructor.baseStats };
+    this.color = 0xffffff;
   }
 
   fire(shooter, bulletList) {
@@ -79,7 +80,7 @@ class MassDriverGun extends Gun {
     bulletList.push(b);
     shooter.ammo[MassDriverGun.kind].count--;
     if (window.drumSampler && shooter.human) {
-      window.drumSampler.triggerAttackRelease("c0", 0.5); // Ride FF
+      window.drumSampler.triggerAttackRelease("g0", 0.5); // Snarestick, pretty good for a machine gun.
     }
   }
 }

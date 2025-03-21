@@ -50,6 +50,9 @@ class Ship extends Base1 {
       props.activeAbilityEnergyRecoveryRate ?? 0;
     this.activeAbilityEnergy = 1;
     this.maxActiveAbilityEnergy = 1;
+    this.shieldEnergyRecoveryRate = props.shieldEnergyRecoveryRate ?? 0;
+    this.shieldEnergy = 1;
+    this.maxShieldEnergy = 1;
     this._id = getShipId();
     this.prevShot = -1;
     this.secondaryPrevShot = -1;
@@ -202,7 +205,7 @@ class Ship extends Base1 {
     if (dist(other.pos, this.pos) < 50) {
       return true;
     }
-    if (dist(other.pos, this.pos) < (other.radius ?? 50) + 50) {
+    if (dist(other.pos, this.pos) < (other.radius ?? 0) + 50) {
       return true;
     }
 
@@ -418,6 +421,8 @@ class Ship extends Base1 {
       this.activeAbilityEnergy,
       this.maxActiveAbilityEnergy,
     );
+    this.shieldEnergy += this.shieldEnergyRecoveryRate * delta.deltaTime;
+    this.shieldEnergy = Math.min(this.shieldEnergy, this.maxShieldEnergy);
     let w = this.weapons[0];
     if (w) {
       const rr = w.stats.ammoRefreshRate;
@@ -478,6 +483,11 @@ class Ship extends Base1 {
           presentation.alpha = 0.2;
         }
       } else {
+        if (presentation.name == "primaryWeapon") {
+          if (this.weapons[0] && this.weapons[0].kind) {
+            presentation.tint = this.weapons[0].color;
+          }
+        }
         if (presentation.name == "secondaryWeapon") {
           if (
             this.secondaryWeapons[0] &&
@@ -489,7 +499,6 @@ class Ship extends Base1 {
           }
         }
         if (presentation.name == "pointSight") {
-          console.log(this.pointSight);
           if (!this.pointSight) {
             presentation.tint = 0xff0000;
             presentation.alpha = 0.0;
@@ -631,19 +640,6 @@ class Lynx extends Ship {
           source: this._id,
         });
         secondaryWeapons = [photonTorpedo, railGun];
-        /*const massDriverGun1 = new MassDriverGun({
-          pos: {
-            x: -40,
-            y: 40,
-          },
-        });
-        const massDriverGun2 = new MassDriverGun({
-          pos: {
-            x: -40,
-            y: -40,
-          },
-        });*/
-        //weapons = [massDriverGun1, massDriverGun2];
       } catch (err) {
         console.error(err);
       }
@@ -682,6 +678,20 @@ class Bobcat extends Ship {
       width: 10,
       fill: 0x000000,
     });
+    const meshAround = new Mesh({
+      kind: Meshes.kPoly,
+      vertices: [
+        [-70, 50],
+        [-50, 60],
+        [70, 0],
+        [-50, -60],
+        [-70, -50],
+        [-30, 0],
+        [-70, 50],
+      ],
+      color: 0xffffff,
+      width: 10,
+    });
     const secondaryWeaponMesh = new Mesh({
       name: "secondaryWeapon",
       kind: Meshes.kCircle,
@@ -690,8 +700,40 @@ class Bobcat extends Ship {
       color: 0xffffff,
       fill: 0xffffff,
     });
+    const primaryWeaponMesh1 = new Mesh({
+      name: "primaryWeapon",
+      kind: Meshes.kPoly,
+      vertices: [
+        [15, 35],
+        [-50, 35],
+        [-50, 25],
+        [15, 25],
+      ],
+      fill: 0xffffff,
+    });
+    const primaryWeaponMesh2 = new Mesh({
+      name: "primaryWeapon",
+      kind: Meshes.kPoly,
+      vertices: [
+        [15, -35],
+        [-50, -35],
+        [-50, -25],
+        [15, -25],
+      ],
+      fill: 0xffffff,
+    });
     let weapons = [];
-    super({ ...props, meshes: [mesh, secondaryWeaponMesh], weapons: weapons });
+    super({
+      ...props,
+      meshes: [
+        mesh,
+        secondaryWeaponMesh,
+        primaryWeaponMesh1,
+        primaryWeaponMesh2,
+        meshAround,
+      ],
+      weapons: weapons,
+    });
     try {
       /*const plasmaGun1 = new PlasmaGun({
         pos: {

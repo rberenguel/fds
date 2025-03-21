@@ -1,13 +1,13 @@
-export { EmpBlast, dropEmp };
+export { Bomb, dropBomb };
 
 import { Mesh, Meshes } from "../mesh.js";
 import { Base1 } from "../base.js";
 import { FillGradient } from "../../libs/3rdparty/pixi.mjs";
-const dropEmp = (shooter, bulletList) => {
+const dropBomb = (shooter, bulletList) => {
   if (shooter.human) {
-    shooter.stats.shots["kEmp"].fired++;
+    shooter.stats.shots["kBomb"].fired++;
   }
-  const b = new EmpBlast({
+  const b = new Bomb({
     pos: shooter.pos,
     vel: {
       x: 0,
@@ -17,25 +17,25 @@ const dropEmp = (shooter, bulletList) => {
     source: shooter._id,
   });
   b.shooter = shooter;
-  b.firedBy = "kEmp";
+  b.firedBy = "kBomb";
   bulletList.push(b);
 };
 
-class EmpBlast extends Base1 {
+class Bomb extends Base1 {
   constructor(props) {
     let meshes = [];
 
-    for (let i = 1; i <= 10; i++) {
+    for (let i = 1; i <= 20; i++) {
       const mesh = new Mesh({
         kind: Meshes.kCircle,
         center: [0, 0],
-        radius: 10 * i,
+        radius: 3 * i,
         color: 0x2089d9,
         width: 2,
         gradienter:
           (mesh, p) =>
           (s1 = 1, s2 = 1) => {
-            const colorStops = [0x2089d9, 0x000000];
+            const colorStops = [0xda9933, 0x999933];
             const gradientFill = new FillGradient(
               -50 * s1,
               -50 * s2,
@@ -52,17 +52,28 @@ class EmpBlast extends Base1 {
               .stroke({ fill: gradientFill, width: 2 }); //, width: mesh.width ?? 4 });
           },
       });
+      mesh.name = "ripple";
       meshes.push(mesh);
     }
+    const mesh = new Mesh({
+      kind: Meshes.kCircle,
+      center: [0, 0],
+      radius: 10,
+      fill: 0xcc6600,
+    });
+    mesh.name = "bomb";
+    meshes.push(mesh);
     super({ ...props, meshes: meshes });
-    this.e = 100;
+    this.e = 5000;
     this.f = props.f ?? 0.2; // Multiplying factor for energy
-    this.decay = props.decay ?? 0.1;
+    this.decay = props.decay ?? 0.2;
     this.source = props.source ?? -1;
     this.baseScale = props.scale ?? 1;
-    this.kind = "kEmpBlast";
+    this.scale = 1;
+    this.kind = "kBombBlast";
     this.s = 10; //
     this.radius = 100; // TODO
+    this.goOff = performance.now() + 2000;
   }
 
   generate() {
@@ -72,10 +83,12 @@ class EmpBlast extends Base1 {
   update(delta) {
     super.update(delta);
     super.move(delta.deltaTime);
-    this.scale = this.baseScale * (10 - this.s);
-    const r = 100 * (10 - this.s);
-    this.radius = r;
-    this.s -= this.decay * delta.deltaTime;
+    if (this.goOff < performance.now()) {
+      this.scale = this.baseScale * (10 - this.s);
+      const r = 60 * (10 - this.s);
+      this.radius = r;
+      this.s -= this.decay * delta.deltaTime;
+    }
     if (this.s < 1) {
       this.e = -1;
     }
@@ -88,9 +101,23 @@ class EmpBlast extends Base1 {
         this.presentation = { destroyed: true };
         return;
       }
-      presentation.scale = this.scale;
-      presentation.alpha = 0.4 + Math.random() * 0.3;
-      presentation.rotation = Math.random() * Math.PI * 2;
+      if (this.goOff > performance.now()) {
+        if (presentation.name === "bomb") {
+          presentation.alpha = 1;
+        }
+        if (presentation.name === "ripple") {
+          presentation.alpha = 0;
+        }
+      } else {
+        if (presentation.name === "bomb") {
+          presentation.alpha = 0;
+        }
+        if (presentation.name === "ripple") {
+          presentation.scale = this.scale;
+          presentation.alpha = 0.4 + Math.random() * 0.3;
+          presentation.rotation = Math.random() * Math.PI * 2;
+        }
+      }
     }
   }
 }

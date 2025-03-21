@@ -32,6 +32,7 @@ import {
   LaserGun,
 } from "../stardust/weapons/weapons.js";
 import { dropEmp } from "../stardust/weapons/empBlast.js";
+import { dropBomb } from "../stardust/weapons/bomb.js";
 
 const globalCanvasScale = 0.95;
 
@@ -87,6 +88,10 @@ const gameActions = {
     );
   },
   secondaryShoot: () => {
+    if (gameOver) {
+      fullRestart();
+      return;
+    }
     if (player.e < 10) {
       return;
     }
@@ -105,22 +110,30 @@ const gameActions = {
     } catch {}
   },
   shield: () => {
-    if (player.activeAbility && player.activeAbilityEnergy >= 1) {
+    if (player.shield && player.shieldEnergy >= 1) {
       const now = performance.now();
-      if (player.activeAbility === "kDeflectorShield") {
+      if (player.shield === "kDeflectorShield") {
         player.deflectorShield = now + 3000;
-        player.activeAbilityEnergy = 0;
+        player.shieldEnergy = 0;
       }
-      if (player.activeAbility === "kEnergyShield") {
+      if (player.shield === "kEnergyShield") {
         player.energyShield = now + 3000;
-        player.activeAbilityEnergy = 0;
+        player.shieldEnergy = 0;
       }
-      if (player.activeAbility === "kPhaseShield") {
+      if (player.shield === "kPhaseShield") {
         player.phaseShield = now + 3000;
-        player.activeAbilityEnergy = 0;
+        player.shieldEnergy = 0;
       }
+    }
+  },
+  activeAbility: () => {
+    if (player.activeAbility && player.activeAbilityEnergy >= 1) {
       if (player.activeAbility === "kEmp") {
         dropEmp(player, player.bulletList);
+        player.activeAbilityEnergy = 0;
+      }
+      if (player.activeAbility === "kBomb") {
+        dropBomb(player, player.bulletList);
         player.activeAbilityEnergy = 0;
       }
     }
@@ -136,28 +149,28 @@ const inMenuActions = {
       return;
     }
     powerupControls("GoDown");
-    inMenuActions.debounce = performance.now() + 100;
+    inMenuActions.debounce = performance.now() + 300;
   },
   moveUp: (f = 1) => {
     if (inMenuActions.debounce > performance.now()) {
       return;
     }
     powerupControls("GoUp");
-    inMenuActions.debounce = performance.now() + 100;
+    inMenuActions.debounce = performance.now() + 300;
   },
   moveRight: (f = 1) => {
     if (inMenuActions.debounce > performance.now()) {
       return;
     }
     powerupControls("GoRight");
-    inMenuActions.debounce = performance.now() + 100;
+    inMenuActions.debounce = performance.now() + 300;
   },
   moveLeft: (f = 1) => {
     if (inMenuActions.debounce > performance.now()) {
       return;
     }
     powerupControls("GoLeft");
-    inMenuActions.debounce = performance.now() + 100;
+    inMenuActions.debounce = performance.now() + 300;
   },
   shoot: () => {},
   secondaryShoot: () => {
@@ -165,7 +178,7 @@ const inMenuActions = {
       return;
     }
     powerupControls("Accept");
-    inMenuActions.debounce = performance.now() + 100;
+    inMenuActions.debounce = performance.now() + 300;
   },
   shield: () => {},
   menu: () => {},
@@ -176,14 +189,14 @@ const showHUDInfo = () => {
   const nextWaveCountdown = document.getElementById("next-wave-countdown");
   const scoreDiv = document.getElementById("score");
   const hull = document.getElementById("hull");
-  const activeAbilityEnergy = document.getElementById("shield-energy");
+  const shieldEnergy = document.getElementById("shield-energy");
   const containerPrimary = document.getElementById("primary-weapon-types");
   const containerSecondary = document.getElementById("secondary-weapon-types");
   const ammoPContainer = document.getElementById("primary-weapon-ammo");
   const ammoSContainer = document.getElementById("secondary-weapon-ammo");
   if (player.e < 0) {
     hull.innerHTML = "";
-    activeAbilityEnergy.innerHTML = "";
+    shieldEnergy.innerHTML = "";
     containerPrimary.innerHTML = "";
     containerSecondary.innerHTML = "";
     ammoPContainer.innerHTML = "";
@@ -211,23 +224,21 @@ const showHUDInfo = () => {
   hull.innerHTML = `H:${((player.e / 1000) * 100).toFixed(0)}%`;
   // TODO: use a maxE instead
   let S = "";
-  if (player.activeAbility === "kDeflectorShield") {
+  if (player.shield === "kDeflectorShield") {
     S = "(d):";
   }
-  if (player.activeAbility === "kEnergyShield") {
+  if (player.shield === "kEnergyShield") {
     S = "(e):";
   }
-  if (player.activeAbility === "kPhaseShield") {
+  if (player.shield === "kPhaseShield") {
     S = "(p):";
   }
-  if (player.activeAbility === "kEmp") {
+  /*if (player.shield === "kEmp") {
     S = "(m):";
-  }
-  activeAbilityEnergy.innerHTML = `${S}${player.activeAbilityEnergy.toFixed(
-    2,
-  )}`;
+  }*/
+  shieldEnergy.innerHTML = `${S}${player.shieldEnergy.toFixed(2)}`;
   if (S === "") {
-    activeAbilityEnergy.innerHTML = "";
+    shieldEnergy.innerHTML = "";
   }
   containerPrimary.innerHTML = `W1: ${a}${b}`;
 
@@ -344,7 +355,15 @@ focusTrap.focus(); // Set focus to the hidden input
 const controller = handleControls(gameActions, keyMap, buttonMap);
 const menuController = handleControls(inMenuActions, keyMap, buttonMap);
 
-const scale = isMobile() ? 0.12 : SpaceScene.MAXSCALE;
+const scale = (() => {
+  //isMobile() ? 0.12 : SpaceScene.MAXSCALE;
+  //AAAA
+  const { width, height } = getLandscapeDimensions();
+  // width*height should be 1.5 million
+  return (SpaceScene.MAXSCALE * width * height) / 1500000;
+})();
+
+console.log(scale);
 
 const baseWeapons = () => {
   let weapons = [];
@@ -430,6 +449,11 @@ const resetStats = (player) => {
         hitsAsteroid: 0,
         hitsShip: 0,
       },
+      kBomb: {
+        fired: 0,
+        hitsAsteroid: 0,
+        hitsShip: 0,
+      },
     },
   };
 };
@@ -486,10 +510,10 @@ const presentStats = (player) => {
 
 resetStats(player);
 
-player.activeAbilityEnergy = 1;
-player.activeAbilityEnergyRecoveryRate = 0.0005;
+player.shieldEnergy = 1;
+player.shieldEnergyRecoveryRate = 0.0007;
 player.powerUps = {};
-player.recoveryRate = 0.04;
+player.recoveryRate = 0.08;
 player.emergencyBrakes = false;
 player.energyShield = 0;
 player.deflectorShield = 0;
@@ -533,6 +557,7 @@ const resetPlayerPVA = (regenerate = false) => {
   player.r = 0;
   player.lives = 1;
   resetPlayerAmmo(player);
+  player.shieldEnergy = 1;
   player.activeAbilityEnergy = 1;
   spaceScene.player = player;
   player.e = 1500; // TODO: this should be the current player maximum instead
@@ -606,6 +631,7 @@ const fullRestart = () => {
   player.powerUps = {};
   player.pointSight = false; // TODO There are more things to reset
   player.emergencyBrakes = false;
+  player.shield = undefined;
   player.activeAbility = undefined;
 
   player.extraAmmo = 1;
@@ -697,6 +723,7 @@ const pauseMenu = () => {
     paused = false;
   });
   backToGame.textContent = "Back to the game";
+  backToGame.classList.add("pause-button");
   const backToMainMenu = document.createElement("DIV");
   backToMainMenu.style.cursor = "pointer";
   backToMainMenu.addEventListener("click", () => {
@@ -705,11 +732,12 @@ const pauseMenu = () => {
     showMainMenu = true;
     fullRestart();
   });
+  backToMainMenu.classList.add("pause-button");
   backToMainMenu.textContent = "Back to the main menu";
   wrapper.appendChild(backToGame);
   wrapper.appendChild(backToMainMenu);
   msgs.div(wrapper);
-  msgs.show({ glass: 0, msgs: 1000 });
+  msgs.show({ glass: 1000, msgs: 1001 });
   paused = true;
 };
 
@@ -735,6 +763,9 @@ const mainMenuCommands = [
     title: "Play",
     lambda: () => {
       showMainMenu = false;
+      finishCountdown = 0;
+      countdown = 0;
+      diffFinishCountdown = 0;
     },
   },
   {
@@ -761,6 +792,7 @@ const mainMenuCommands = [
 menuP.bind(mainMenuCommands, { blur: 30 }, false);
 
 const enemiesPerLevel = (level) => {
+  console.log(level);
   const obj = {
     level: level,
   };
@@ -860,7 +892,6 @@ const enemiesPerLevel = (level) => {
 let powerUpChosen = true;
 let offerPowerUpChoices = false;
 let countdown = 0;
-let diffcountDown = 0;
 let finishCountdown = 0;
 let diffFinishCountdown = 0;
 let level = 0;
@@ -911,22 +942,27 @@ app.ticker.add((delta) => {
       showHUDInfo: showHUDInfo,
       player: player,
     };
+    // Level is increased before being here
     if (level === 3) {
       console.info("Offering only shields!");
       offerChoices(shieldPowerups(player), globals);
       return;
     }
-    if (level === 15) {
-      console.info("Offering the good stuff");
-      offerChoices(superPowerups(player), globals);
-      return;
-    }
     if (level < 3) {
+      offerChoices(choices.slice(0, 2), globals);
+      return;
+    } else if (level < 8) {
+      const choices = [
+        ...allPowerUpChoices(player).concat(shieldPowerups(player)),
+      ];
+      choices.sort(() => Math.random() - 0.5);
       offerChoices(choices.slice(0, 2), globals);
       return;
     } else {
       const choices = [
-        ...allPowerUpChoices(player).concat(shieldPowerups(player)),
+        ...allPowerUpChoices(player).concat(
+          shieldPowerups(player).concat(superPowerups(player)),
+        ),
       ];
       choices.sort(() => Math.random() - 0.5);
       offerChoices(choices.slice(0, 2), globals);

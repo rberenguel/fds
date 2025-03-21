@@ -50,6 +50,7 @@ const currentPowerupsToDiv = (div, player) => {
 };
 
 const powerupContainer = document.getElementById("powerup-container");
+const currentPowerUpsHud = document.getElementById("current-powerups-hud");
 
 let selection = null;
 
@@ -139,6 +140,8 @@ const offerChoices = (options = [], globals = {}) => {
       console.info(`Setting ${option.id} to true`);
       globals.player.powerUps[option.id] = true;
       globals.player.stats.powerups.chosen++;
+      currentPowerUpsHud.innerHTML = "";
+      currentPowerupsToDiv(currentPowerUpsHud, globals.player);
     };
   }
   const skipPowerup = document.getElementById("skip-powerup");
@@ -388,38 +391,38 @@ const shieldPowerups = (player) => [
     id: "kDeflectorShield",
     name: "Deflector shield",
     description: () => {
-      const title = "<h2>Active ability</h2>";
+      const title = "<h2>Shield</h2>";
       let html = `${title}${shieldDescs["kDeflectorShield"]}`;
-      if (player.activeAbility) {
-        html += `<h3>replaces</h3> ${shieldDescs[player.activeAbility]}`;
+      if (player.shield) {
+        html += `<h3>replaces</h3> ${shieldDescs[player.shield]}`;
       }
       return html;
     },
     glyph: "deflectorshield.png",
     lambda: () => {
-      if (player.activeAbility) {
-        player.powerUps[player.activeAbility] = false;
+      if (player.shield) {
+        player.powerUps[player.shield] = false;
       }
-      player.activeAbility = "kDeflectorShield";
+      player.shield = "kDeflectorShield";
     },
   },
   {
     id: "kEnergy shield",
     name: "Energy shield",
     description: () => {
-      const title = "<h2>Active ability</h2>";
+      const title = "<h2>Shield</h2>";
       let html = `${title}${shieldDescs["kEnergyShield"]}`;
-      if (player.activeAbility) {
-        html += `<h3>replaces</h3> ${shieldDescs[player.activeAbility]}`;
+      if (player.shield) {
+        html += `<h3>replaces</h3> ${shieldDescs[player.shield]}`;
       }
       return html;
     },
     glyph: "energyshield.png",
     lambda: () => {
-      if (player.activeAbility) {
-        player.powerUps[player.activeAbility] = false;
+      if (player.shield) {
+        player.powerUps[player.shield] = false;
       }
-      player.activeAbility = "kDeflectorShield";
+      player.shield = "kEnergyShield";
     },
   },
 ];
@@ -429,19 +432,19 @@ const superPowerups = (player) => [
     id: "kPhaseShield",
     name: "Phase shield",
     description: () => {
-      const title = "<h2>Active ability</h2>";
+      const title = "<h2>Shield</h2>";
       let html = `${title}${shieldDescs["kPhaseShield"]}`;
-      if (player.activeAbility) {
-        html += `<h3>replaces</h3> ${shieldDescs[player.activeAbility]}`;
+      if (player.shield) {
+        html += `<h3>replaces</h3> ${shieldDescs[player.shield]}`;
       }
       return html;
     },
     glyph: "phaseshield.png",
     lambda: () => {
-      if (player.activeAbility) {
-        player.powerUps[player.activeAbility] = false;
+      if (player.shield) {
+        player.powerUps[player.shield] = false;
       }
-      player.activeAbility = "kPhaseShield";
+      player.shield = "kPhaseShield";
     },
   },
   {
@@ -449,9 +452,9 @@ const superPowerups = (player) => [
     name: "EMP pulse",
     description: () => {
       const title = "<h2>Active ability</h2>";
-      let html = `${title}${shieldDescs["kEmp"]}`;
-      if (player.activeAbility) {
-        html += `<h3>replaces</h3> ${shieldDescs[player.activeAbility]}`;
+      let html = `${title}${activeAbilityDescs["kEmp"]}`;
+      if (player.shield) {
+        html += `<h3>replaces</h3> ${activeAbilityDescs[player.activeAbility]}`;
       }
       return html;
     },
@@ -463,6 +466,25 @@ const superPowerups = (player) => [
       player.activeAbility = "kEmp";
     },
   },
+  {
+    id: "kBomb",
+    name: "Bomb",
+    description: () => {
+      const title = "<h2>Active ability</h2>";
+      let html = `${title}${activeAbilityDescs["kBomb"]}`;
+      if (player.shield) {
+        html += `<h3>replaces</h3> ${activeAbilityDescs[player.activeAbility]}`;
+      }
+      return html;
+    },
+    glyph: "bomb.png",
+    lambda: () => {
+      if (player.activeAbility) {
+        player.powerUps[player.activeAbility] = false;
+      }
+      player.activeAbility = "kBomb";
+    },
+  },
 ];
 
 const shieldDescs = {
@@ -472,7 +494,12 @@ const shieldDescs = {
     "<p>Energy shield</p><hr/>Stops completely energy weapons for 3 seconds, no effect on kinetic weapons.<br/><em>You can't fire your secondary weapon while the shield is on</em>",
   kPhaseShield:
     "<p>Phase shield</p><hr/>Let's you pass through asteroids, projectiles and beams for 3 seconds.<br/><em>You can't fire your secondary weapon while the shield is on</em>",
+};
+
+const activeAbilityDescs = {
   kEmp: "<p>EMP pulse</p><hr/>Generates an EMP pulse where you are, disabling enemy ships for 3 seconds.",
+  kBomb:
+    "<p>Gravitic bomb</p><hr/>Drop it and it will explode in 1 second for massive damage. Won't affect your ship.",
 };
 
 const debugCommands = (player) => {

@@ -61,6 +61,10 @@ class Asteroid extends Base1 {
     if (dist(other.pos, this.pos) < 1.2 * this.size) {
       return true;
     }
+    if (dist(other.pos, this.pos) < (other.radius ?? 0) + 1.1 * this.size) {
+      // For bombs
+      return true;
+    }
     return false;
   }
 

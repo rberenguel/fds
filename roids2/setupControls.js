@@ -14,6 +14,7 @@ const commandNames = {
   shoot: "Fire primary weapon",
   secondaryShoot: "Fire secondary weapon",
   shield: "Turn on shields briefly",
+  activeAbility: "Use ability",
   menu: "Open pause menu",
 };
 
@@ -29,6 +30,7 @@ const defaultKeyboardControls = {
   Space: "shoot",
   Enter: "secondaryShoot",
   KeyX: "shield",
+  KeyZ: "activeAbility",
   KeyQ: "menu",
 };
 
@@ -49,6 +51,8 @@ const defaultPadControls = {
   b1: "shoot",
   b2: "secondaryShoot",
   b3: "shield",
+  b4: "activeAbility",
+  b9: "menu",
 };
 
 if (

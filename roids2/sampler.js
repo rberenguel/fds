@@ -1,10 +1,10 @@
 const drumSampler = new Tone.Sampler({
   attack: 0,
   urls: {
-    c0: "ride1_OH_FF_1.mp3",
+    c0: "plasma.mp3",
     c1: "ride1_OH_MP_1.mp3",
     c2: "ride1_OH_FF_3.mp3",
-    b0: "hihatFootStomp_OH_MP_1.mp3",
+    b0: "torpedo.mp3",
     b1: "hihatFootStomp_OH_MP_3.mp3",
     b2: "hihatFootStomp_OH_MP_4.mp3",
     d0: "hihatClosed_OH_F_1.mp3",
