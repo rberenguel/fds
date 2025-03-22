@@ -13,7 +13,7 @@ const messages = {
     "Killed by a wimpy ship",
     "The AI in this game is not particularly good. Just sayin'",
     "Maybe try shooting back next time?",
-    "Next time move out of the way"
+    "Next time move out of the way",
   ],
   kShipSecondaryWeapon: [
     "Next time try to avoid that {PLACEHOLDER}",

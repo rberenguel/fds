@@ -1032,7 +1032,7 @@ app.ticker.add((delta) => {
     if (level < 3) {
       offerChoices(choices.slice(0, 2), globals);
       return;
-    } else if (level < 8) {
+    } else if (level < 7) {
       const choices = [
         ...allPowerUpChoices(player).concat(shieldPowerups(player)),
       ];

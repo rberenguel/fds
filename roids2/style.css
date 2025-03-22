@@ -1,10 +1,11 @@
 :root {
-  font-size: calc(calc(min(1vw, 1vh)));
+  /*font-size: calc(calc(min(1vw, 1vh)));*/
   font-family: "Sixtyfour";
 }
 
 html,
 body {
+  font-size: 0.7rem;
   margin: 0;
   padding: 0;
   overflow: hidden;
@@ -216,11 +217,22 @@ canvas {
   border-radius: 1rem; /* TODO: check all radii */
   border: 1px solid #ccc;
   text-align: center;
-  width: 40%;
+  width: 80rem; /* To fit all text */
   display: flex;
   flex-direction: row;
   justify-content: center;
   flex-wrap: wrap;
+}
+
+.powerup-title {
+  font-size: 2rem;
+  color: #0cc;
+}
+
+.powerup-replaces {
+  font-size: 1.2rem;
+  color: red;
+  font-style: italic;
 }
 
 #powerup-container > h2 {
@@ -302,6 +314,7 @@ canvas {
 .choice-description {
   text-align: center;
   color: white;
+  font-size: 1.5rem;
 }
 
 .choice-description table {
@@ -347,4 +360,18 @@ canvas {
     font-size 300ms ease-out;
   pointer-events: none;
   z-index: 1001;
+}
+
+#about {
+  font-size: 1.5rem;
+  color: #cc0;
+  text-align: left;
+}
+
+#about em {
+  color: #06c;
+}
+
+#about code {
+  color: #c60;
 }

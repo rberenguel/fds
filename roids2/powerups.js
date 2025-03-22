@@ -172,6 +172,8 @@ const setSecondaryWeaponPowerup = (player, weapon) => {
   player.powerUps[weapon] = true;
 };
 
+const replaces = `<h3 class="powerup-replaces">replaces</h3>`;
+
 const allPowerUpChoices = (player) => [
   {
     id: "kMassDriverGun",
@@ -180,7 +182,7 @@ const allPowerUpChoices = (player) => [
       const title = "<h2>Primary weapon</h2>";
       const htmlA = MassDriverGun.present();
       const htmlB = player.weapons[0].present();
-      return `${title} ${htmlA} <h3>replaces</h3> ${htmlB}`;
+      return `${title} ${htmlA} ${replaces} ${htmlB}`;
     },
     glyph: "massdriver.png",
     lambda: () => {
@@ -214,7 +216,7 @@ const allPowerUpChoices = (player) => [
       const title = "<h2>Primary weapon</h2>";
       const htmlA = PlasmaGun.present();
       const htmlB = player.weapons[0].present();
-      return `${title} ${htmlA} <h3>replaces</h3> ${htmlB}`;
+      return `${title} ${htmlA} ${replaces} ${htmlB}`;
     },
     glyph: "plasmagun.png",
     lambda: () => {
@@ -246,7 +248,7 @@ const allPowerUpChoices = (player) => [
       const title = "<h2>Secondary weapon</h2>";
       const htmlA = GaussCannon.present();
       const htmlB = player.secondaryWeapons[0].present();
-      return `${title} ${htmlA} <h3>replaces</h3> ${htmlB}`;
+      return `${title} ${htmlA} ${replaces} ${htmlB}`;
     },
     glyph: "gausscannon.png",
     lambda: () => {
@@ -273,7 +275,7 @@ const allPowerUpChoices = (player) => [
       const title = "<h2>Secondary weapon</h2>";
       const htmlA = PhotonTorpedoLauncher.present();
       const htmlB = player.secondaryWeapons[0].present();
-      return `${title} ${htmlA} <h3>replaces</h3> ${htmlB}`;
+      return `${title} ${htmlA} ${replaces} ${htmlB}`;
     },
     glyph: "photontorpedo.png",
     lambda: () => {
@@ -300,7 +302,7 @@ const allPowerUpChoices = (player) => [
       const title = "<h2>Primary weapon</h2>";
       const htmlA = LaserGun.present();
       const htmlB = player.weapons[0].present();
-      return `${title} ${htmlA} <h3>replaces</h3> ${htmlB}`;
+      return `${title} ${htmlA} ${replaces} ${htmlB}`;
     },
     glyph: "lasergun.png",
     lambda: () => {
@@ -331,7 +333,7 @@ const allPowerUpChoices = (player) => [
     name: "Emergency brakes",
     description: () => {
       const title = "<h2>Passive utility</h2>";
-      return `${title}<p>Emergency brakes</p> Accelerate in the opposite direction of your travel to brake immediately.`;
+      return `${title}<p class='powerup-title'>Emergency brakes</p> Accelerate in the opposite direction of your travel to brake immediately.`;
     },
     glyph: "emergencybrakes.png",
     lambda: () => {
@@ -343,7 +345,7 @@ const allPowerUpChoices = (player) => [
     name: "Point sight",
     description: () => {
       const title = "<h2>Passive utility</h2>";
-      return `${title}<p>Point sight</p> Show an overlay of where you are aiming at. Particularly useful for long range weapons`;
+      return `${title}<p class='powerup-title'>Point sight</p> Show an overlay of where you are aiming at. Particularly useful for long range weapons`;
     },
     glyph: "pointsight.png",
     lambda: () => {
@@ -356,7 +358,7 @@ const allPowerUpChoices = (player) => [
     name: "Faster rotation",
     description: () => {
       const title = "<h2>Passive ability</h2>";
-      return `${title}<p>Faster rotation</p>Rotate faster. Does not accumulate.`;
+      return `${title}<p class='powerup-title'>Faster rotation</p>Rotate faster. Does not accumulate.`;
     },
     glyph: "rotatefaster.png",
     lambda: () => {
@@ -368,7 +370,7 @@ const allPowerUpChoices = (player) => [
     name: "Faster acceleration",
     description: () => {
       const title = "<h2>Passive ability</h2>";
-      return `${title}<p>Faster acceleration</p>Accelerate faster. Does not accumulate.`;
+      return `${title}<p class='powerup-title'>Faster acceleration</p>Accelerate faster. Does not accumulate.`;
     },
     glyph: "speedup.png",
     lambda: () => {
@@ -380,7 +382,7 @@ const allPowerUpChoices = (player) => [
     name: "Additional ammunition/energy",
     description: () => {
       const title = "<h2>Passive ability</h2>";
-      return `${title}<p>Additional ammunition/energy</p>x1.5 your storage. Does not accumulate.`;
+      return `${title}<p class='powerup-title'>Additional ammunition/energy</p>x1.5 your storage. Does not accumulate.`;
     },
     glyph: "extraammo.png",
     lambda: () => {
@@ -397,7 +399,7 @@ const shieldPowerups = (player) => [
       const title = "<h2>Shield</h2>";
       let html = `${title}${shieldDescs["kDeflectorShield"]}`;
       if (player.shield) {
-        html += `<h3>replaces</h3> ${shieldDescs[player.shield]}`;
+        html += `${replaces} ${shieldDescs[player.shield]}`;
       }
       return html;
     },
@@ -416,7 +418,7 @@ const shieldPowerups = (player) => [
       const title = "<h2>Shield</h2>";
       let html = `${title}${shieldDescs["kEnergyShield"]}`;
       if (player.shield) {
-        html += `<h3>replaces</h3> ${shieldDescs[player.shield]}`;
+        html += `${replaces} ${shieldDescs[player.shield]}`;
       }
       return html;
     },
@@ -438,7 +440,7 @@ const superPowerups = (player) => [
       const title = "<h2>Shield</h2>";
       let html = `${title}${shieldDescs["kPhaseShield"]}`;
       if (player.shield) {
-        html += `<h3>replaces</h3> ${shieldDescs[player.shield]}`;
+        html += `${replaces} ${shieldDescs[player.shield]}`;
       }
       return html;
     },
@@ -457,7 +459,7 @@ const superPowerups = (player) => [
       const title = "<h2>Active ability</h2>";
       let html = `${title}${activeAbilityDescs["kEmp"]}`;
       if (player.shield) {
-        html += `<h3>replaces</h3> ${activeAbilityDescs[player.activeAbility]}`;
+        html += `${replaces} ${activeAbilityDescs[player.activeAbility]}`;
       }
       return html;
     },
@@ -476,7 +478,7 @@ const superPowerups = (player) => [
       const title = "<h2>Active ability</h2>";
       let html = `${title}${activeAbilityDescs["kBomb"]}`;
       if (player.shield) {
-        html += `<h3>replaces</h3> ${activeAbilityDescs[player.activeAbility]}`;
+        html += `${replaces} ${activeAbilityDescs[player.activeAbility]}`;
       }
       return html;
     },
@@ -492,17 +494,17 @@ const superPowerups = (player) => [
 
 const shieldDescs = {
   kDeflectorShield:
-    "<p>Deflector shield</p><hr/>Deflects strongly kinetic weapons for 3 seconds, affects mildly energy weapons.<br/><em>You can't fire your secondary weapon while the shield is on</em>",
+    "<p class='powerup-title'>Deflector shield</p><hr/>Deflects strongly kinetic weapons for 3 seconds, affects mildly energy weapons.<br/><em>You can't fire your secondary weapon while the shield is on</em>",
   kEnergyShield:
-    "<p>Energy shield</p><hr/>Stops completely energy weapons for 3 seconds, no effect on kinetic weapons.<br/><em>You can't fire your secondary weapon while the shield is on</em>",
+    "<p class='powerup-title'>Energy shield</p><hr/>Stops completely energy weapons for 3 seconds, no effect on kinetic weapons.<br/><em>You can't fire your secondary weapon while the shield is on</em>",
   kPhaseShield:
-    "<p>Phase shield</p><hr/>Let's you pass through asteroids, projectiles and beams for 3 seconds.<br/><em>You can't fire your secondary weapon while the shield is on</em>",
+    "<p class='powerup-title'>Phase shield</p><hr/>Let's you pass through asteroids, projectiles and beams for 3 seconds.<br/><em>You can't fire your secondary weapon while the shield is on</em>",
 };
 
 const activeAbilityDescs = {
   kEmp: "<p>EMP pulse</p><hr/>Generates an EMP pulse where you are, disabling enemy ships for 3 seconds.",
   kBomb:
-    "<p>Gravitic bomb</p><hr/>Drop it and it will explode in 1 second for massive damage. Won't affect your ship.",
+    "<p class='powerup-title'>Gravitic bomb</p><hr/>Drop it and it will explode in 1 second for massive damage. Won't affect your ship.",
 };
 
 const debugCommands = (player) => {

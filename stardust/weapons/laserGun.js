@@ -23,6 +23,7 @@ class LaserGun extends Gun {
   ammoMax = 10;
   // Although it's an energy weapon, it uses a lot of energy. Let's treat it as ammo
   static present = () => {
+    return `<p class='powerup-title'>Laser gun</p><hr/>`;
     const stats = LaserGun.baseStats;
     const range = (
       (stats.baseE / LaserGun.baseStats.decay) *

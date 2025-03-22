@@ -21,6 +21,7 @@ class PlasmaGun extends Gun {
   };
   ammo = false;
   static present = () => {
+    return `<p class='powerup-title'>Plasma gun</p><hr/>`;
     const stats = PlasmaGun.baseStats;
     const range = (
       (stats.baseE / PlasmaGun.baseStats.decay) *

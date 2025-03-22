@@ -25,6 +25,7 @@ class PhotonTorpedoLauncher extends Gun {
   };
 
   static present = () => {
+    return `<p class='powerup-title'>Photon torpedo</p><hr/>`;
     const stats = PhotonTorpedoLauncher.baseStats;
     const range = stats.minRange;
     const mip = PhotonTorpedoLauncher.baseStats.baseE.toFixed(0);

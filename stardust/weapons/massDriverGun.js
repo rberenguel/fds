@@ -26,6 +26,7 @@ class MassDriverGun extends Gun {
   ammo = true;
   ammoMax = 99;
   static present = () => {
+    return `<p class='powerup-title'>Mass driver</p><hr/>`;
     const stats = MassDriverGun.baseStats;
     const range = ((stats.f / stats.decay) * stats.ACCEL).toFixed(0);
     const mip = (stats.f * stats.mass * stats.ACCEL * stats.ACCEL).toFixed(0);

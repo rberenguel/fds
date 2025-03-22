@@ -552,7 +552,12 @@ class SpaceScene extends Scene {
             continue;
           }
           const collisioning = o.collision(b);
-          if (collisioning < 0 && collisioning > -150) {
+          if (
+            b.source === this.player._id &&
+            collisioning < 0 &&
+            collisioning > -150
+          ) {
+            // TODO or idea: kClose for flying close to asteroids
             triggerTextEffect("kClose", b.pos.x, b.pos.y, this.scale);
             b.minDistance[o._id] = -1; // Stop the loop
           }
