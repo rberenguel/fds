@@ -7,16 +7,20 @@ const messages = {
     "You were between a rock and a hard place and decided to crash into the rock",
     "If this was rock-paper-scissors you'd be scissors",
     "Death by space geology",
+    "Your ship insurance rate just went up",
   ],
   kShipWeapon: [
     "Killed by a wimpy ship",
     "The AI in this game is not particularly good. Just sayin'",
+    "Maybe try shooting back next time?",
   ],
   kShipSecondaryWeapon: [
     "Next time try to avoid that {PLACEHOLDER}",
     "The pilot of that ship is now a hero somewhere",
     "Did you see those fireworks!? Oh, sorry…",
     "You saw the {PLACEHOLDER} and thought, ‘How bad can it be?’",
+    "That's what you get for standing still",
+    "That {PLACEHOLDER} had your name on it",
   ],
 };
 
@@ -28,6 +32,8 @@ const genericMessages = [
   "Git gud",
   "Have you heard of PEBKAC? Look it up",
   "Maybe take a look into Settings, you can customise your controls",
+  "Don't worry, everyone dies eventually. In this game, it's just very quickly",
+  "Your skills need some... polishing",
 ];
 
 const getEncouragementMessage = (player) => {
