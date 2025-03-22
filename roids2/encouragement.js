@@ -13,6 +13,7 @@ const messages = {
     "Killed by a wimpy ship",
     "The AI in this game is not particularly good. Just sayin'",
     "Maybe try shooting back next time?",
+    "Next time move out of the way"
   ],
   kShipSecondaryWeapon: [
     "Next time try to avoid that {PLACEHOLDER}",
@@ -27,7 +28,7 @@ const messages = {
 const genericMessages = [
   "Game over!",
   "Well, you can try again",
-  "Luckily this is not real life and you can try as many things as you want",
+  "Luckily this is not real life and you can try as many times as you want",
   "I should add micropayments. I'd be rich with so many retries",
   "Git gud",
   "Have you heard of PEBKAC? Look it up",
