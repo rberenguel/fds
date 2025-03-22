@@ -55,47 +55,50 @@ const currentPowerUpsHud = document.getElementById("current-powerups-hud");
 let selection = null;
 
 const powerupControls = (ev) => {
-  console.log(ev);
   if (powerupContainer.style.display != "flex") {
     return;
   }
-  const isH2 = selection.tagName === "H2";
-  const isChoice = selection.classList.contains("powerup-choice");
-  const isSkip = selection.id === "skip-powerup";
-  // TODO: these should be the real controls, including the gamepad
-  if (ev == "GoLeft" || ev == "GoRight") {
-    if (isChoice) {
-      const other = Array.from(
-        powerupContainer.querySelectorAll(".powerup-choice"),
-      ).filter((s) => !s.classList.contains("powerup-selected"))[0];
-      selection.classList.remove("powerup-selected");
-      selection = other;
+  try {
+    const isH2 = selection.tagName === "H2";
+    const isChoice = selection.classList.contains("powerup-choice");
+    const isSkip = selection.id === "skip-powerup";
+    // TODO: these should be the real controls, including the gamepad
+    if (ev == "GoLeft" || ev == "GoRight") {
+      if (isChoice) {
+        const other = Array.from(
+          powerupContainer.querySelectorAll(".powerup-choice"),
+        ).filter((s) => !s.classList.contains("powerup-selected"))[0];
+        selection.classList.remove("powerup-selected");
+        selection = other;
+      }
     }
-  }
-  if (ev == "GoDown") {
-    if (isH2) {
-      selection.classList.remove("powerup-selected");
-      selection = powerupContainer.querySelector(".powerup-choice");
-    } else if (isChoice) {
-      selection.classList.remove("powerup-selected");
-      selection = powerupContainer.querySelector("#skip-powerup");
+    if (ev == "GoDown") {
+      if (isH2) {
+        selection.classList.remove("powerup-selected");
+        selection = powerupContainer.querySelector(".powerup-choice");
+      } else if (isChoice) {
+        selection.classList.remove("powerup-selected");
+        selection = powerupContainer.querySelector("#skip-powerup");
+      }
     }
-  }
-  if (ev == "GoUp") {
-    if (isChoice) {
-      selection.classList.remove("powerup-selected");
-      selection = powerupContainer.querySelector("h2");
-    } else if (isSkip) {
-      selection.classList.remove("powerup-selected");
-      selection = powerupContainer.querySelector(".powerup-choice");
+    if (ev == "GoUp") {
+      if (isChoice) {
+        selection.classList.remove("powerup-selected");
+        selection = powerupContainer.querySelector("h2");
+      } else if (isSkip) {
+        selection.classList.remove("powerup-selected");
+        selection = powerupContainer.querySelector(".powerup-choice");
+      }
     }
+    if (ev === "Accept") {
+      selection.click();
+      selection.classList.remove("powerup-selected");
+      selection = null;
+    }
+    selection?.classList.add("powerup-selected");
+  } catch (e) {
+    console.error(e);
   }
-  if (ev === "Accept") {
-    selection.click();
-    selection.classList.remove("powerup-selected");
-    selection = null;
-  }
-  selection?.classList.add("powerup-selected");
 };
 
 const offerChoices = (options = [], globals = {}) => {

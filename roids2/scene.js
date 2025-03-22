@@ -164,7 +164,7 @@ class SpaceScene extends Scene {
         source: this._id,
       });
       photonTorpedo.stats.ammoRefreshRate =
-        PhotonTorpedoLauncher.baseStats.ammoRefreshRate * 2;
+        PhotonTorpedoLauncher.baseStats.ammoRefreshRate;
       other.secondaryWeapons = [photonTorpedo];
       other.ammo[PhotonTorpedoLauncher.kind] = {};
       other.ammo[PhotonTorpedoLauncher.kind].count = 2;
@@ -184,7 +184,7 @@ class SpaceScene extends Scene {
         },
         source: this._id,
       });
-      railGun.stats.ammoRefreshRate = GaussCannon.baseStats.ammoRefreshRate * 2;
+      railGun.stats.ammoRefreshRate = GaussCannon.baseStats.ammoRefreshRate;
       other.secondaryWeapons = [railGun];
       other.ammo[GaussCannon.kind] = {};
       other.ammo[GaussCannon.kind].count = 2;
@@ -465,17 +465,23 @@ class SpaceScene extends Scene {
               b.shooter.stats.shots[b.firedBy].hitsAsteroid++;
             }
             a.transferMomentum(b);
+            b.pos.x += b.vel.x;
+            b.pos.y += b.vel.y;
             a.addFlame(b.pos, b.vel);
+            try {
+              a.addCrack(b);
+            } catch (err) {
+              console.error(err);
+            }
+
             if (a.e < 0 && b.source === this.player._id) {
               this.score += Math.round(a.size);
               newAsteroids.push(...a.split(b.vel));
-            } else {
-              a.addCrack(b);
             }
           }
         }
 
-        if (this.player.e > 0 && this.player.collision(b)) {
+        if (this.player.e > 0 && this.player.collision(b) == 1) {
           if (b.source === this.player._id) {
             continue;
           }
@@ -511,6 +517,24 @@ class SpaceScene extends Scene {
             if (window.drumSampler) {
               window.drumSampler.triggerAttackRelease("f0", 0.5); // Crash
             }
+            if (
+              b.kind === "kPhotonTorpedo" ||
+              b.kind === "kGaussCannonBullet"
+            ) {
+              let replacement = "";
+              if (b.kind === "kPhotonTorpedo") {
+                replacement = "photon torpedo";
+              }
+              if (b.kind === "kGaussCannonBullet") {
+                replacement = "gauss cannon";
+              }
+              this.player.killedBy = {
+                id: "kShipSecondaryWeapon",
+                replacement: replacement,
+              };
+            } else {
+              this.player.killedBy = { id: "kShipWeapon" };
+            }
             this.player.e = -1;
             this.flameList.push(...this.player.flameList);
             //this.player.invulnerable = performance.now();
@@ -527,12 +551,25 @@ class SpaceScene extends Scene {
           if (b.source === o._id) {
             continue;
           }
-
-          if (o.collision(b)) {
+          const collisioning = o.collision(b);
+          if (collisioning < 0 && collisioning > -150) {
+            triggerTextEffect("kClose", b.pos.x, b.pos.y, this.scale);
+            b.minDistance[o._id] = -1; // Stop the loop
+          }
+          if (collisioning == 1) {
             const oe = o.e;
+            o.showHit = performance.now() + settings.showHitMs;
             if (b.shooter?.human) {
               b.shooter.stats.shots[b.firedBy].hitsShip++;
               // This is a global though, I pass it to the player like this
+              if (
+                b.kind === "kPhotonTorpedo" ||
+                b.kind === "kGaussCannonBullet"
+              ) {
+                if (b.moved > 800) {
+                  triggerTextEffect("kGood", b.pos.x, b.pos.y, this.scale);
+                }
+              }
               b.shooter.sleepUntil = performance.now() + settings.hitSleepMs;
             }
             if (b.kind === "kEmpBlast") {
@@ -578,6 +615,7 @@ class SpaceScene extends Scene {
       }
       if (this.player.e > 0 && this.player.collision(a)) {
         a.e = -1;
+        this.player.killedBy = { id: "kAsteroid" };
         //this.player.invulnerable = performance.now();
         this.player.lives -= 1;
         //livesDiv.textContent = this.player.lives;
@@ -592,6 +630,7 @@ class SpaceScene extends Scene {
           continue;
         }
         if (a.collision(o)) {
+          triggerTextEffect("kShipAsteroid", o.pos.x, o.pos.y, this.scale);
           a.e = -1;
           o.explode({ e: -o.e });
           o.e = -1;
@@ -689,4 +728,63 @@ class SpaceScene extends Scene {
       o.update(delta);
     }
   }
+}
+
+let effectText = document.getElementById("effectText");
+
+function triggerTextEffect(kind, x_, y_, scale) {
+  const x = x_ * scale;
+  const y = y_ * scale;
+  let text = "";
+  if (kind === "kGood") {
+    const options = [
+      "Good shot!",
+      "Bullseye",
+      "Snipe",
+      "Nice one",
+      "Nailed it",
+    ].sort(() => Math.random() - 0.5);
+    text = options[0];
+  }
+  if (kind === "kClose") {
+    const options = ["Close", "Missed", "Almost", "Weeez"].sort(
+      () => Math.random() - 0.5,
+    );
+    text = options[0];
+  }
+  if (kind === "kShipAsteroid") {
+    const options = ["Loser", "Pow", "Crash", "Oopsie", "Oh no!"].sort(
+      () => Math.random() - 0.5,
+    );
+    text = options[0];
+  }
+  effectText.textContent = text;
+  effectText.style.fontSize = "1em";
+  effectText.style.color = "red";
+  effectText.style.opacity = 0;
+  effectText.style.left = x + "px";
+  effectText.style.top = y + "px";
+  effectText.style.fontSize = "1em";
+  effectText.style.opacity = 1; // Immediately visible
+
+  let size = 1;
+  let colorHue = 0;
+
+  let interval = setInterval(() => {
+    size += 0.1;
+    colorHue += 5;
+
+    effectText.style.fontSize = size + "em";
+    effectText.style.color = `hsl(${colorHue % 360}, 100%, 50%)`;
+
+    if (size > 3) {
+      effectText.style.opacity = 0;
+      clearInterval(interval);
+      // Delay the reset of fontSize and color:
+      setTimeout(() => {
+        effectText.style.fontSize = "1em";
+        effectText.style.color = "red";
+      }, 300); // Same as transition
+    }
+  }, 50);
 }

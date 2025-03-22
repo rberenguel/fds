@@ -207,17 +207,38 @@ class Ship extends Base1 {
         }
       }
     }
-    if (dist(other.pos, this.pos) < 50) {
-      return true;
-    }
-    if (dist(other.pos, this.pos) < (other.radius ?? 0) + 50) {
-      return true;
+    const d = dist(other.pos, this.pos);
+    if (
+      other.kind === "kPhotonTorpedo" ||
+      other.kind === "kGaussCannonBullet"
+    ) {
+      if (!other.minDistance) {
+        other.minDistance = {};
+        other.minDistance[this._id] = d;
+      }
+      if (
+        (other.minDistance[this._id] ?? Infinity) > 0 &&
+        d > other.minDistance[this._id]
+      ) {
+        return -other.minDistance[this._id];
+      }
+      other.minDistance[this._id] = Math.min(
+        other.minDistance[this._id] ?? Infinity,
+        d,
+      );
     }
 
-    if (dist(other.pos, this.pos) < (other.size ?? 0) + 50) {
-      return true;
+    if (d < 50) {
+      return 1;
     }
-    return false;
+    if (d < (other.radius ?? 0) + 50) {
+      return 1;
+    }
+
+    if (d < (other.size ?? 0) + 50) {
+      return 1;
+    }
+    return 0;
   }
 
   annotateMountPoints() {
@@ -488,6 +509,13 @@ class Ship extends Base1 {
           presentation.alpha = 0.2;
         }
       } else {
+        if (presentation.name == "hitMesh") {
+          if (this.showHit > performance.now()) {
+            presentation.alpha = 1;
+          } else {
+            presentation.alpha = 0;
+          }
+        }
         if (presentation.name == "primaryWeapon") {
           if (this.weapons[0] && this.weapons[0].kind) {
             presentation.tint = this.weapons[0].color;
@@ -668,7 +696,8 @@ class Lynx extends Ship {
 
 class Bobcat extends Ship {
   constructor(props) {
-    const mesh = new Mesh({
+    const meshBelow = new Mesh({
+      name: "hitMesh",
       kind: Meshes.kPoly,
       vertices: [
         [-70, 50],
@@ -679,9 +708,7 @@ class Bobcat extends Ship {
         [-30, 0],
         [-70, 50],
       ],
-      color: 0xffffff,
-      width: 10,
-      fill: 0x000000,
+      fill: 0xffffff,
     });
     const meshAround = new Mesh({
       kind: Meshes.kPoly,
@@ -731,7 +758,7 @@ class Bobcat extends Ship {
     super({
       ...props,
       meshes: [
-        mesh,
+        meshBelow,
         secondaryWeaponMesh,
         primaryWeaponMesh1,
         primaryWeaponMesh2,

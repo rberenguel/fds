@@ -48,13 +48,17 @@ class Msgs {
   toggle() {
     if (this.visible) {
       this.hide();
+      this._div.style = "";
     } else {
       this.show();
     }
   }
 
-  html(content) {
+  html(content, cssprops = {}) {
     this._div.innerHTML = content;
+    for (let prop in cssprops) {
+      this._div.style[prop] = cssprops[prop];
+    }
   }
 
   text(content) {

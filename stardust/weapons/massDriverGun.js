@@ -101,6 +101,7 @@ class MassDriverBullet extends Base1 {
     this.e = this.f * sqnorm(this.vel.x, this.vel.y) * this.mass;
     this._initial_e = this.e;
     this.mass = props.mass ?? 0.4;
+    this.moved = 0;
     this.source = props.source ?? -1;
     this.flameList = props.flameList;
     this.kind = "kMassDriverBullet";
@@ -131,6 +132,9 @@ class MassDriverBullet extends Base1 {
     }
     super.update(delta);
     super.move(delta.deltaTime);
+    this.moved +=
+      Math.abs(this.vel.x * delta.deltaTime) +
+      Math.abs(this.vel.y * delta.deltaTime);
     this.e = this.f * sqnorm(this.vel.x, this.vel.y) * this.mass;
     this.f -= this.decay;
     const ne = Math.max(0, Math.min(1, this.e / this._initial_e));

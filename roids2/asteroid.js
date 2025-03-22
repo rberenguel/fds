@@ -14,7 +14,7 @@ class Asteroid extends Base1 {
   constructor(props) {
     const size = props.size;
     const sides = props.sides;
-    const vertices = Asteroid.getVertices(size, sides);
+    const [vertices, radius] = Asteroid.getVertices(size, sides);
     const energy = Math.floor(0.5 * sides * sides);
     const ne = Math.max(0, Math.min(1, energy / 1000));
     const g = Math.floor(Math.max(100, Math.min(200, ne)));
@@ -23,7 +23,7 @@ class Asteroid extends Base1 {
       kind: Meshes.kPoly,
       vertices: vertices,
       color: 0xffffff,
-      width: 3,
+      width: 8,
       fill: 0x111111,
     });
 
@@ -31,6 +31,7 @@ class Asteroid extends Base1 {
     this.vel = props.vel;
     this.vertices = vertices;
     this.size = props.size;
+    this.radius = radius;
     this.sides = props.sides;
     this.spin = props.spin;
     this.mass = sides * size;
@@ -42,14 +43,16 @@ class Asteroid extends Base1 {
   static getVertices = (size, sides) => {
     let path = [];
     const a = (Math.PI * 2) / sides;
+    let asteroidRadius = 0;
     for (let i = 0; i < sides; i++) {
       const wiggled = i * a + 0.3 * a + 0.6 * a * rnd();
       const radius = size + size * 0.1 * rnd();
+      asteroidRadius = Math.max(radius, radius);
       const x = radius * Math.cos(wiggled);
       const y = radius * Math.sin(wiggled);
       path.push([x, y]);
     }
-    return path;
+    return [path, asteroidRadius];
   };
 
   generate() {
@@ -59,10 +62,10 @@ class Asteroid extends Base1 {
 
   collision(other) {
     // TODO: This could be in Base, somehow?
-    if (dist(other.pos, this.pos) < 1.2 * this.size) {
+    if (dist(other.pos, this.pos) < 0.99 * this.radius) {
       return true;
     }
-    if (dist(other.pos, this.pos) < (other.radius ?? 0) + 1.1 * this.size) {
+    if (dist(other.pos, this.pos) < (other.radius ?? 1) + 0.99 * this.radius) {
       // For bombs
       return true;
     }
@@ -181,9 +184,6 @@ class Asteroid extends Base1 {
     if (!this.presentations || this.presentations?.length == 0) {
       return false;
     }
-    /*if (rnd() > from.e) {
-      return false;
-    }*/
     let vx = this.pos.x - from.pos.x,
       vy = this.pos.y - from.pos.y;
     const nsq = Math.sqrt(sqnorm(vx, vy));
@@ -199,11 +199,11 @@ class Asteroid extends Base1 {
       q0y = from.pos.y - this.pos.y + s * vy;
     const [p1x, p1y] = rotate(p0x, p0y, -this.presentations[0].rotation ?? 0);
     const [q1x, q1y] = rotate(q0x, q0y, -this.presentations[0].rotation ?? 0);
-    const verts = [p1x, p1y, p1x + 8, p1y + 8, q1x, q1y];
+    const verts = [p1x, p1y, p1x + 16, p1y + 16, q1x, q1y];
     this.presentations[0].poly(verts);
-    const red = Math.floor(10 + 80 * rnd());
+    const red = Math.floor(80 + 80 * rnd());
     const hexColor = red << 16;
-    this.presentations[0].stroke({ color: hexColor });
+    this.presentations[0].fill({ color: hexColor });
   }
 
   addFlame(pos, vel, wiggle = false) {
@@ -221,8 +221,8 @@ class Asteroid extends Base1 {
     const [rpx, rpy] = rotate(-60, 0, this.r);
     const fl = new Flame({
       pos: {
-        x: pos.x + rpx,
-        y: pos.y + rpy,
+        x: pos.x, // + rpx,
+        y: pos.y, // + rpy,
       },
       vel: {
         x: rvx,

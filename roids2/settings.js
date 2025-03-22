@@ -31,7 +31,7 @@ const settings = {
       },
       flame: {
         scale: () => {
-          0.8 + Math.random() * 0.6;
+          0.8 + Math.random() * 0.8;
         },
       },
     },
@@ -41,7 +41,7 @@ const settings = {
       },
       flame: {
         scale: () => {
-          0.8 + Math.random() * 0.6;
+          0.8 + Math.random() * 0.8;
         },
       },
       hitFlame: {
@@ -51,7 +51,7 @@ const settings = {
     player: {
       flame: {
         scale: () => {
-          0.8 + Math.random() * 0.6;
+          0.8 + Math.random() * 0.8;
         },
       },
       hitFlame: {
@@ -106,4 +106,5 @@ const settings = {
       },
     },
   },
+  showHitMs: 10, // ms to show a blank frame
 };

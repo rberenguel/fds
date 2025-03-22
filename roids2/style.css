@@ -1,3 +1,8 @@
+:root {
+  font-size: calc(calc(min(1vw, 1vh)));
+  font-family: "Sixtyfour";
+}
+
 html,
 body {
   margin: 0;
@@ -35,7 +40,9 @@ canvas {
 }
 
 #main-menu {
-  font-size: 2rem;
+  font-family: "Sixtyfour";
+  color: #cc3;
+  font-size: 2.5rem;
   top: 35%;
   left: 50%;
   transform: translate(-50%, -50%);
@@ -64,6 +71,23 @@ canvas {
   transform: none;
 }
 
+#msgs-main {
+  font-family: "Sixtyfour";
+}
+
+.encouragement {
+  color: #c60;
+  margin-bottom: 1.5rem;
+}
+
+.remaining-time {
+  color: #06c;
+}
+
+.wave-num {
+  color: #0cc;
+}
+
 #score {
   text-align: right;
   margin-right: 1em;
@@ -72,7 +96,6 @@ canvas {
 }
 
 #info {
-  font-family: "monoidregular";
   position: absolute;
   z-index: 1000;
   width: 100%;
@@ -82,7 +105,7 @@ canvas {
   top: 0.2em;
   left: 0.2em;
   color: #cc0;
-  font-size: 2rem;
+  font-size: 1.5rem;
 }
 
 #debug-menu {
@@ -105,7 +128,6 @@ canvas {
 }
 
 #next-wave-countdown {
-  font-size: 1rem;
   padding: 10px;
   margin-left: 10px;
 }
@@ -117,17 +139,12 @@ canvas {
 }
 
 #extra-info {
-  font-family: "monoidregular";
   position: static;
   z-index: 1000;
-  /*width: 100%;*/
   display: flex;
   align-items: center;
   box-sizing: border-box;
-  /*bottom: 0.2em;
-  left: 0.2em;*/
   color: #cc0;
-  font-size: 1rem;
 }
 
 .right-container {
@@ -199,7 +216,6 @@ canvas {
   border-radius: 1rem; /* TODO: check all radii */
   border: 1px solid #ccc;
   text-align: center;
-  font-family: "monoidregular";
   width: 40%;
   display: flex;
   flex-direction: row;
@@ -207,9 +223,11 @@ canvas {
   flex-wrap: wrap;
 }
 
-#powerup-container > h3 {
+#powerup-container > h2 {
   width: 100%;
   flex-basis: 100%;
+  padding-top: 0.3rem;
+  padding-bottom: 0.3rem;
 }
 
 #skip-powerup {
@@ -316,4 +334,17 @@ canvas {
   margin: 1em;
   border-collapse: separate;
   border-spacing: 2rem;
+}
+
+#effectText {
+  position: absolute;
+  font-size: 1em;
+  font-weight: bold;
+  color: red;
+  opacity: 0; /* Starts hidden */
+  transition:
+    opacity 300ms ease-out,
+    font-size 300ms ease-out;
+  pointer-events: none;
+  z-index: 1001;
 }

@@ -12,6 +12,7 @@ import { presentKeyMap, keyMap, buttonMap } from "./setupControls.js";
 
 import { VirtualPad } from "../libs/controller/virtualPad.js";
 import { settings } from "./settings.js";
+import { getEncouragementMessage } from "./encouragement.js";
 import { Lynx } from "../stardust/ship.js";
 import {
   offerChoices,
@@ -89,10 +90,6 @@ const gameActions = {
     settings.shake.onFire(app);
   },
   secondaryShoot: () => {
-    if (gameOver) {
-      fullRestart();
-      return;
-    }
     if (player.e < 10) {
       return;
     }
@@ -112,6 +109,10 @@ const gameActions = {
     settings.shake.onSecondaryFire(app);
   },
   shield: () => {
+    if (gameOver) {
+      fullRestart();
+      return;
+    }
     if (player.shield && player.shieldEnergy >= 1) {
       const now = performance.now();
       if (player.shield === "kDeflectorShield") {
@@ -352,10 +353,11 @@ app.stage.addEventListener("pointerup", (e) => {
 });
 
 const focusTrap = document.getElementById("focus-trap");
-if(!isMobile()){
+if (!isMobile()) {
   focusTrap.focus(); // Set focus to the hidden input… unless on mobile
+} else {
+  // TODO: remove
 }
-
 
 const controller = handleControls(gameActions, keyMap, buttonMap);
 const menuController = handleControls(inMenuActions, keyMap, buttonMap);
@@ -365,7 +367,7 @@ const scale = (() => {
   //AAAA
   const { width, height } = getLandscapeDimensions();
   // width*height should be 1.5 million
-  return (SpaceScene.MAXSCALE * width * height) / 1500000;
+  return Math.max(0.12, (SpaceScene.MAXSCALE * width * height) / 2200000);
 })();
 
 console.log(scale);
@@ -797,7 +799,20 @@ const mainMenuCommands = [
 menuP.bind(mainMenuCommands, { blur: 30 }, false);
 
 const enemiesPerLevel = (level) => {
-  console.log(level);
+  const laser = {
+    weapon: "kLaserGun",
+  };
+  const torpedo = {
+    weapon: "kLaserGun",
+    secondary: "kPhotonTorpedoLauncher",
+  };
+  const massDriver = {
+    weapon: "kMassDriverGun",
+  };
+  const gaussCannon = {
+    weapon: "kMassDriverGun",
+    secondary: "kGaussCannon",
+  };
   const obj = {
     level: level,
   };
@@ -823,11 +838,7 @@ const enemiesPerLevel = (level) => {
       ...obj,
       asteroids: 5,
       ships: 1,
-      shipLoadouts: [
-        {
-          weapon: "kLaserGun",
-        },
-      ],
+      shipLoadouts: [laser],
     };
   }
   if (level == 3) {
@@ -835,11 +846,7 @@ const enemiesPerLevel = (level) => {
       ...obj,
       asteroids: 5,
       ships: 1,
-      shipLoadouts: [
-        {
-          weapon: "kMassDriverGun",
-        },
-      ],
+      shipLoadouts: [massDriver],
     };
   }
   if (level == 4) {
@@ -847,12 +854,7 @@ const enemiesPerLevel = (level) => {
       ...obj,
       asteroids: 5,
       ships: 1,
-      shipLoadouts: [
-        {
-          weapon: "kLaserGun",
-          secondary: "kPhotonTorpedoLauncher",
-        },
-      ],
+      shipLoadouts: [torpedo],
     };
   }
   if (level == 5) {
@@ -860,28 +862,99 @@ const enemiesPerLevel = (level) => {
       ...obj,
       asteroids: 5,
       ships: 1,
-      shipLoadouts: [
-        {
-          weapon: "kMassDriverGun",
-          secondary: "kGaussCannon",
-        },
-      ],
+      shipLoadouts: [gaussCannon],
     };
   }
   if (level < 9) {
-    return { ...obj, asteroids: 6, ships: 2 };
+    const choices = [
+      laser,
+      laser,
+      laser,
+      laser,
+      torpedo,
+      torpedo,
+      massDriver,
+      massDriver,
+      gaussCannon,
+    ].sort(() => Math.random() - 0.5);
+    return {
+      ...obj,
+      asteroids: 6,
+      ships: 2,
+      shipLoadouts: choices.slice(0, 2),
+    };
   }
   if (level < 15) {
-    return { ...obj, asteroids: 6, ships: 3 };
+    const choices = [
+      laser,
+      laser,
+      laser,
+      torpedo,
+      torpedo,
+      massDriver,
+      massDriver,
+      gaussCannon,
+    ].sort(() => Math.random() - 0.5);
+    return {
+      ...obj,
+      asteroids: 6,
+      ships: 2,
+      shipLoadouts: choices.slice(0, 2),
+    };
   }
   if (level < 19) {
-    return { ...obj, asteroids: 6, ships: 4 };
+    const choices = [
+      laser,
+      laser,
+      laser,
+      torpedo,
+      torpedo,
+      massDriver,
+      massDriver,
+      gaussCannon,
+    ].sort(() => Math.random() - 0.5);
+    return {
+      ...obj,
+      asteroids: 6,
+      ships: 3,
+      shipLoadouts: choices.slice(0, 3),
+    };
   }
   if (level == 19) {
-    return { ...obj, asteroids: 7, ships: 5 };
+    const choices = [
+      laser,
+      laser,
+      laser,
+      torpedo,
+      torpedo,
+      massDriver,
+      massDriver,
+      gaussCannon,
+    ].sort(() => Math.random() - 0.5);
+    return {
+      ...obj,
+      asteroids: 7,
+      ships: 4,
+      shipLoadouts: choices.slice(0, 4),
+    };
   }
   if (level == 20) {
-    return { ...obj, asteroids: 7, ships: 6 };
+    const choices = [
+      laser,
+      laser,
+      laser,
+      torpedo,
+      torpedo,
+      massDriver,
+      massDriver,
+      gaussCannon,
+    ].sort(() => Math.random() - 0.5);
+    return {
+      ...obj,
+      asteroids: 7,
+      ships: 5,
+      shipLoadouts: choices.slice(0, 5),
+    };
   }
   const a = enemiesPerLevel(level - 20).asteroids;
   const s = enemiesPerLevel(level - 20).ships + 1;
@@ -1004,9 +1077,16 @@ app.ticker.add((delta) => {
   }
   if (player.lives <= 0 && !msgs.visible) {
     const div = document.createElement("DIV");
-    (div.innerHTML = `Game over!<br/>Click here to play again`),
-      div.addEventListener("click", fullRestart);
+    const message = getEncouragementMessage(player);
+    const encouragement = document.createElement("DIV");
+    encouragement.classList.add("encouragement");
+    encouragement.innerHTML = message;
+    const clicky = document.createElement("DIV");
+    clicky.innerHTML = `Click here to play again`;
+    div.addEventListener("click", fullRestart);
     div.style.cursor = "pointer";
+    div.appendChild(encouragement);
+    div.appendChild(clicky);
     const statsTable = presentStats(player);
     div.appendChild(statsTable);
     msgs.div(div);
@@ -1032,8 +1112,8 @@ app.ticker.add((delta) => {
       const remainingTime = Math.ceil(
         (finishCountdown - performance.now()) / 1000,
       ).toFixed(0); // Calculate remaining seconds
-      document.getElementById("next-wave-countdown").innerText =
-        `Next wave in ${remainingTime} seconds`;
+      document.getElementById("next-wave-countdown").innerHTML =
+        `Next wave in <span class="remaining-time">${remainingTime}</span> seconds`;
     }
   }
   if (!inGame && !gameOver) {
@@ -1073,8 +1153,9 @@ app.ticker.add((delta) => {
         extra = `<br/><hr/><span style='color: red'>DANGER<em> You will face ${s} ships </em>DANGER</span>`;
       }
       msgs.html(
-        `Wave ${level} in ${remainingTime} seconds<br\>You will face ${a} asteroids` +
+        `Wave <span class="wave-num">${level}</span> in <span class="remaining-time">${remainingTime}</span> seconds<br\>You will face <span style="color: #c60;">${a} asteroids</span>` +
           extra,
+        { fontSize: "2rem" },
       );
     }
   }

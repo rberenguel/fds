@@ -116,7 +116,7 @@ class PhotonTorpedo extends Base1 {
     this.color = props.color ?? 0xff0000;
     this.e = props.e ?? 10;
     this.mass = props.mass ?? 3;
-    this.minRange = props.minRange ?? 1500;
+    this.minRange = props.minRange ?? 1000;
     this.moved = 0;
     this.source = props.source ?? -1;
     this.flameList = props.flameList;
@@ -168,7 +168,9 @@ class PhotonTorpedo extends Base1 {
     }
     this.e -= Math.random() * 0.1;
     const ne = Math.max(0, Math.min(1, this.e / 1000));
-    this.moved += Math.abs(this.vel.x) + Math.abs(this.vel.y);
+    this.moved +=
+      Math.abs(this.vel.x * delta.deltaTime) +
+      Math.abs(this.vel.y * delta.deltaTime);
     if (this.moved > this.minRange) {
       this.e -= 10;
     }
