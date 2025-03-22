@@ -13,6 +13,7 @@ import { dist, sqnorm, rotate } from "../stardust/math.js";
 import { Flame } from "./flame.js";
 import { seededRnd } from "./rnd.js";
 import { normalizeAngle } from "../stardust/math.js";
+import { settings } from "../roids2/settings.js";
 const rnd = seededRnd(performance.now());
 
 function shortestAngleDifference(angle1, angle2) {
@@ -72,7 +73,11 @@ class Ship extends Base1 {
     const explenergy = Math.min(Math.max(props.e, 1), 5);
     const pos = props.pos ?? { x: 0, y: 0 };
     const [rpx, rpy] = rotate(pos.x, pos.y, this.r);
-    for (let i = 0; i < (props.count ?? 12) * explenergy; i++) {
+    for (
+      let i = 0;
+      i < settings.explosions.ships.explode.baseCount * explenergy;
+      i++
+    ) {
       const m = 4 * Math.random();
       const a = Math.random() * 2 * Math.PI;
       const fl = new Flame({
@@ -87,7 +92,7 @@ class Ship extends Base1 {
         fill: props.fill,
         r: 0,
         e: minenergy + Math.random() * 8,
-        scale: 0.8,
+        scale: settings.explosions.ships.flame.scale(),
       });
       this.flameList.push(fl);
     }

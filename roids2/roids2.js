@@ -11,7 +11,7 @@ import {
 import { presentKeyMap, keyMap, buttonMap } from "./setupControls.js";
 
 import { VirtualPad } from "../libs/controller/virtualPad.js";
-
+import { settings } from "./settings.js";
 import { Lynx } from "../stardust/ship.js";
 import {
   offerChoices,
@@ -86,6 +86,7 @@ const gameActions = {
       player,
       player.bulletList,
     );
+    settings.shake.onFire(app);
   },
   secondaryShoot: () => {
     if (gameOver) {
@@ -108,6 +109,7 @@ const gameActions = {
         player.bulletList,
       );
     } catch {}
+    settings.shake.onSecondaryFire(app);
   },
   shield: () => {
     if (player.shield && player.shieldEnergy >= 1) {
@@ -900,6 +902,9 @@ let inGame = false;
 let gameOver = false;
 
 app.ticker.add((delta) => {
+  if (player.sleepUntil > performance.now()) {
+    return;
+  }
   if (showMainMenu) {
     if (!menuP.visible()) {
       console.debug("Showing main menu");

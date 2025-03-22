@@ -18,6 +18,7 @@ import {
   PhotonTorpedoLauncher,
   GaussCannon,
 } from "../stardust/weapons/weapons.js";
+import { settings } from "./settings.js";
 const rnd = seededRnd(performance.now());
 
 class Scene {
@@ -478,11 +479,7 @@ class SpaceScene extends Scene {
           if (b.source === this.player._id) {
             continue;
           }
-          // AAAA
-          const rx = -2 + Math.floor(Math.random() * 4);
-          const ry = -2 + Math.floor(Math.random() * 4);
-          this.app.canvas.style.translate = `${rx}px ${ry}px`;
-          document.body.style.backgroundColor = "#211";
+          settings.shake.onHit(this.app);
 
           if (window.drumSampler) {
             window.drumSampler.triggerAttackRelease("a4", 0.5); // Cowbell
@@ -490,20 +487,24 @@ class SpaceScene extends Scene {
           const pe = this.player.e;
           this.player.e -= b.e;
           b.e -= pe;
-          const fl = new Flame({
-            pos: {
-              x: b.pos.x,
-              y: b.pos.y,
-            },
-            vel: {
-              x: b.vel.x - this.player.vel.x * this.player.mass,
-              y: b.vel.y - this.player.vel.y * this.player.mass,
-            },
-            r: 0,
-            e: 12,
-            scale: 0.7,
-          });
-          this.flameList.push(fl);
+          for (let i = 0; i < settings.explosions.player.hitFlame.count; i++) {
+            const fl = new Flame({
+              pos: {
+                x: b.pos.x,
+                y: b.pos.y,
+              },
+              vel: {
+                x:
+                  0.1 * b.vel.x - this.player.vel.x * (this.player.mass ?? 100),
+                y:
+                  0.1 * b.vel.y - this.player.vel.y * (this.player.mass ?? 100),
+              },
+              r: 0,
+              e: 12,
+              scale: settings.explosions.player.flame.scale(),
+            });
+            this.flameList.push(fl);
+          }
           if (this.player.e < 0) {
             this.player.lives -= 1;
             this.player.explode({ e: -this.player.e });
@@ -531,6 +532,8 @@ class SpaceScene extends Scene {
             const oe = o.e;
             if (b.shooter?.human) {
               b.shooter.stats.shots[b.firedBy].hitsShip++;
+              // This is a global though, I pass it to the player like this
+              b.shooter.sleepUntil = performance.now() + settings.hitSleepMs;
             }
             if (b.kind === "kEmpBlast") {
               // Note that this can be used for mine/bomb too
@@ -542,20 +545,24 @@ class SpaceScene extends Scene {
               o.e -= b.e;
               b.e -= oe;
             }
-            const fl = new Flame({
-              pos: {
-                x: b.pos.x,
-                y: b.pos.y,
-              },
-              vel: {
-                x: b.vel.x - o.vel.x * o.mass,
-                y: b.vel.y - o.vel.y * o.mass,
-              },
-              r: 0,
-              e: 12,
-              scale: 0.7,
-            });
-            this.flameList.push(fl); // TODO this should be handled internally
+            for (let i = 0; i < settings.explosions.ships.hitFlame.count; i++) {
+              const fl = new Flame({
+                pos: {
+                  x: b.pos.x,
+                  y: b.pos.y,
+                },
+                vel: {
+                  // Bullets move too fast otherwise
+                  x: 0.1 * b.vel.x - o.vel.x * (o.mass ?? 0.1),
+                  y: 0.1 * b.vel.y - o.vel.y * (o.mass ?? 0.1),
+                },
+                fill: 0xff0000,
+                r: 0,
+                e: 12,
+                scale: settings.explosions.ships.flame.scale(),
+              });
+              this.flameList.push(fl); // TODO this should be handled internally
+            }
             //o.transferMomentum(b); TODO momentum
             if (o.e < 0) {
               o.explode({ e: -o.e }); // TODO this should be handled internally

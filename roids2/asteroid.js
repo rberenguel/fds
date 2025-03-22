@@ -5,6 +5,7 @@ import { Mesh, Meshes } from "../stardust/mesh.js";
 import { dist, sqnorm, rotate } from "../stardust/math.js";
 import { Flame } from "../stardust/flame.js";
 import { seededRnd } from "../stardust/rnd.js";
+import { settings } from "./settings.js";
 
 const rnd = seededRnd(performance.now());
 
@@ -80,7 +81,7 @@ class Asteroid extends Base1 {
     // We want them to separate fast, but not very fast
     const nv = sqnorm(vel.x, vel.y) + 0.1;
     if (this.size / 2 < 40) {
-      for (let i = 0; i < 20; i++) {
+      for (let i = 0; i < settings.explosions.asteroids.destroy.count; i++) {
         this.addFlame(this.pos, this.vel, true);
       }
       return [];
@@ -112,7 +113,13 @@ class Asteroid extends Base1 {
       size: this.size / 2,
       spin: this.spin,
     });
-    for (let i = 0; i < 20 + rnd() * 10; i++) {
+    for (
+      let i = 0;
+      i <
+      settings.explosions.asteroids.split.minCount +
+        rnd() * settings.explosions.asteroids.split.randCount;
+      i++
+    ) {
       this.addFlame(this.pos, this.vel, true);
     }
     return [a1, a2];
@@ -145,7 +152,7 @@ class Asteroid extends Base1 {
   }
 
   explode() {
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < settings.explosions.asteroids.split.minCount; i++) {
       const m = 4 * Math.random();
       const a = Math.random() * 2 * Math.PI;
       const fl = new Flame({
@@ -223,7 +230,7 @@ class Asteroid extends Base1 {
       },
       r: this.r,
       e: 12,
-      scale: 0.5,
+      scale: settings.explosions.asteroids.flame.scale(),
     });
 
     this.flameList.push(fl);
