@@ -14,6 +14,7 @@ const messages = {
     "The AI in this game is not particularly good. Just sayin'",
     "Maybe try shooting back next time?",
     "Next time move out of the way",
+    "Swiss cheese has no holes, but you do now"
   ],
   kShipSecondaryWeapon: [
     "Next time try to avoid that {PLACEHOLDER}",
