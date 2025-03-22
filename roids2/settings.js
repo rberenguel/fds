@@ -59,7 +59,7 @@ const settings = {
       },
     },
   },
-  hitSleepMs: 10,
+  hitSleepMs: 15,
   shake: {
     onHit: (app) => {
       shake(app, -6);
@@ -106,5 +106,5 @@ const settings = {
       },
     },
   },
-  showHitMs: 10, // ms to show a blank frame
+  showHitMs: 15, // ms to show a blank frame
 };
