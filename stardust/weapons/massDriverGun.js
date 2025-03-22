@@ -91,7 +91,7 @@ class MassDriverBullet extends Base1 {
     const mesh = new Mesh({
       kind: Meshes.kCircle,
       center: [0, 0],
-      radius: 6,
+      radius: 7,
       color: 0xffffff,
       fill: 0xffffff,
     });

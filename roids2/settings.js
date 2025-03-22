@@ -59,7 +59,7 @@ const settings = {
       },
     },
   },
-  hitSleepMs: 20,
+  hitSleepMs: 10,
   shake: {
     onHit: (app) => {
       shake(app, -6);

@@ -352,7 +352,10 @@ app.stage.addEventListener("pointerup", (e) => {
 });
 
 const focusTrap = document.getElementById("focus-trap");
-focusTrap.focus(); // Set focus to the hidden input
+if(!isMobile()){
+  focusTrap.focus(); // Set focus to the hidden input… unless on mobile
+}
+
 
 const controller = handleControls(gameActions, keyMap, buttonMap);
 const menuController = handleControls(inMenuActions, keyMap, buttonMap);
