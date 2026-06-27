@@ -103,6 +103,7 @@ class SpaceScene extends Scene {
     this.otherShips = [];
     this.debrisList = [];
     this._planetNames = this._buildPlanetNames();
+    this.cameraPos = { x: this.player.pos.x, y: this.player.pos.y };
     this.minimap = new Minimap({
       player: this.player,
       renderedSystem: this.renderedSystem,
@@ -130,15 +131,11 @@ class SpaceScene extends Scene {
 
     this.viewframe.move(delta.deltaTime);
     this.viewframe.update();
-    let scale = Math.min(
-      MAXSCALE,
-      Math.min(this.viewframe.scale, 100 / (nv + 1)),
-    ); // TODO This prevents/screws with manual zooming
-    //console.log(scale)
-    this.starfield.starContainer.scale = linScale(scale);
-    this.starfield.dustContainer.scale = linScale(scale);
+    const rawSpeedScale = Math.min(MAXSCALE, 100 / (nv + 1));
+    this.starfield.starContainer.scale = linScale(rawSpeedScale);
+    this.starfield.dustContainer.scale = linScale(rawSpeedScale);
     if (this.renderedSystem.nebulaSprite) {
-      this.renderedSystem.nebulaSprite.scale = linScale(scale);
+      this.renderedSystem.nebulaSprite.scale = linScale(rawSpeedScale);
     }
     //if(nv > 1){
     //if (scale < 1e-10) {
@@ -167,20 +164,41 @@ class SpaceScene extends Scene {
       }
       otherShip.update(delta);
     }
-    scale = linScale(scale, {
+    // Elastic dead-zone camera: player moves freely in the inner 3/5 of screen;
+    // the 1/5 border region pulls the camera and triggers zoom-out.
+    const W = this.app.screen.width;
+    const H = this.app.screen.height;
+    const MARGIN = 0.2;
+
+    const speedScale = linScale(rawSpeedScale, {
       minScale: 1e-15,
       maxScale: MAXSCALE,
       minOutput: 1e-2,
       maxOutput: MAXSCALE,
     });
+
+    // Where would the player appear at max scale given current camera?
+    const screenX = (this.player.pos.x - this.cameraPos.x) * MAXSCALE + W / 2;
+    const screenY = (this.player.pos.y - this.cameraPos.y) * MAXSCALE + H / 2;
+
+    // How far into the border zone (0 = safe, 1 = at screen edge)?
+    const excessX = Math.max(0, (Math.abs(screenX - W / 2) - (0.5 - MARGIN) * W) / (MARGIN * W));
+    const excessY = Math.max(0, (Math.abs(screenY - H / 2) - (0.5 - MARGIN) * H) / (MARGIN * H));
+    const excess = Math.min(1, Math.max(excessX, excessY));
+
+    // At warp speed the dead-zone melts away and camera locks to player;
+    // at low speed it's elastic (0.12 at border, 0 at centre).
+    const warpFactor = 1 - speedScale / MAXSCALE; // 0 = stationary, 1 = max speed
+    const followRate = warpFactor + (1 - warpFactor) * excess * 0.12;
+    this.cameraPos.x += (this.player.pos.x - this.cameraPos.x) * followRate;
+    this.cameraPos.y += (this.player.pos.y - this.cameraPos.y) * followRate;
+
+    // Scale: full zoom at centre, speed-driven zoom-out at border
+    const scale = MAXSCALE + (speedScale - MAXSCALE) * Math.max(excess, warpFactor);
+
     this.viewframe.scale = scale;
-    this.viewframe.pos.x =
-      this.player.pos.x - ((1 / scale) * this.app.screen.width) / 2;
-    this.viewframe.pos.y =
-      this.player.pos.y - ((1 / scale) * this.app.screen.height) / 2;
-    /*} else {
-          viewframe.scale = scale
-        }*/
+    this.viewframe.pos.x = this.cameraPos.x - (W / 2) / scale;
+    this.viewframe.pos.y = this.cameraPos.y - (H / 2) / scale;
     let hudTarget = { targetName: null, targetColor: null, targetDist: null, targetPos: null };
     for (let pl of this.waypoints) {
       const dx = pl.pos.x - this.player.pos.x;
