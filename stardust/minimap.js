@@ -28,7 +28,7 @@ class Minimap {
     this.player = props.player;
     this.renderedSystem = props.renderedSystem;
     this._scale = null;
-    this._hud = { targetName: null, targetColor: null, targetDist: null, targetPos: null, speed: null };
+    this._hud = { targetName: null, targetColor: null, targetDist: null, targetPos: null, speed: null, torus: false, velAngle: null, shipAngle: 0 };
     this._otherShips = [];
   }
 
@@ -142,6 +142,50 @@ class Minimap {
       ctx.fill();
     }
 
+    // Prograde / retrograde markers
+    const { velAngle, shipAngle } = this._hud;
+    if (velAngle !== null) {
+      const markerR = SIZE * 0.19;
+      const markerSize = SIZE * 0.028;
+      const ALIGN_DOT = Math.cos(5 * Math.PI / 180); // cos(5°)
+
+      const headingDot = Math.cos(velAngle - shipAngle);
+      const progradeAligned   = headingDot >  ALIGN_DOT;
+      const retrogradeAligned = headingDot < -ALIGN_DOT;
+
+      const pgx = cx + markerR * Math.cos(velAngle);
+      const pgy = cy + markerR * Math.sin(velAngle);
+      const rgx = cx - markerR * Math.cos(velAngle);
+      const rgy = cy - markerR * Math.sin(velAngle);
+
+      // Prograde — open circle
+      ctx.save();
+      ctx.strokeStyle = progradeAligned ? "rgba(0,255,136,1)" : "rgba(0,255,136,0.45)";
+      ctx.lineWidth = progradeAligned ? 2 : 1;
+      ctx.beginPath();
+      ctx.arc(pgx, pgy, markerSize, 0, Math.PI * 2);
+      ctx.closePath();
+      ctx.stroke();
+      ctx.restore();
+
+      // Retrograde — circle with cross inside
+      ctx.save();
+      ctx.strokeStyle = retrogradeAligned ? "rgba(255,160,0,1)" : "rgba(255,160,0,0.35)";
+      ctx.lineWidth = retrogradeAligned ? 2 : 1;
+      ctx.beginPath();
+      ctx.arc(rgx, rgy, markerSize, 0, Math.PI * 2);
+      ctx.closePath();
+      ctx.stroke();
+      const cr = markerSize * 0.55;
+      ctx.beginPath();
+      ctx.moveTo(rgx - cr, rgy);
+      ctx.lineTo(rgx + cr, rgy);
+      ctx.moveTo(rgx, rgy - cr);
+      ctx.lineTo(rgx, rgy + cr);
+      ctx.stroke();
+      ctx.restore();
+    }
+
     // Player triangle — always at centre
     const px = cx;
     const py = cy;
@@ -187,11 +231,14 @@ class Minimap {
 
     ctx.restore();
 
-    // Border ring
+    // Border ring — blue pulse during torus
+    const { torus } = this._hud;
     ctx.beginPath();
     ctx.arc(cx, cy, SIZE / 2 - 0.5, 0, Math.PI * 2);
-    ctx.strokeStyle = BORDER_COLOR;
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = torus
+      ? `rgba(100,200,255,${0.6 + 0.35 * Math.sin(performance.now() / 200)})`
+      : BORDER_COLOR;
+    ctx.lineWidth = torus ? 2 : 1;
     ctx.stroke();
   }
 

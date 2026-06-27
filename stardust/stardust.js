@@ -74,12 +74,16 @@ const gameActions = {
       return;
     }
     player.forwardThrust();
+    player.vel.x *= 0.999;
+    player.vel.y *= 0.999;
   },
   fastUp: () => {
     if (player.e < 10) {
       return;
     }
     player.forwardThrust(5);
+    player.vel.x *= 0.997;
+    player.vel.y *= 0.997;
   },
   moveDown: (f = 1) => {
     if (player.e < 10) {

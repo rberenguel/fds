@@ -49,6 +49,11 @@ const linScale = (
 };
 
 const MAXSCALE = 0.2;
+const TORUS_WARP_SPEED = 5000;    // world units/sec while in torus
+const TORUS_SPEED_SQ  = 100 * 100; // engage threshold: 100 m/s
+const TORUS_HOLD_SQ   =  60 *  60; // disengage below this (hysteresis)
+const TORUS_DROP_DIST = 200000;    // drop out within this distance of target
+const TORUS_ENEMY_DIST = 1000000;  // drop out if an enemy is this close
 
 class SpaceScene extends Scene {
   constructor(props = {}) {
@@ -104,6 +109,7 @@ class SpaceScene extends Scene {
     this.debrisList = [];
     this._planetNames = this._buildPlanetNames();
     this.cameraPos = { x: this.player.pos.x, y: this.player.pos.y };
+    this.torusDrive = false;
     this.minimap = new Minimap({
       player: this.player,
       renderedSystem: this.renderedSystem,
@@ -131,7 +137,9 @@ class SpaceScene extends Scene {
 
     this.viewframe.move(delta.deltaTime);
     this.viewframe.update();
-    const rawSpeedScale = Math.min(MAXSCALE, 100 / (nv + 1));
+    const visualNv = this.torusDrive ? TORUS_WARP_SPEED * TORUS_WARP_SPEED : nv;
+    // Zoom-out knee: sqrt(constant/MAXSCALE - 1) ≈ 50 m/s at 500, ~22 m/s at 100
+    const rawSpeedScale = Math.min(MAXSCALE, 500 / (visualNv + 1));
     this.starfield.starContainer.scale = linScale(rawSpeedScale);
     this.starfield.dustContainer.scale = linScale(rawSpeedScale);
     if (this.renderedSystem.nebulaSprite) {
@@ -168,7 +176,7 @@ class SpaceScene extends Scene {
     // the 1/5 border region pulls the camera and triggers zoom-out.
     const W = this.app.screen.width;
     const H = this.app.screen.height;
-    const MARGIN = 0.2;
+    const MARGIN = 0.02;
 
     const speedScale = linScale(rawSpeedScale, {
       minScale: 1e-15,
@@ -222,9 +230,43 @@ class SpaceScene extends Scene {
         break;
       }
     }
+    // Torus drive: engage when aimed at a target, moving fast, AND velocity
+    // is aligned with the direction to the target (not just pointing at it).
+    const torusThreshold = this.torusDrive ? TORUS_HOLD_SQ : TORUS_SPEED_SQ;
+    let torusActive = hudTarget.targetPos !== null && nv >= torusThreshold;
+    if (torusActive) {
+      const tdx = hudTarget.targetPos.x - this.player.pos.x;
+      const tdy = hudTarget.targetPos.y - this.player.pos.y;
+      const dist = Math.sqrt(tdx * tdx + tdy * tdy);
+      if (dist < TORUS_DROP_DIST) {
+        torusActive = false;
+      } else {
+        // Velocity must be pointing within ~30° of the target direction
+        const speed = Math.sqrt(nv);
+        const velDot = (this.player.vel.x * tdx + this.player.vel.y * tdy) / (speed * dist);
+        if (velDot < 0.97) torusActive = false; // cos(15°) ≈ 0.97
+      }
+    }
+    if (torusActive) {
+      for (const ship of this.otherShips) {
+        if (ship.e < 0) continue;
+        const sdx = ship.pos.x - this.player.pos.x;
+        const sdy = ship.pos.y - this.player.pos.y;
+        if (sdx * sdx + sdy * sdy < TORUS_ENEMY_DIST * TORUS_ENEMY_DIST) {
+          torusActive = false;
+          break;
+        }
+      }
+    }
+    this.torusDrive = torusActive;
+
+    const velAngle = nv > 1 ? Math.atan2(this.player.vel.y, this.player.vel.x) : null;
     this.minimap.setHUD({
       ...hudTarget,
       speed: Math.sqrt(nv).toFixed(1),
+      torus: this.torusDrive,
+      velAngle,
+      shipAngle: this.player.r,
     });
 
     //viewframe.scale = nv > 0.2 ? 0.2 * 10000 /nv : 0.2
@@ -232,7 +274,19 @@ class SpaceScene extends Scene {
     this.controller();
 
     this.player.update(delta);
-    //
+
+    // Warp displacement: added on top of normal physics during torus
+    if (this.torusDrive && hudTarget.targetPos) {
+      const tdx = hudTarget.targetPos.x - this.player.pos.x;
+      const tdy = hudTarget.targetPos.y - this.player.pos.y;
+      const dist = Math.sqrt(tdx * tdx + tdy * tdy);
+      if (dist > 0) {
+        const move = TORUS_WARP_SPEED * delta.deltaTime;
+        this.player.pos.x += (tdx / dist) * move;
+        this.player.pos.y += (tdy / dist) * move;
+      }
+    }
+
     for (let flammable of [this.player, ...this.otherShips]) {
       // Remove destroyed flames (in-place)
       for (let i = flammable.flameList.length - 1; i >= 0; i--) {
