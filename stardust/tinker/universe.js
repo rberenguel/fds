@@ -6,7 +6,7 @@ import { seededRnd } from "../rnd.js";
 let universe = [];
 let links = [];
 
-const SYSTEMS = 1000;
+const SYSTEMS = 256;
 
 const rnd = seededRnd(42);
 
@@ -126,6 +126,18 @@ reblob(universe, {
 relink(universe);
 reblob(universe, { fullrandom: false, threshold: 10, random: () => rnd() < 1 });
 relink(universe);
+
+// Guarantee full connectivity regardless of threshold misses
+{
+  const comps = findConnectedComponents(universe);
+  comps.sort((a, b) => b.length - a.length);
+  for (let ci = 1; ci < comps.length; ci++) {
+    const a = universe[comps[ci][0]];
+    const b = universe[comps[0][Math.floor(rnd() * comps[0].length)]];
+    a.neighbors[b.id] = true;
+    b.neighbors[a.id] = true;
+  }
+}
 
 let components = findConnectedComponents(universe);
 

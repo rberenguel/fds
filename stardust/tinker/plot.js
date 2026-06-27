@@ -60,22 +60,14 @@ const plot = (nodes, links) => {
       d3
         .forceLink(links)
         .id((d) => d.id)
-        .distance(30),
+        .distance(120)
+        .strength(0.8),
     )
-    .force("charge", d3.forceManyBody().strength(10))
-    .force("center", d3.forceCenter(cx, cy))
-    .force("collide", d3.forceCollide(30))
-    .force(
-      "x",
-      d3.forceX(() => Math.abs(Math.sin(rnd()))),
-    )
-    .force(
-      "y",
-      d3.forceY().strength(() => 4 + rnd()),
-    )
-    .randomSource(myRandom);
-
-  simulation.alphaDecay(0.0);
+    .force("charge", d3.forceManyBody().strength(-300))
+    .force("center", d3.forceCenter(cx, cy).strength(0.15))
+    .force("collide", d3.forceCollide(55))
+    .randomSource(myRandom)
+    .alphaDecay(0.02);
 
   simulation.on("tick", () => {
     tick++;
@@ -88,8 +80,7 @@ const plot = (nodes, links) => {
       .attr("y2", (d) => d.target.y);
   });
 
-  simulation.alphaDecay(0.1);
-  simulation.tick(200);
+  simulation.tick(1000);
 
   simulation.stop();
 
@@ -119,6 +110,16 @@ const plot = (nodes, links) => {
       d.system.starSize / System.STARSIZEFACTOR,
       d.system.starColor,
     );
+
+    dis
+      .append("circle")
+      .attr("cx", d.x)
+      .attr("cy", d.y)
+      .attr("r", 22)
+      .attr("fill", "none")
+      .attr("stroke-width", 2)
+      .attr("stroke-opacity", 0.7)
+      .classed("stability-ring", true);
 
     dis
       .append("svg:image")

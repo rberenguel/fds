@@ -6,6 +6,10 @@ import { RenderedSystem } from "./tinker/renderedSystem.js";
 import { sqnorm } from "./math.js";
 import { PlanetKinds } from "./tinker/system.js";
 import { otherControl } from "./pid.js";
+import { Flame } from "./flame.js";
+import { settings } from "../roids2/settings.js";
+import { Debris } from "./base/debris.js";
+import { Minimap } from "./minimap.js";
 class Scene {
   constructor() {}
 }
@@ -20,11 +24,6 @@ const niceDistance = (dist) => {
   }
   return (dist / 1000000).toFixed(2) + "M";
 };
-
-const planetTarget = document.getElementById("planet-target");
-const planetDistance = document.getElementById("planet-distance");
-const planetIdx = document.getElementById("planet-idx");
-const playerv = document.getElementById("player-vel");
 
 const logg = document.getElementById("logg");
 const log = (f) => {
@@ -84,8 +83,8 @@ class SpaceScene extends Scene {
 
     this.viewframe.attach(this.app);
     this.viewframe.scale = MAXSCALE;
-    this.player.attach(this.viewframe);
     this.renderedSystem.attachPlanets();
+    this.player.attach(this.viewframe);
 
     this.starfield.viewframe = this.viewframe; // TODO Trying to see if I can shift with this
 
@@ -102,7 +101,28 @@ class SpaceScene extends Scene {
     this.bulletList = props.bulletList;
     this.flameList = props.flameList;
     this.otherShips = [];
+    this.debrisList = [];
+    this._planetNames = this._buildPlanetNames();
+    this.minimap = new Minimap({
+      player: this.player,
+      renderedSystem: this.renderedSystem,
+    });
   }
+  _buildPlanetNames() {
+    const roman = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"];
+    const sysName = this.renderedSystem.name;
+    const earthLikes = this.renderedSystem.planets
+      .filter((p) => p.kind === PlanetKinds.EarthLike)
+      .sort((a, b) => a.idx - b.idx);
+    const names = new Map();
+    earthLikes.forEach((p, rank) => {
+      names.set(p.idx, earthLikes.length === 1
+        ? `${sysName} Prime`
+        : `${sysName} ${roman[rank]}`);
+    });
+    return names;
+  }
+
   // TODO: will need a destructor for all the created objects
   update(delta) {
     const nv = sqnorm(this.player.vel.x, this.player.vel.y);
@@ -161,7 +181,7 @@ class SpaceScene extends Scene {
     /*} else {
           viewframe.scale = scale
         }*/
-    let targetted = false;
+    let hudTarget = { targetName: null, targetColor: null, targetDist: null, targetPos: null };
     for (let pl of this.waypoints) {
       const dx = pl.pos.x - this.player.pos.x;
       const dy = pl.pos.y - this.player.pos.y;
@@ -169,27 +189,25 @@ class SpaceScene extends Scene {
       const diff = Math.cos(angle + this.player.r) - 1;
 
       if (diff * diff < 1e-4) {
-        targetted = true;
-        //log(`${pl.kind} ${pl.p.idx}`)
-        planetIdx.innerHTML = pl.p.idx;
-        planetTarget.innerHTML = pl.kind.slice(1);
-        if (pl.kind === PlanetKinds.Sun) {
-          planetTarget.innerHTML = pl.name;
-        }
-        planetTarget.style.color = `rgb(${pl.averagedColor[0] * 255},${
-          pl.averagedColor[1] * 255
-        },${pl.averagedColor[2] * 255})`;
+        const name = pl.kind === PlanetKinds.Sun
+          ? pl.name
+          : (pl.kind === PlanetKinds.EarthLike
+            ? (this._planetNames.get(pl.p.idx) ?? pl.kind.slice(1))
+            : pl.kind.slice(1));
         const dist = Math.sqrt(dx * dx + dy * dy);
-        planetDistance.innerHTML = niceDistance(dist);
+        hudTarget = {
+          targetName: name,
+          targetColor: pl.averagedColor,
+          targetDist: niceDistance(dist),
+          targetPos: { x: pl.pos.x, y: pl.pos.y },
+        };
         break;
       }
     }
-    if (!targetted) {
-      planetIdx.innerHTML = "";
-      planetTarget.innerHTML = "";
-      planetDistance.innerHTML = "";
-    }
-    playerv.innerHTML = Math.sqrt(nv).toFixed(2);
+    this.minimap.setHUD({
+      ...hudTarget,
+      speed: Math.sqrt(nv).toFixed(1),
+    });
 
     //viewframe.scale = nv > 0.2 ? 0.2 * 10000 /nv : 0.2
     this.objectList.map((p) => p.update(delta));
@@ -212,13 +230,100 @@ class SpaceScene extends Scene {
         }
       }
 
-      // Render and update bullets
+      // Render and update bullets; run collision checks
       for (let b of flammable.bulletList) {
         if (!b.drawn) {
           b.generate();
           b.attach(this.viewframe);
         }
         b.update(delta);
+
+        if (b.e <= 0.01) {
+          b.e = -1;
+          continue;
+        }
+
+        // Player hit by enemy bullets
+        if (this.player.e > 0 && b.source !== this.player._id) {
+          if (this.player.collision(b) === 1) {
+            settings.shake?.onHit(this.app);
+            const pe = this.player.e;
+            this.player.e -= b.e;
+            b.e -= pe;
+            const bnv = sqnorm(b.vel.x, b.vel.y) + 0.01;
+            const pnv = sqnorm(this.player.vel.x, this.player.vel.y) + 0.01;
+            for (let i = 0; i < settings.explosions.player.hitFlame.count; i++) {
+              const fl = new Flame({
+                pos: { x: b.pos.x, y: b.pos.y },
+                vel: {
+                  x: (250 * b.vel.x) / bnv - (0.4 * this.player.vel.x) / pnv,
+                  y: (250 * b.vel.y) / bnv - (0.4 * this.player.vel.y) / pnv,
+                },
+                r: 0,
+                e: 12,
+                scale: settings.explosions.player.flame.scale?.() ?? 1,
+              });
+              this.player.flameList.push(fl);
+            }
+            if (this.player.e < 0) {
+              this.player.e = -1;
+              const debris = this.player.explode({
+                e: Math.abs(this.player.e) + 1,
+                vel: {
+                  x: (2 * b.vel.x) / bnv - (0.4 * this.player.vel.x) / pnv,
+                  y: (2 * b.vel.y) / bnv - (0.4 * this.player.vel.y) / pnv,
+                },
+              });
+              if (debris) this.debrisList.push(debris);
+            }
+          }
+        }
+
+        // Other ships hit by any bullet not from themselves
+        for (let o of this.otherShips) {
+          if (o.e < 0) continue;
+          if (b.source === o._id) continue;
+          const collisioning = o.collision(b);
+          if (collisioning === 1) {
+            o.showHit = performance.now() + settings.showHitMs;
+            const oe = o.e;
+            if (b.kind === "kMissile") {
+              o.e -= b.e;
+              b.e = -1;
+              b.explode?.();
+            } else {
+              o.e -= b.e;
+              b.e -= oe;
+            }
+            const bnv = sqnorm(b.vel.x, b.vel.y) + 0.01;
+            const onv = sqnorm(o.vel.x, o.vel.y) + 0.01;
+            for (let i = 0; i < settings.explosions.ships.hitFlame.count; i++) {
+              const fl = new Flame({
+                pos: { x: b.pos.x, y: b.pos.y },
+                vel: {
+                  x: (290 * b.vel.x) / bnv - (0.3 * o.vel.x) / onv,
+                  y: (290 * b.vel.y) / bnv - (0.3 * o.vel.y) / onv,
+                },
+                fill: 0xff0000,
+                r: 0,
+                e: 12,
+                scale: settings.explosions.ships.flame.scale?.() ?? 1,
+              });
+              this.player.flameList.push(fl);
+            }
+            if (o.e < 0) {
+              const debris = o.explode({
+                e: Math.abs(o.e) + 1,
+                vel: {
+                  x: (2 * b.vel.x) / bnv - (0.4 * o.vel.x) / onv,
+                  y: (2 * b.vel.y) / bnv - (0.4 * o.vel.y) / onv,
+                },
+              });
+              if (debris) this.debrisList.push(debris);
+              o.e = -1;
+            }
+          }
+        }
       }
 
       // Render and update flames
@@ -231,6 +336,32 @@ class SpaceScene extends Scene {
       }
     }
 
+    // Remove dead other ships
+    for (let i = this.otherShips.length - 1; i >= 0; i--) {
+      if (this.otherShips[i].e < 0) {
+        this.otherShips.splice(i, 1);
+      }
+    }
+
+    // Render and update debris
+    for (let i = this.debrisList.length - 1; i >= 0; i--) {
+      const d = this.debrisList[i];
+      if (d.destroyed) {
+        this.debrisList.splice(i, 1);
+        continue;
+      }
+      if (!d.generated) {
+        d.generate();
+        d.viewframe = this.viewframe;
+        for (let p of d.presentations) {
+          this.viewframe.presentation.addChild(p);
+        }
+      }
+      d.update(delta);
+    }
+
     this.renderedSystem.update(delta);
+    this.minimap.setOtherShips(this.otherShips);
+    this.minimap.update();
   }
 }

@@ -1,3 +1,5 @@
+export { TradeSimulator };
+
 import {
   SystemCategories,
   GovernmentTypes,
@@ -11,61 +13,9 @@ class TradeSimulator {
     this.pendingTransactions = [];
   }
 
-  _applyPriceFluctuation(basePrice, system, commodityId, isBuy) {
-    let price = basePrice;
-    const fluctuationFactor = 0.05; //  5% fluctuation
-
-    const produced = system.getProducedCommodities();
-    const consumed = system.getConsumedCommodities();
-
-    let demandWeight = 0;
-    let supplyWeight = 0;
-
-    for (const prod of produced) {
-      if (prod.commodity.id === commodityId) {
-        supplyWeight = prod.weight;
-        break;
-      }
-    }
-    for (const cons of consumed) {
-      if (cons.commodity.id === commodityId) {
-        demandWeight = cons.weight;
-        break;
-      }
-    }
-
-    if (isBuy) {
-      // If the ship buys, high demand increases price, production decreases
-      price *= 1 + (demandWeight - supplyWeight) * fluctuationFactor;
-    } else {
-      //If the ship is selling, high production decreases price, high demand increases.
-      price *= 1 + (demandWeight - supplyWeight) * fluctuationFactor;
-    }
-
-    // Apply random fluctuation
-    price *= 1 + (Math.random() - 0.5) * 2 * fluctuationFactor;
-
-    return Math.max(0, price); // Ensure price is not negative
-  }
-
   calculateProfit(sourceSystem, destinationSystem, commodityId, quantity) {
-    const commodity = commodityRegistry.getCommodity(commodityId);
-    if (!commodity) {
-      console.warn(`Commodity with ID ${commodityId} not found.`);
-      return 0;
-    }
-    const buyPrice = this._applyPriceFluctuation(
-      commodity.basePrice,
-      sourceSystem,
-      commodityId,
-      true,
-    );
-    const sellPrice = this._applyPriceFluctuation(
-      commodity.basePrice,
-      destinationSystem,
-      commodityId,
-      false,
-    );
+    const buyPrice = sourceSystem.getPrice(commodityId);
+    const sellPrice = destinationSystem.getPrice(commodityId);
     return (sellPrice - buyPrice) * quantity;
   }
 
@@ -144,8 +94,13 @@ class TradeSimulator {
         continue;
       }
 
-      // Get availableCommodities from precalculated production
+      // Get availableCommodities from precalculated production plus 10% of inventory surplus
       const availableCommodities = { ...systemProductions.get(system) };
+      for (const [id, qty] of Object.entries(system.inventory)) {
+        if (qty > 0) {
+          availableCommodities[id] = (availableCommodities[id] || 0) + Math.floor(qty * 0.1);
+        }
+      }
 
       for (let i = 0; i < traders; i++) {
         let bestCommodityId = null;
@@ -229,6 +184,13 @@ class TradeSimulator {
     return this.pendingTransactions;
   }
 
+  disruptionChance(system) {
+    const pirates = system.shipDistribution[ShipTypes.PIRATE] ?? 0;
+    const law = (system.shipDistribution[ShipTypes.MILITARY] ?? 0) +
+                (system.shipDistribution[ShipTypes.POLICE] ?? 0);
+    return pirates / (pirates + law + 1);
+  }
+
   executeTradeStep() {
     const executedTransactions = [];
     for (const transaction of this.pendingTransactions) {
@@ -247,60 +209,48 @@ class TradeSimulator {
           `Invalid transaction: Source or destination system not found.`,
           transaction,
         );
-        continue; // Skip invalid transactions
+        continue;
       }
 
       if (shipType === ShipTypes.TRADER) {
-        // 1. Move the trader
+        // Piracy check: if either endpoint is dangerous, cargo may be lost
+        const disruption = Math.max(
+          this.disruptionChance(sourceSystem),
+          this.disruptionChance(destinationSystem),
+        );
+        const disrupted = commodityId && quantity > 0 && Math.random() < disruption;
+
+        // Move the trader regardless (it made the trip)
         const traderIndex = sourceSystem.shipDistribution[ShipTypes.TRADER];
         if (traderIndex > 0) {
-          // Check for enough traders
           sourceSystem.shipDistribution[ShipTypes.TRADER] -= 1;
           destinationSystem.shipDistribution[ShipTypes.TRADER] += 1;
         } else {
-          console.warn(
-            "Inconsistency detected: trying to move trader that does not exist",
-          );
-          continue; //Critical to avoid
+          console.warn("Inconsistency detected: trying to move trader that does not exist");
+          continue;
         }
 
-        // 2. Update inventories (if it's a trade, not a relocation)
-        if (commodityId && quantity > 0) {
+        if (disrupted) {
+          // Pirates take the cargo — removed from source, never reaches destination
+          sourceSystem.removeFromInventory(commodityId, quantity);
+          transaction.notes = "disrupted by pirates";
+        } else if (commodityId && quantity > 0) {
           sourceSystem.removeFromInventory(commodityId, quantity);
           destinationSystem.addToInventory(commodityId, quantity);
         }
-        executedTransactions.push(transaction); // Store it after correct processing
-      } // else if (/* other ship types */) { ... }  Handle other ship types later
+        executedTransactions.push(transaction);
+      }
     }
 
-    this.pendingTransactions = []; // Clear pending transactions *after* execution
+    this.pendingTransactions = [];
     return executedTransactions;
   }
-  // Player interaction with the trading system
   getBuyPrice(system, commodityId) {
-    const commodity = commodityRegistry.getCommodity(commodityId);
-    if (!commodity) {
-      return null; // Or handle the error
-    }
-    return this._applyPriceFluctuation(
-      commodity.basePrice,
-      system,
-      commodityId,
-      true,
-    );
+    return system.getPrice(commodityId) || null;
   }
 
   getSellPrice(system, commodityId) {
-    const commodity = commodityRegistry.getCommodity(commodityId);
-    if (!commodity) {
-      return null;
-    }
-    return this._applyPriceFluctuation(
-      commodity.basePrice,
-      system,
-      commodityId,
-      false,
-    );
+    return system.getPrice(commodityId) || null;
   }
 
   playerBuy(player, commodityId, quantity) {

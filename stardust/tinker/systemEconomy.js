@@ -67,8 +67,16 @@ const SystemCategories = {
     ];
   },
   getOne(n) {
-    const all = this.getAll();
-    return all[Math.floor(n) % all.length];
+    // Weighted: more low-tier producers, fewer high-tier consumers (scarcity drives trade)
+    const weighted = [
+      ...Array(25).fill(Agricultural),
+      ...Array(20).fill(Mining),
+      ...Array(20).fill(Industrial),
+      ...Array(15).fill(Frontier),
+      ...Array(10).fill(HighTech),
+      ...Array(10).fill(Services),
+    ];
+    return weighted[Math.floor(n) % weighted.length];
   },
   repr(category) {
     return descriptions[category];
@@ -350,9 +358,9 @@ registry.addProducer(AgriculturalSpecialized, textilesId, 2); //if specialized i
 registry.addProducer(AgriculturalRich, liquorWinesId, 2);
 registry.addProducer(AgriculturalSpecialized, liquorWinesId, 3); // If specialized in wines
 
-registry.addConsumer(AgriculturalRich, machineryId, 2);
-registry.addConsumer(AgriculturalStandard, machineryId, 2);
-registry.addConsumer(AgriculturalPoor, machineryId, 3);
+registry.addConsumer(AgriculturalRich, machineryId, 1);
+registry.addConsumer(AgriculturalStandard, machineryId, 1);
+registry.addConsumer(AgriculturalPoor, machineryId, 1);
 registry.addConsumer(AgriculturalRich, luxuriesId, 1);
 registry.addConsumer(AgriculturalRich, computersId, 1);
 
@@ -408,9 +416,9 @@ registry.addProducer(MiningRich, goldId, 3);
 registry.addProducer(MiningRich, platinumId, 3);
 registry.addProducer(MiningRich, gemStonesId, 3);
 
-registry.addConsumer(MiningStandard, machineryId, 2);
+registry.addConsumer(MiningStandard, machineryId, 1);
 registry.addConsumer(MiningRich, machineryId, 1);
-registry.addConsumer(MiningRadioactive, machineryId, 3);
+registry.addConsumer(MiningRadioactive, machineryId, 1);
 registry.addConsumer(MiningStandard, foodId, 2);
 registry.addConsumer(MiningRich, foodId, 1);
 registry.addConsumer(MiningRadioactive, foodId, 2);
@@ -436,34 +444,50 @@ registry.addConsumer(ServicesFinancial, luxuriesId, 3);
 registry.addConsumer(ServicesFinancial, computersId, 2);
 
 // Frontier
-registry.addProducer(FrontierOutpost, mineralsId, 1); // Initial resource extraction
-registry.addProducer(FrontierIndependent, mineralsId, 2); // More established extraction, or unique goods
+// Outpost: bare colony, subsistence farming + basic mining. Needs machinery and some computers.
+registry.addProducer(FrontierOutpost, mineralsId, 1);
+registry.addProducer(FrontierOutpost, foodId, 1);   // subsistence farming keeps lights on
 
-registry.addConsumer(FrontierOutpost, foodId, 3);
-registry.addConsumer(FrontierOutpost, textilesId, 3);
-registry.addConsumer(FrontierOutpost, machineryId, 3);
-registry.addConsumer(FrontierOutpost, computersId, 2);
-registry.addConsumer(FrontierIndependent, foodId, 2);
-registry.addConsumer(FrontierIndependent, machineryId, 2);
+registry.addConsumer(FrontierOutpost, foodId, 1);   // net-neutral on food; traders bring the rest
+registry.addConsumer(FrontierOutpost, machineryId, 1);
+registry.addConsumer(FrontierOutpost, computersId, 1);
+
+// Independent: more established, diversified production
+registry.addProducer(FrontierIndependent, mineralsId, 2);
+registry.addProducer(FrontierIndependent, foodId, 1);
+
+registry.addConsumer(FrontierIndependent, foodId, 1);
+registry.addConsumer(FrontierIndependent, machineryId, 1);
 registry.addConsumer(FrontierIndependent, computersId, 1);
 
-// --- Anarchy (special handling for contraband) ---
-// All system subtypes can produce and consume contraband in an Anarchy, but with varying weights
+// --- Contraband ---
+// Narcotics: produced only in lawless/frontier systems; consumed everywhere at low weight
+registry.addProducer(FrontierIndependent, narcoticsId, 2);
+registry.addProducer(FrontierOutpost, narcoticsId, 1);
 
-for (const systemType of [
-  ...SystemCategories.getAll(),
-  ...Object.values(subTypes).flat(),
-]) {
-  registry.addProducer(systemType, narcoticsId, 1); // Low, opportunistic production
-  registry.addProducer(systemType, firearmsId, 2); // Higher production of firearms
+registry.addConsumer(AgriculturalRich, narcoticsId, 0.3);
+registry.addConsumer(AgriculturalStandard, narcoticsId, 0.3);
+registry.addConsumer(AgriculturalPoor, narcoticsId, 0.3);
+registry.addConsumer(AgriculturalSpecialized, narcoticsId, 0.3);
+registry.addConsumer(IndustrialHeavy, narcoticsId, 0.3);
+registry.addConsumer(IndustrialLight, narcoticsId, 0.3);
+registry.addConsumer(IndustrialRefining, narcoticsId, 0.3);
+registry.addConsumer(HighTechResearch, narcoticsId, 0.3);
+registry.addConsumer(HighTechIndustrial, narcoticsId, 0.3);
+registry.addConsumer(HighTechConsumer, narcoticsId, 0.3);
+registry.addConsumer(MiningStandard, narcoticsId, 0.3);
+registry.addConsumer(MiningRich, narcoticsId, 0.3);
+registry.addConsumer(MiningRadioactive, narcoticsId, 0.3);
+registry.addConsumer(MiningVolatile, narcoticsId, 0.3);
+registry.addConsumer(ServicesTrade, narcoticsId, 0.5);
+registry.addConsumer(ServicesFinancial, narcoticsId, 0.5);
+registry.addConsumer(FrontierOutpost, narcoticsId, 0.2);
+registry.addConsumer(FrontierIndependent, narcoticsId, 0.3);
 
-  registry.addConsumer(systemType, narcoticsId, 3); // Highest demand in Anarchy
-  registry.addConsumer(systemType, firearmsId, 2);
-}
-//Adjust Anarchy specifics
-registry.addProducer(Anarchy, narcoticsId, 3); // Increased
-registry.addProducer(Anarchy, firearmsId, 3);
-registry.addConsumer(Anarchy, narcoticsId, 3); // Increased
-registry.addConsumer(Anarchy, firearmsId, 3);
+// Firearms: produced in Industrial Light (already registered above); consumed in frontier/mining
+registry.addConsumer(FrontierOutpost, firearmsId, 2);
+registry.addConsumer(FrontierIndependent, firearmsId, 3);
+registry.addConsumer(MiningVolatile, firearmsId, 2);
+registry.addConsumer(MiningRadioactive, firearmsId, 1);
 
 const commodityRegistry = registry;

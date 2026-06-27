@@ -70,9 +70,95 @@
         color: white;
         border: 0px;
         border-radius: 8px;
-        pointer-events: none; /* Prevent the tooltip from interfering with mouse events */
-        opacity: 0; /* Initially hidden */
-        transition: opacity 0.2s ease-in-out; /* Add a fade-in effect */
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.2s ease-in-out;
+      }
+      #controls {
+        z-index: 1000;
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        display: flex;
+        gap: 0.5em;
+        align-items: center;
+        color: var(--lightgrey);
+        background: var(--darkgrey);
+        padding: 6px 10px;
+        border: 1px solid #c60;
+        border-radius: 0.1em;
+        font-family: monospace;
+        font-size: 13px;
+      }
+      #controls input[type="number"] {
+        width: 4em;
+        background: var(--sky);
+        color: var(--lightgrey);
+        border: 1px solid #666;
+        padding: 2px 4px;
+      }
+      #controls button {
+        background: var(--darkgrey);
+        color: var(--yellow);
+        border: 1px solid #c60;
+        padding: 2px 8px;
+        cursor: pointer;
+      }
+      #controls button:hover { background: #444; }
+      #chart-container {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: rgba(0, 0, 0, 0.75);
+        padding: 4px 4px 0;
+        z-index: 500;
+      }
+      .ship-chart {
+        display: flex;
+        flex-direction: row;
+        align-items: flex-end;
+        height: 60px;
+        overflow: hidden;
+      }
+      .system-bar {
+        flex: 1;
+        min-width: 1px;
+        margin-right: 1px;
+        background-color: steelblue;
+        position: relative;
+        cursor: default;
+      }
+      .system-bar:hover { background-color: var(--cyan); }
+      .system-bar .bar-tip {
+        display: none;
+        position: absolute;
+        bottom: 105%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0,0,0,0.85);
+        color: white;
+        padding: 3px 6px;
+        border-radius: 3px;
+        white-space: nowrap;
+        font-size: 11px;
+        font-family: monospace;
+        pointer-events: none;
+        z-index: 600;
+      }
+      .system-bar:hover .bar-tip { display: block; }
+      #gov-chart {
+        position: fixed;
+        bottom: 80px;
+        right: 10px;
+        z-index: 1000;
+        background: var(--darkgrey);
+        border: 1px solid #c60;
+        border-radius: 0.1em;
+        padding: 5px 8px;
+        font-family: monospace;
+        font-size: 12px;
+        line-height: 1.6;
       }
     </style>
     <script src="https://d3js.org/d3.v7.min.js"></script>
@@ -81,7 +167,14 @@
   <body>
     <div id="logg" style="z-index: 1000; width: 3em"></div>
     <div id="system-info"></div>
+    <div id="controls">
+      <label>Landings: <input type="number" id="tick-count" value="10" min="1" max="10000" /></label>
+      <button id="run-ticks">Simulate</button>
+      <span id="tick-display">Ticks: 0</span>
+    </div>
     <div id="universe-container"></div>
+    <div id="chart-container"></div>
+    <div id="gov-chart"></div>
   </body>
   <script type="module" src="tinker.js"></script>
 </html>

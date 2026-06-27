@@ -60,6 +60,24 @@ const settings = {
     },
   },
   hitSleepMs: 15,
+  showHitMs: 15,
+  shipProps: {
+    baseAccel: 0.1,
+    accel: undefined,
+  },
+  player: {
+    speedLimit: 500,
+    shieldDuration: 5000,
+    phaseShieldDuration: 2500,
+    empDuration: 5000,
+    boostDuration: 750,
+    inertialDampener: 0.005,
+  },
+  weaponProps: {
+    maxRange: {
+      missileLauncher: undefined,
+    },
+  },
   shake: {
     onHit: (app) => {
       shake(app, -6);

@@ -61,6 +61,9 @@ class System {
     this.currentProduction = {}; // TODO deprecated?
     this.inventory = {};
     this.hasNebula = true;
+    this.health = 0;
+    this.stabilityCounter = 0;
+    this.wealth = 0;
   }
   info() {
     return `System ID: ${this.id} <br> Neighbors: ${Object.keys(
@@ -100,12 +103,29 @@ class System {
       )
       .join("<br>");
     const shipDist = distributionToHTML(this.shipDistribution);
+    const inventoryEntries = Object.entries(this.inventory)
+      .filter(([, qty]) => qty > 0)
+      .sort(([, a], [, b]) => b - a);
+    const inventoryHTML = inventoryEntries.length > 0
+      ? `<hr/><p>Inventory:</p>` + inventoryEntries
+          .map(([id, qty]) => {
+            const c = commodityRegistry.getCommodity(id);
+            const price = this.getPrice(id);
+            return `<span class="commodity-name">${c ? c.name : id}:</span> <span class="commodity-weight">${Math.round(qty)}</span> <span style="color:#b58900">@ ${Math.round(price)} cr</span>`;
+          })
+          .join("<br>")
+      : "";
+    const normHealth = this.health;
+    const sc = this.stabilityCounter;
+    const scSign = sc > 0 ? "+" : "";
+    const scColor = sc > 10 ? "#859900" : sc < -10 ? "#dc322f" : "#b58900";
     return `
       <h2>System ${this.name} (${this.id})</h2>
       <p>Population: ${humanizePopulation(this.population)}</p>
       <p>Planets: ${planetInfo}</p>
-      <p>Government: ${governmentStr}</p>
+      <p>Government: ${governmentStr} (T${this.governmentTier()})</p>
       <p>Category: ${categoryStr}</p>
+      <p>Health: ${(normHealth * 100).toFixed(0)}% &nbsp; Stability: <span style="color:${scColor}">${scSign}${sc}</span> &nbsp; Wealth: ${Math.round(this.wealth)}</p>
       <hr/>
       <p>Produces:</p>
       ${producedHTML}
@@ -114,13 +134,59 @@ class System {
       ${consumedHTML}
       <hr/>
       ${shipDist}
+      ${inventoryHTML}
       `;
   }
+  computeHealth() {
+    // Health = fraction of consumed needs that are adequately stocked.
+    // Surplus produced goods don't hurt health — only unmet consumption does.
+    const consumed = this.getConsumedCommodities();
+    if (consumed.length === 0) return 0.7; // no needs, quietly stable
+    let totalWeight = 0;
+    let metWeight = 0;
+    for (const { commodity, weight } of consumed) {
+      const referenceStock = weight * 100;
+      const satisfaction = Math.min(1, this.getInventory(commodity.id) / referenceStock);
+      totalWeight += weight;
+      metWeight += weight * satisfaction;
+    }
+    return metWeight / totalWeight; // 0 (nothing met) to 1 (all needs met)
+  }
+
+  governmentTier() {
+    const tiers = {
+      [GovernmentTypes.Democracy]: 5,
+      [GovernmentTypes.Technocracy]: 5,
+      [GovernmentTypes.CorporateState]: 4,
+      [GovernmentTypes.Dictatorship]: 3,
+      [GovernmentTypes.Communist]: 3,
+      [GovernmentTypes.Feudal]: 2,
+      [GovernmentTypes.Theocracy]: 2,
+      [GovernmentTypes.MultiGovernment]: 1,
+      [GovernmentTypes.Anarchy]: 1,
+    };
+    return tiers[this.government] ?? 1;
+  }
+
   r() {
     return 0;
   }
+  getPrice(commodityId) {
+    const commodity = commodityRegistry.getCommodity(commodityId);
+    if (!commodity) return 0;
+    const producers = commodityRegistry.getProducers(this.subCategory);
+    const consumers = commodityRegistry.getConsumers(this.subCategory);
+    const supplyWeight = producers[commodityId] || 0;
+    const demandWeight = consumers[commodityId] || 0;
+    const refWeight = Math.max(supplyWeight, demandWeight, 1);
+    const referenceStock = refWeight * 100;
+    const stock = this.getInventory(commodityId);
+    const stockRatio = stock / referenceStock;
+    const floor = commodity.basePrice * 0.5;
+    return Math.max(floor, commodity.basePrice * 2 / (1 + stockRatio));
+  }
+
   getProducedCommodities() {
-    // Use the registry to get produced commodities based on subCategory
     return commodityRegistry.getProducedCommodities(this.subCategory);
   }
 

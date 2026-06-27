@@ -30,6 +30,7 @@ class RenderedSystem extends System {
       this.nebulaSprite.pivot.y = nebula.height / 2;
       this.nebulaSprite.x = nebula.width / 4;
       this.nebulaSprite.y = nebula.height / 4;
+      this.nebulaSprite.alpha = 0.15;
     }
   }
 
