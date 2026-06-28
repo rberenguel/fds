@@ -6,6 +6,8 @@ import { RenderedSystem } from "./tinker/renderedSystem.js";
 import { sqnorm } from "./math.js";
 import { PlanetKinds } from "./tinker/system.js";
 import { otherControl } from "./pid.js";
+import { npcControl } from "./npc.js";
+import { Lynx } from "./base/lynx.js";
 import { Flame } from "./flame.js";
 import { settings } from "../roids2/settings.js";
 import { Debris } from "./base/debris.js";
@@ -72,7 +74,7 @@ const TORUS_WARP_SPEED = 5000;    // world units/sec while in torus
 const TORUS_SPEED_SQ  = 100 * 100; // engage threshold: 100 m/s
 const TORUS_HOLD_SQ   =  60 *  60; // disengage below this (hysteresis)
 const TORUS_DROP_DIST = 200000;    // drop out within this distance of target
-const TORUS_ENEMY_DIST = 1000000;  // drop out if an enemy is this close
+const TORUS_ENEMY_DIST = 150000;   // drop out if an enemy is this close
 
 class SpaceScene extends Scene {
   constructor(props = {}) {
@@ -129,6 +131,8 @@ class SpaceScene extends Scene {
     this.flameList = props.flameList;
     this.otherShips = [];
     this.debrisList = [];
+    this.station = this._buildStation();
+    this._spawnSecurityShips();
     this._planetNames = this._buildPlanetNames();
     this.cameraPos = { x: this.player.pos.x, y: this.player.pos.y };
     this.torusDrive = false;
@@ -156,6 +160,52 @@ class SpaceScene extends Scene {
         systemId: sysId,
       });
     });
+  }
+
+  _buildStation() {
+    const earthLike = this.renderedSystem.planetObjects.find(
+      p => p.kind === PlanetKinds.EarthLike
+    );
+    if (!earthLike) return null;
+    const planetRadius = earthLike.p?.radius ?? earthLike.meshes[0]?.radius ?? 20000;
+    // Place station perpendicular to the planet's orbital direction (L4-ish offset)
+    const a = Math.atan2(earthLike.pos.y, earthLike.pos.x);
+    const perpAngle = a + Math.PI / 2;
+    return {
+      pos: {
+        x: earthLike.pos.x + Math.cos(perpAngle) * planetRadius * 1.5,
+        y: earthLike.pos.y + Math.sin(perpAngle) * planetRadius * 1.5,
+      },
+      planetRadius,
+    };
+  }
+
+  _spawnSecurityShips() {
+    if (!this.station) return;
+    const dist = this.renderedSystem.shipDistribution;
+    const count = Math.min(3, (dist.police ?? 0) + Math.floor((dist.military ?? 0) / 4));
+    if (count === 0) return;
+    const patrolRadius = this.station.planetRadius * 2;
+    const homePos = this.station.pos;
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2;
+      const ship = new Lynx({
+        pos: {
+          x: homePos.x + Math.cos(angle) * patrolRadius,
+          y: homePos.y + Math.sin(angle) * patrolRadius,
+        },
+        vel: { x: 0, y: 0 },
+        r: angle + Math.PI / 2, // face tangent to orbit initially
+      });
+      ship.npcState    = 'patrol';
+      ship.homePos     = homePos;
+      ship.patrolRadius = patrolRadius;
+      ship.orbitAngle  = angle;
+      ship.orbitSpeed  = 0.0003; // rad/deltaTime; full circle ≈ 20k frames ≈ 5 min at 60fps
+      ship.generate(this.app);
+      ship.attach(this.viewframe);
+      this.otherShips.push(ship);
+    }
   }
 
   _buildPlanetNames() {
@@ -204,14 +254,16 @@ class SpaceScene extends Scene {
       },
     };
     for (let otherShip of this.otherShips) {
-      if (otherShip.action() === "kChase") {
+      if (otherShip.npcState) {
+        npcControl(otherShip, delta.deltaTime);
+      } else if (otherShip.action() === "kChase") {
         otherControl(
           otherShip,
           this.player,
           target,
           delta.deltaTime,
           this.player.bulletList,
-        ); // TODO: Too many arguments, and the last one…
+        );
       }
       otherShip.update(delta);
     }
