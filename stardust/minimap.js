@@ -27,6 +27,7 @@ class Minimap {
     this.ctx = this.canvas.getContext("2d");
     this.player = props.player;
     this.renderedSystem = props.renderedSystem;
+    this.warpTunnels = props.warpTunnels ?? [];
     this._scale = null;
     this._hud = { targetName: null, targetColor: null, targetDist: null, targetPos: null, speed: null, torus: false, velAngle: null, shipAngle: 0 };
     this._otherShips = [];
@@ -38,6 +39,10 @@ class Minimap {
 
   setOtherShips(ships) {
     this._otherShips = ships;
+  }
+
+  destroy() {
+    this.canvas.remove();
   }
 
   _computeScale() {
@@ -109,6 +114,29 @@ class Minimap {
         ctx.fillStyle = PLANET_COLOR;
         ctx.fill();
       }
+    }
+
+    // Warp tunnel edge markers — small orange triangles pointing inward at minimap rim
+    const rimR = SIZE / 2 - PADDING * 0.6;
+    for (const tunnel of this.warpTunnels) {
+      const dx = tunnel.pos.x - ox;
+      const dy = tunnel.pos.y - oy;
+      const angle = Math.atan2(dy, dx);
+      const ex = cx + Math.cos(angle) * rimR;
+      const ey = cy + Math.sin(angle) * rimR;
+      const aw = SIZE * 0.022; // arrow half-width
+      const al = SIZE * 0.034; // arrow length
+      ctx.save();
+      ctx.translate(ex, ey);
+      ctx.rotate(angle + Math.PI); // point inward
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(-al, -aw);
+      ctx.lineTo(-al, aw);
+      ctx.closePath();
+      ctx.fillStyle = "rgba(255,160,40,0.75)";
+      ctx.fill();
+      ctx.restore();
     }
 
     // Target lock: line from centre to targeted object + highlight dot

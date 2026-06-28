@@ -22,7 +22,7 @@ import { VirtualPad } from "../libs/controller/virtualPad.js";
 import { Bobcat, Lynx } from "./ship.js";
 import { Asteroid } from "./asteroid.js";
 
-import { SpaceScene } from "./scene.js";
+import { SpaceScene, computeEntryPosition } from "./scene.js";
 
 import { seededRnd } from "./rnd.js";
 
@@ -217,12 +217,80 @@ const player = new Bobcat({
 
 player.generate();
 
-let spaceScene = new SpaceScene({
-  app: app,
-  player: player,
-  controller: controller,
-  id: 0,
-});
+const makeScene = (id, fromId = null) => {
+  if (fromId !== null) {
+    const entry = computeEntryPosition(id, fromId);
+    player.pos.x = entry.x;
+    player.pos.y = entry.y;
+    // Tunnel absorbs all velocity — player arrives stationary
+    player.vel.x = 0;
+    player.vel.y = 0;
+  }
+  return new SpaceScene({ app, player, controller, id });
+};
+
+let spaceScene = makeScene(0);
+
+// CRT transition — null when inactive
+let crt = null;
+const CRT_FOLD   = 30; // frames
+const CRT_UNFOLD = 30;
+
+const startCRT = (destId, fromId) => {
+  const overlay = new Graphics();
+  app.stage.addChild(overlay);
+  crt = { phase: "fold", t: 0, overlay, destId, fromId };
+};
+
+const stepCRT = (delta) => {
+  crt.t += delta.deltaTime;
+  const W = app.screen.width;
+  const H = app.screen.height;
+  const ov = crt.overlay;
+  ov.clear();
+
+  if (crt.phase === "fold") {
+    const p = Math.min(1, crt.t / CRT_FOLD);
+    // Black bars close in from top and bottom
+    const barH = (H / 2) * p;
+    ov.rect(0, 0, W, barH).fill({ color: 0x000000 });
+    ov.rect(0, H - barH, W, barH).fill({ color: 0x000000 });
+    // White scanline appears as bars meet
+    if (p > 0.75) {
+      const sp = (p - 0.75) / 0.25;
+      const lh = Math.max(2, 6 * (1 - sp));
+      ov.rect(0, H / 2 - lh / 2, W, lh).fill({ color: 0xffffff });
+    }
+    if (p >= 1) {
+      // Swap the scene while screen is blacked out
+      spaceScene.destroy();
+      spaceScene = makeScene(crt.destId, crt.fromId);
+      app.stage.addChild(ov); // restore overlay on top
+      crt = { ...crt, phase: "unfold", t: 0 };
+    }
+
+  } else {
+    const p = Math.min(1, crt.t / CRT_UNFOLD);
+    if (p < 0.25) {
+      // Scanline expands from centre
+      const sp = p / 0.25;
+      const lh = 2 + (H / 2 - 2) * sp;
+      ov.rect(0, 0, W, H / 2 - lh / 2).fill({ color: 0x000000 });
+      ov.rect(0, H / 2 + lh / 2, W, H / 2 - lh / 2).fill({ color: 0x000000 });
+      ov.rect(0, H / 2 - lh / 2, W, lh).fill({ color: 0xffffff });
+    } else {
+      // Black bars retreat to top and bottom
+      const bp = (p - 0.25) / 0.75;
+      const barH = (H / 2) * (1 - bp);
+      ov.rect(0, 0, W, barH).fill({ color: 0x000000 });
+      ov.rect(0, H - barH, W, barH).fill({ color: 0x000000 });
+    }
+    if (p >= 1) {
+      ov.destroy();
+      crt = null;
+    }
+  }
+};
 
 const commands = [
   {
@@ -247,17 +315,21 @@ const commands = [
     inputType: "number",
     lambda: (number) => {
       app.stage.removeChildren();
-      spaceScene = new SpaceScene({
-        app: app,
-        player: player,
-        controller: controller,
-        id: number,
-      });
+      spaceScene = makeScene(number);
     },
   },
 ];
 metaP.bind(commands);
 
 app.ticker.add((delta) => {
+  if (crt) {
+    stepCRT(delta);
+    return;
+  }
   spaceScene.update(delta);
+  if (spaceScene.pendingJump) {
+    const { destId, fromId } = spaceScene.pendingJump;
+    spaceScene.pendingJump = null;
+    startCRT(destId, fromId);
+  }
 });

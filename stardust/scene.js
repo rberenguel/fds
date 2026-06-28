@@ -1,4 +1,4 @@
-export { Scene, SpaceScene };
+export { Scene, SpaceScene, computeEntryPosition };
 
 import { Viewframe } from "./viewframe.js";
 import { Starfield } from "./parallax.js";
@@ -10,6 +10,25 @@ import { Flame } from "./flame.js";
 import { settings } from "../roids2/settings.js";
 import { Debris } from "./base/debris.js";
 import { Minimap } from "./minimap.js";
+import { WarpTunnel, TUNNEL_RADIUS } from "./warpTunnel.js";
+import { universe } from "./tinker/universe.js";
+import { seededRnd } from "./rnd.js";
+// Returns spawn position and inward velocity angle for arriving via the tunnel from `fromId`
+function computeEntryPosition(systemId, fromId) {
+  const planets = universe[systemId].planets;
+  const outermost = Math.max(...planets.map(p => p.distance + p.radius));
+  const tunnelDist = outermost * 2;
+  const rnd = seededRnd(systemId * 997 + fromId);
+  const angle = rnd() * Math.PI * 2;
+  // Arrive 5× TUNNEL_RADIUS inward from the tunnel so the jump check doesn't re-fire
+  const arrivalDist = tunnelDist - TUNNEL_RADIUS * 5;
+  return {
+    x: Math.cos(angle) * arrivalDist,
+    y: Math.sin(angle) * arrivalDist,
+    inwardAngle: angle + Math.PI, // direction pointing toward the system centre
+  };
+}
+
 class Scene {
   constructor() {}
 }
@@ -59,6 +78,7 @@ class SpaceScene extends Scene {
   constructor(props = {}) {
     super();
     this.controller = props.controller; // This is required
+    this.pendingJump = null; // set to { destId, fromId } when player enters a tunnel
     this.player = props.player; // This is required
     this.app = props.app; // This is required, but likely I don't want it in super (non-pixi scenes)
     this.systemId = props.id; // This will very likely be required
@@ -101,8 +121,10 @@ class SpaceScene extends Scene {
     this.player.viewframe = this.viewframe; // Linking to have zoom
     this.viewframe.vel = this.player.vel;
 
-    this.objectList = this.renderedSystem.planetObjects; // This has to have more stuff
-    this.waypoints = this.renderedSystem.planetObjects; // TODO this will have more stuff
+    this.warpTunnels = this._buildWarpTunnels();
+    this.warpTunnels.forEach(t => { t.generate(this.app); t.attach(this.viewframe); });
+    this.objectList = [...this.renderedSystem.planetObjects, ...this.warpTunnels];
+    this.waypoints = this.objectList;
     this.bulletList = props.bulletList;
     this.flameList = props.flameList;
     this.otherShips = [];
@@ -113,8 +135,29 @@ class SpaceScene extends Scene {
     this.minimap = new Minimap({
       player: this.player,
       renderedSystem: this.renderedSystem,
+      warpTunnels: this.warpTunnels,
     });
   }
+  _buildWarpTunnels() {
+    const sysId = this.renderedSystem.id;
+    const outermost = Math.max(
+      ...this.renderedSystem.planets.map(p => p.distance + p.radius)
+    );
+    // Place tunnels at 2× the outermost planet distance so torus drive is needed
+    const tunnelDist = outermost * 2;
+    return Object.keys(universe[sysId].neighbors).map(nid => {
+      const destId = parseInt(nid);
+      const rnd = seededRnd(sysId * 997 + destId);
+      const angle = rnd() * Math.PI * 2;
+      return new WarpTunnel({
+        pos: { x: Math.cos(angle) * tunnelDist, y: Math.sin(angle) * tunnelDist },
+        destinationId: destId,
+        destinationName: universe[destId].name,
+        systemId: sysId,
+      });
+    });
+  }
+
   _buildPlanetNames() {
     const roman = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"];
     const sysName = this.renderedSystem.name;
@@ -201,13 +244,12 @@ class SpaceScene extends Scene {
     this.cameraPos.x += (this.player.pos.x - this.cameraPos.x) * followRate;
     this.cameraPos.y += (this.player.pos.y - this.cameraPos.y) * followRate;
 
-    // Scale: full zoom at centre, speed-driven zoom-out at border
     const scale = MAXSCALE + (speedScale - MAXSCALE) * Math.max(excess, warpFactor);
 
     this.viewframe.scale = scale;
     this.viewframe.pos.x = this.cameraPos.x - (W / 2) / scale;
     this.viewframe.pos.y = this.cameraPos.y - (H / 2) / scale;
-    let hudTarget = { targetName: null, targetColor: null, targetDist: null, targetPos: null };
+    let hudTarget = { targetName: null, targetColor: null, targetDist: null, targetPos: null, isWarpTunnel: false };
     for (let pl of this.waypoints) {
       const dx = pl.pos.x - this.player.pos.x;
       const dy = pl.pos.y - this.player.pos.y;
@@ -215,17 +257,20 @@ class SpaceScene extends Scene {
       const diff = Math.cos(angle + this.player.r) - 1;
 
       if (diff * diff < 1e-4) {
-        const name = pl.kind === PlanetKinds.Sun
+        const name = pl.kind === "kWarpTunnel"
           ? pl.name
-          : (pl.kind === PlanetKinds.EarthLike
-            ? (this._planetNames.get(pl.p.idx) ?? pl.kind.slice(1))
-            : pl.kind.slice(1));
+          : pl.kind === PlanetKinds.Sun
+            ? pl.name
+            : pl.kind === PlanetKinds.EarthLike
+              ? (this._planetNames.get(pl.p.idx) ?? pl.kind.slice(1))
+              : pl.kind.slice(1);
         const dist = Math.sqrt(dx * dx + dy * dy);
         hudTarget = {
           targetName: name,
           targetColor: pl.averagedColor,
           targetDist: niceDistance(dist),
           targetPos: { x: pl.pos.x, y: pl.pos.y },
+          isWarpTunnel: pl.kind === "kWarpTunnel",
         };
         break;
       }
@@ -238,7 +283,7 @@ class SpaceScene extends Scene {
       const tdx = hudTarget.targetPos.x - this.player.pos.x;
       const tdy = hudTarget.targetPos.y - this.player.pos.y;
       const dist = Math.sqrt(tdx * tdx + tdy * tdy);
-      if (dist < TORUS_DROP_DIST) {
+      if (!hudTarget.isWarpTunnel && dist < TORUS_DROP_DIST) {
         torusActive = false;
       } else {
         // Velocity must be pointing within ~30° of the target direction
@@ -284,6 +329,16 @@ class SpaceScene extends Scene {
         const move = TORUS_WARP_SPEED * delta.deltaTime;
         this.player.pos.x += (tdx / dist) * move;
         this.player.pos.y += (tdy / dist) * move;
+      }
+    }
+
+    // Jump trigger: entering a warp tunnel's event horizon
+    for (const tunnel of this.warpTunnels) {
+      const jdx = tunnel.pos.x - this.player.pos.x;
+      const jdy = tunnel.pos.y - this.player.pos.y;
+      if (jdx * jdx + jdy * jdy < TUNNEL_RADIUS * TUNNEL_RADIUS) {
+        this.pendingJump = { destId: tunnel.destinationId, fromId: this.renderedSystem.id };
+        return;
       }
     }
 
@@ -435,5 +490,18 @@ class SpaceScene extends Scene {
     this.renderedSystem.update(delta);
     this.minimap.setOtherShips(this.otherShips);
     this.minimap.update();
+  }
+
+  destroy() {
+    this.minimap.destroy();
+    // Detach the reused player from the viewframe before destroying the scene tree,
+    // otherwise destroy({ children: true }) would nuke the player's PIXI objects.
+    for (const p of (this.player.presentations ?? [])) {
+      p?.parent?.removeChild(p);
+    }
+    this.starfield.dustContainer?.destroy({ children: true });
+    this.starfield.starContainer?.destroy({ children: true });
+    this.viewframe.presentation?.destroy({ children: true });
+    this.renderedSystem.nebulaSprite?.destroy();
   }
 }
