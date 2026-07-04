@@ -34,9 +34,26 @@ class Minimap {
     this.player = props.player;
     this.renderedSystem = props.renderedSystem;
     this.warpTunnels = props.warpTunnels ?? [];
+    this.station = props.station ?? null;
     this._scale = null;
-    this._hud = { targetName: null, targetColor: null, targetDist: null, targetPos: null, speed: null, torus: false, velAngle: null, shipAngle: 0 };
+    this._hud = { targetName: null, targetColor: null, targetDist: null, targetPos: null, speed: null, torus: false, velAngle: null, shipAngle: 0, dockPrompt: null, dockedFlash: false, zoomRatio: 1 };
     this._otherShips = [];
+
+    const GS = 200;
+    this._ghostSize = GS;
+    this._ghostCanvas = document.createElement("canvas");
+    this._ghostCanvas.width = GS;
+    this._ghostCanvas.height = GS;
+    Object.assign(this._ghostCanvas.style, {
+      position: "fixed",
+      left: "50%",
+      top: "50%",
+      transform: "translate(-50%, -50%)",
+      pointerEvents: "none",
+      zIndex: "900",
+    });
+    document.body.appendChild(this._ghostCanvas);
+    this._ghostCtx = this._ghostCanvas.getContext("2d");
   }
 
   setHUD(hud) {
@@ -145,6 +162,20 @@ class Minimap {
       ctx.restore();
     }
 
+    // Station marker — small diamond (square rotated 45°)
+    if (this.station) {
+      const sx = cx + (this.station.pos.x - ox) * s;
+      const sy = cy + (this.station.pos.y - oy) * s;
+      const hw = SIZE * 0.022;
+      ctx.save();
+      ctx.translate(sx, sy);
+      ctx.rotate(Math.PI / 4);
+      ctx.strokeStyle = "rgba(80,200,255,0.9)";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(-hw, -hw, hw * 2, hw * 2);
+      ctx.restore();
+    }
+
     // Target lock: line from centre to targeted object + highlight dot
     const { targetPos } = this._hud;
     if (targetPos) {
@@ -240,7 +271,7 @@ class Minimap {
     ctx.restore();
 
     // HUD text — faint separator arc
-    const { targetName, targetColor, targetDist, speed, torus } = this._hud;
+    const { targetName, targetColor, targetDist, speed, torus, dockPrompt, dockedFlash } = this._hud;
 
     const fontSize = Math.round(SIZE * 0.075);
     const smallFontSize = Math.round(SIZE * 0.065);
@@ -266,19 +297,78 @@ class Minimap {
       ctx.fillText(torus ? "c" : speed + " m/s", cx, cy + curveR - fontSize * 1.3);
     }
 
+    // Dock prompt / docked confirmation — centred in minimap
+    if (dockedFlash) {
+      const pulse = 0.7 + 0.3 * Math.abs(Math.sin(performance.now() / 300));
+      ctx.font = `bold ${Math.round(SIZE * 0.09)}px monospace`;
+      ctx.fillStyle = `rgba(0,255,136,${pulse})`;
+      ctx.fillText("DOCKED", cx, cy);
+    } else if (dockPrompt === 'dock') {
+      const pulse = 0.6 + 0.4 * Math.abs(Math.sin(performance.now() / 400));
+      ctx.font = `bold ${Math.round(SIZE * 0.085)}px monospace`;
+      ctx.fillStyle = `rgba(0,255,204,${pulse})`;
+      ctx.fillText("[ DOCK ]", cx, cy);
+    } else if (dockPrompt === 'approach') {
+      ctx.font = `${Math.round(SIZE * 0.065)}px monospace`;
+      ctx.fillStyle = "rgba(80,200,255,0.6)";
+      ctx.fillText("approach", cx, cy);
+    }
+
     ctx.restore();
 
-    // Border ring — blue pulse during torus
+    // Border ring — green flash on dock, blue pulse on torus
     ctx.beginPath();
     ctx.arc(cx, cy, SIZE / 2 - 0.5, 0, Math.PI * 2);
-    ctx.strokeStyle = torus
-      ? `rgba(100,200,255,${0.6 + 0.35 * Math.sin(performance.now() / 200)})`
-      : BORDER_COLOR;
-    ctx.lineWidth = torus ? 2 : 1;
+    ctx.strokeStyle = dockedFlash
+      ? `rgba(0,255,136,${0.7 + 0.3 * Math.abs(Math.sin(performance.now() / 300))})`
+      : torus
+        ? `rgba(100,200,255,${0.6 + 0.35 * Math.sin(performance.now() / 200)})`
+        : BORDER_COLOR;
+    ctx.lineWidth = (dockedFlash || torus) ? 2 : 1;
     ctx.stroke();
+
+    this._drawGhost();
+  }
+
+  _drawGhost() {
+    const { shipAngle, zoomRatio } = this._hud;
+    const gc = this._ghostCtx;
+    const GS = this._ghostSize;
+
+    gc.clearRect(0, 0, GS, GS);
+
+    // Fade in below 30% zoom, fully visible at 5%
+    const FADE_START = 0.3;
+    const FADE_FULL  = 0.05;
+    if (zoomRatio == null || zoomRatio > FADE_START) return;
+    const alpha = Math.min(0.65, (FADE_START - zoomRatio) / (FADE_START - FADE_FULL));
+    if (alpha <= 0) return;
+
+    const cx = GS / 2;
+    const cy = GS / 2;
+    const t  = GS * 0.28;
+
+    gc.save();
+    gc.globalAlpha = alpha;
+    gc.translate(cx, cy);
+    gc.rotate(shipAngle);
+
+    gc.beginPath();
+    gc.moveTo(t, 0);
+    gc.lineTo(-t * 0.6,  t * 0.7);
+    gc.lineTo(-t * 0.6, -t * 0.7);
+    gc.closePath();
+    gc.strokeStyle = "#00ff88";
+    gc.lineWidth = 2;
+    gc.stroke();
+    gc.fillStyle = "rgba(0,255,136,0.07)";
+    gc.fill();
+
+    gc.restore();
   }
 
   destroy() {
     this.canvas.remove();
+    this._ghostCanvas.remove();
   }
 }

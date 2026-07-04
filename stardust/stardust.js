@@ -23,6 +23,7 @@ import { Bobcat, Lynx } from "./ship.js";
 import { Asteroid } from "./asteroid.js";
 
 import { SpaceScene, computeEntryPosition } from "./scene.js";
+import { SystemMap } from "./systemMap.js";
 
 import { seededRnd } from "./rnd.js";
 
@@ -321,15 +322,103 @@ const commands = [
 ];
 metaP.bind(commands);
 
+// System map (pause)
+const systemMap = new SystemMap();
+
+// Docked / crashed screens
+let dockedScreen = null;
+let crashScreen  = null;
+
+const showDockedScreen = () => {
+  const el = document.createElement("div");
+  Object.assign(el.style, {
+    position: "fixed", inset: "0", background: "rgba(0,0,0,0.82)",
+    color: "#00ff88", fontFamily: "monospace",
+    display: "flex", flexDirection: "column",
+    alignItems: "center", justifyContent: "center",
+    zIndex: "9999", gap: "1em",
+  });
+  el.innerHTML = `
+    <div style="font-size:2.2em;font-weight:bold;letter-spacing:0.15em">DOCKED</div>
+    <div style="font-size:1em;color:#aaffcc">${spaceScene.station?.name ?? "Station"}</div>
+    <div style="margin-top:1.5em;font-size:0.8em;color:#558866">[ SPACE ] to undock</div>
+  `;
+  document.body.appendChild(el);
+  dockedScreen = el;
+};
+
+const dismissDockedScreen = () => {
+  dockedScreen?.remove();
+  dockedScreen = null;
+};
+
+const showCrashScreen = () => {
+  const el = document.createElement("div");
+  Object.assign(el.style, {
+    position: "fixed", inset: "0", background: "rgba(40,0,0,0.88)",
+    color: "#ff4444", fontFamily: "monospace",
+    display: "flex", flexDirection: "column",
+    alignItems: "center", justifyContent: "center",
+    zIndex: "9999", gap: "1em",
+  });
+  el.innerHTML = `
+    <div style="font-size:2.2em;font-weight:bold;letter-spacing:0.15em">SHIP DESTROYED</div>
+    <div style="font-size:0.9em;color:#ff8888">hull breach on station collision</div>
+    <div style="margin-top:1.5em;font-size:0.8em;color:#884444">[ SPACE ] respawn</div>
+  `;
+  document.body.appendChild(el);
+  crashScreen = el;
+};
+
+const dismissCrashScreen = () => {
+  crashScreen?.remove();
+  crashScreen = null;
+  // Respawn outside the station
+  if (spaceScene.station) {
+    const angle = Math.random() * Math.PI * 2;
+    const dist  = spaceScene.station.radius * 4;
+    player.pos.x = spaceScene.station.pos.x + Math.cos(angle) * dist;
+    player.pos.y = spaceScene.station.pos.y + Math.sin(angle) * dist;
+  }
+  player.vel.x = 0;
+  player.vel.y = 0;
+  player.e     = 100;
+  spaceScene._wasColliding = false;
+  spaceScene.pendingCrash  = false;
+};
+
+document.addEventListener("keydown", (e) => {
+  if (e.code === "Escape") {
+    e.preventDefault();
+    if (dockedScreen) { dismissDockedScreen(); return; }
+    systemMap.visible ? systemMap.hide() : systemMap.show(spaceScene);
+    return;
+  }
+  if (e.code === "Space" && (dockedScreen || crashScreen)) {
+    e.preventDefault();
+    if (dockedScreen) dismissDockedScreen();
+    if (crashScreen)  dismissCrashScreen();
+  }
+});
+
 app.ticker.add((delta) => {
   if (crt) {
     stepCRT(delta);
     return;
   }
+  if (dockedScreen || crashScreen || systemMap.visible) return;
   spaceScene.update(delta);
   if (spaceScene.pendingJump) {
     const { destId, fromId } = spaceScene.pendingJump;
     spaceScene.pendingJump = null;
     startCRT(destId, fromId);
+  }
+  if (spaceScene.pendingDock) {
+    spaceScene.pendingDock = false;
+    showDockedScreen();
+  }
+  if (spaceScene.pendingCrash) {
+    spaceScene.pendingCrash = false;
+    showCrashScreen();
   }
 });

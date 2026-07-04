@@ -12,6 +12,7 @@ import { Flame } from "./flame.js";
 import { settings } from "../roids2/settings.js";
 import { Debris } from "./base/debris.js";
 import { Minimap } from "./minimap.js";
+import { Station, APPROACH_RANGE } from "./station.js";
 import { WarpTunnel, TUNNEL_RADIUS } from "./warpTunnel.js";
 import { universe } from "./tinker/universe.js";
 import { seededRnd } from "./rnd.js";
@@ -125,13 +126,26 @@ class SpaceScene extends Scene {
 
     this.warpTunnels = this._buildWarpTunnels();
     this.warpTunnels.forEach(t => { t.generate(this.app); t.attach(this.viewframe); });
-    this.objectList = [...this.renderedSystem.planetObjects, ...this.warpTunnels];
+    this.station = this._buildStation();
+    if (this.station) {
+      this.station.generate(this.app);
+      this.station.attach(this.viewframe);
+    }
+    this.objectList = [
+      ...this.renderedSystem.planetObjects,
+      ...this.warpTunnels,
+      ...(this.station ? [this.station] : []),
+    ];
     this.waypoints = this.objectList;
     this.bulletList = props.bulletList;
     this.flameList = props.flameList;
     this.otherShips = [];
     this.debrisList = [];
-    this.station = this._buildStation();
+    this.pendingDock   = false;
+    this.pendingCrash  = false;
+    this._wasDocking   = false;
+    this._wasColliding = false;
+    this._dockedAt     = null;
     this._spawnSecurityShips();
     this._planetNames = this._buildPlanetNames();
     this.cameraPos = { x: this.player.pos.x, y: this.player.pos.y };
@@ -140,6 +154,7 @@ class SpaceScene extends Scene {
       player: this.player,
       renderedSystem: this.renderedSystem,
       warpTunnels: this.warpTunnels,
+      station: this.station,
     });
   }
   _buildWarpTunnels() {
@@ -168,16 +183,16 @@ class SpaceScene extends Scene {
     );
     if (!earthLike) return null;
     const planetRadius = earthLike.p?.radius ?? earthLike.meshes[0]?.radius ?? 20000;
-    // Place station perpendicular to the planet's orbital direction (L4-ish offset)
     const a = Math.atan2(earthLike.pos.y, earthLike.pos.x);
     const perpAngle = a + Math.PI / 2;
-    return {
+    return new Station({
       pos: {
         x: earthLike.pos.x + Math.cos(perpAngle) * planetRadius * 1.5,
         y: earthLike.pos.y + Math.sin(perpAngle) * planetRadius * 1.5,
       },
       planetRadius,
-    };
+      name: `${this.renderedSystem.name} Station`,
+    });
   }
 
   _spawnSecurityShips() {
@@ -284,13 +299,44 @@ class SpaceScene extends Scene {
       maxOutput: MAXSCALE,
     });
     const zoomT = 1 - speedScale / MAXSCALE; // 0 = slow, 1 = fast
-    const scale = MAXSCALE + (speedScale - MAXSCALE) * zoomT;
+    let scale = MAXSCALE + (speedScale - MAXSCALE) * zoomT;
+
+    // Proximity zoom: zoom out smoothly when close to the station so it doesn't fill the screen.
+    if (this.station) {
+      const psdx = this.player.pos.x - this.station.pos.x;
+      const psdy = this.player.pos.y - this.station.pos.y;
+      const psDist = Math.sqrt(psdx * psdx + psdy * psdy);
+      const PROX_RANGE  = APPROACH_RANGE;        // start zooming at approach range
+      const PROX_SCALE  = MAXSCALE * 0.18;       // target scale when right at station
+      if (psDist < PROX_RANGE) {
+        const pt = 1 - psDist / PROX_RANGE;      // 0 = at range edge, 1 = at station center
+        const smoothPt = pt * pt * (3 - 2 * pt);
+        const proximityScale = MAXSCALE * (1 - smoothPt) + PROX_SCALE * smoothPt;
+        scale = Math.min(scale, proximityScale);  // take whichever is more zoomed out
+      }
+    }
+
+    // Planet/sun proximity zoom: zoom out proportionally to body size when nearby.
+    for (const body of this.renderedSystem.planetObjects) {
+      const bodyRadius = body.meshes[0].radius;
+      const pdx = this.player.pos.x - body.pos.x;
+      const pdy = this.player.pos.y - body.pos.y;
+      const pDist = Math.sqrt(pdx * pdx + pdy * pdy);
+      const BODY_PROX_RANGE = bodyRadius * 5;
+      const BODY_PROX_SCALE = Math.min(MAXSCALE, W / (4 * bodyRadius));
+      if (pDist < BODY_PROX_RANGE) {
+        const pt = Math.max(0, 1 - pDist / BODY_PROX_RANGE);
+        const smoothPt = pt * pt * (3 - 2 * pt);
+        const proximityScale = MAXSCALE * (1 - smoothPt) + BODY_PROX_SCALE * smoothPt;
+        scale = Math.min(scale, proximityScale);
+      }
+    }
 
     // Camera tracking: dead zone shrinks and follow strength grows with speed.
     // Below CAM_LOW_SPEED: full dead zone (PULL_BASE of viewport), gentle pull at border.
     // CAM_LOW_SPEED→CAM_HIGH_SPEED: dead zone shrinks to zero, follow tightens.
     // Torus: lock to player.
-    const CAM_LOW_SPEED  = 50;
+    const CAM_LOW_SPEED  = 35;
     const CAM_HIGH_SPEED = 100;
     const PULL_BASE      = 0.80; // dead zone radius at low speed (inner 80%)
     const FOLLOW_LOW     = 0.03; // gentle pull at low speed, border
@@ -301,7 +347,9 @@ class SpaceScene extends Scene {
       this.cameraPos.y = this.player.pos.y;
     } else {
       const speed = Math.sqrt(nv);
-      const sf = Math.max(0, Math.min(1, (speed - CAM_LOW_SPEED) / (CAM_HIGH_SPEED - CAM_LOW_SPEED)));
+      const speedSf   = Math.max(0, Math.min(1, (speed - CAM_LOW_SPEED) / (CAM_HIGH_SPEED - CAM_LOW_SPEED)));
+      const zoomSf    = Math.max(0, 1 - scale / MAXSCALE); // 0=full zoom, 1=zoomed out
+      const sf        = Math.max(speedSf, zoomSf);
       const deadRadius = PULL_BASE * (1 - sf);
 
       // norm: where the player sits on screen relative to center (0=center, 1=edge)
@@ -327,14 +375,17 @@ class SpaceScene extends Scene {
     this.viewframe.pos.x = this.cameraPos.x - (W / 2) / scale;
     this.viewframe.pos.y = this.cameraPos.y - (H / 2) / scale;
     let hudTarget = { targetName: null, targetColor: null, targetDist: null, targetPos: null, isWarpTunnel: false };
+    let bestDiff = 1e-4; // threshold: cos(angle+r)-1 squared must beat this
     for (let pl of this.waypoints) {
-      const dx = pl.pos.x - this.player.pos.x;
-      const dy = pl.pos.y - this.player.pos.y;
+      const dx    = pl.pos.x - this.player.pos.x;
+      const dy    = pl.pos.y - this.player.pos.y;
       const angle = -Math.atan2(dy, dx);
-      const diff = Math.cos(angle + this.player.r) - 1;
+      const diff  = Math.cos(angle + this.player.r) - 1;
+      const diffSq = diff * diff;
 
-      if (diff * diff < 1e-4) {
-        const name = pl.kind === "kWarpTunnel"
+      if (diffSq < bestDiff) {
+        bestDiff = diffSq;
+        const name = (pl.kind === "kWarpTunnel" || pl.kind === "kStation")
           ? pl.name
           : pl.kind === PlanetKinds.Sun
             ? pl.name
@@ -349,7 +400,6 @@ class SpaceScene extends Scene {
           targetPos: { x: pl.pos.x, y: pl.pos.y },
           isWarpTunnel: pl.kind === "kWarpTunnel",
         };
-        break;
       }
     }
     // Torus drive: engage when aimed at a target, moving fast, AND velocity
@@ -383,12 +433,49 @@ class SpaceScene extends Scene {
     this.torusDrive = torusActive;
 
     const velAngle = nv > 1 ? Math.atan2(this.player.vel.y, this.player.vel.x) : null;
+
+    // Station docking and collision
+    let dockPrompt = null;
+    if (this.station) {
+      if (this.station.collides(this.player)) {
+        if (!this._wasColliding) {
+          this.pendingCrash  = true;
+          this._wasColliding = true;
+        }
+      } else {
+        this._wasColliding = false;
+        const ds      = this.station.dockStatus(this.player);
+        // DEBUG — remove once docking feels right
+        if (ds === 'approach' || ds === 'dock') {
+          const bx  = this.station.pos.x + Math.cos(this.station.dockAngle) * this.station.radius;
+          const by  = this.station.pos.y + Math.sin(this.station.dockAngle) * this.station.radius;
+          const bdx = this.player.pos.x - bx, bdy = this.player.pos.y - by;
+          log(`bay dist: ${Math.round(Math.sqrt(bdx*bdx+bdy*bdy))}  status: ${ds}`);
+        }
+        const isDock  = ds === 'dock';
+        if (isDock) {
+          if (!this._wasDocking) {
+            this.pendingDock = true;
+            this._dockedAt   = performance.now();
+          }
+          dockPrompt = 'dock';
+        } else if (ds === 'approach') {
+          dockPrompt = 'approach';
+        }
+        this._wasDocking = isDock;
+      }
+    }
+
+    const dockedFlash = this._dockedAt && (performance.now() - this._dockedAt) < 3000;
     this.minimap.setHUD({
       ...hudTarget,
       speed: Math.sqrt(nv).toFixed(1),
       torus: this.torusDrive,
       velAngle,
       shipAngle: this.player.r,
+      dockPrompt,
+      dockedFlash,
+      zoomRatio: scale / MAXSCALE,
     });
 
     //viewframe.scale = nv > 0.2 ? 0.2 * 10000 /nv : 0.2
