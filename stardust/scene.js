@@ -6,16 +6,58 @@ import { RenderedSystem } from "./tinker/renderedSystem.js";
 import { sqnorm } from "./math.js";
 import { PlanetKinds } from "./tinker/system.js";
 import { otherControl } from "./pid.js";
-import { npcControl } from "./npc.js";
+import { npcControl, traderControl } from "./npc.js";
 import { Lynx } from "./base/lynx.js";
+import { Bobcat } from "./base/bobcat.js";
 import { Flame } from "./flame.js";
 import { settings } from "../roids2/settings.js";
 import { Debris } from "./base/debris.js";
 import { Minimap } from "./minimap.js";
+import { CommsSystem } from "./comms.js";
 import { Station, APPROACH_RANGE } from "./station.js";
 import { WarpTunnel, TUNNEL_RADIUS } from "./warpTunnel.js";
 import { universe } from "./tinker/universe.js";
+import { ShipTypes } from "./tinker/systemShips.js";
+import { generateShipName } from "./comms.js";
 import { seededRnd } from "./rnd.js";
+import { MassDriverGun, PhotonTorpedoLauncher } from "./weapons/weapons.js";
+import { Wreck, SCOOP_RANGE, SCAN_RANGE, HALO_RADIUS } from "./wreck.js";
+
+// Loot tables keyed by planet kind.
+// Each entry: [weight, loot object]  — rnd() selects by cumulative weight.
+const LOOT_TABLES = {
+  [PlanetKinds.Rocky]:      [[0.5, { kind:'ammo', weapon:'kMassDriverGun', count:40 }],
+                             [0.3, { kind:'ammo', weapon:'kPhotonTorpedoLauncher', count:3 }],
+                             [0.2, { kind:'credits', count:800 }]],
+  [PlanetKinds.EarthLike]:  [[0.4, { kind:'ammo', weapon:'kMassDriverGun', count:30 }],
+                             [0.3, { kind:'credits', count:1200 }],
+                             [0.2, { kind:'ammo', weapon:'kPhotonTorpedoLauncher', count:4 }],
+                             [0.1, { kind:'item', id:'matterCompressorMk1', name:'Matter compressor Mk1' }]],
+  [PlanetKinds.Atmosphere]: [[0.45, { kind:'credits', count:1500 }],
+                             [0.3,  { kind:'ammo', weapon:'kMassDriverGun', count:50 }],
+                             [0.15, { kind:'ammo', weapon:'kPhotonTorpedoLauncher', count:5 }],
+                             [0.1,  { kind:'item', id:'matterCompressorMk1', name:'Matter compressor Mk1' }]],
+  [PlanetKinds.GasGiant]:   [[0.4,  { kind:'credits', count:2000 }],
+                             [0.25, { kind:'ammo', weapon:'kPhotonTorpedoLauncher', count:8 }],
+                             [0.2,  { kind:'item', id:'matterCompressorMk2', name:'Matter compressor Mk2' }],
+                             [0.15, { kind:'item', id:'targetingComputer', name:'Targeting computer' }]],
+  [PlanetKinds.IceGiant]:   [[0.35, { kind:'credits', count:3000 }],
+                             [0.25, { kind:'item', id:'matterCompressorMk2', name:'Matter compressor Mk2' }],
+                             [0.2,  { kind:'item', id:'matterCompressorMk3', name:'Matter compressor Mk3' }],
+                             [0.2,  { kind:'item', id:'powerManagementComputer', name:'Power management computer' }]],
+};
+
+function _rollLoot(rnd, planetKind) {
+  const table = LOOT_TABLES[planetKind] ?? LOOT_TABLES[PlanetKinds.Rocky];
+  const roll = rnd();
+  let cumulative = 0;
+  for (const [weight, loot] of table) {
+    cumulative += weight;
+    if (roll < cumulative) return [{ ...loot }];
+  }
+  return [{ ...table[table.length - 1][1] }];
+}
+
 // Returns spawn position and inward velocity angle for arriving via the tunnel from `fromId`
 function computeEntryPosition(systemId, fromId) {
   const planets = universe[systemId].planets;
@@ -141,12 +183,15 @@ class SpaceScene extends Scene {
     this.flameList = props.flameList;
     this.otherShips = [];
     this.debrisList = [];
+    this.wrecks     = [];
     this.pendingDock   = false;
     this.pendingCrash  = false;
     this._wasDocking   = false;
     this._wasColliding = false;
     this._dockedAt     = null;
     this._spawnSecurityShips();
+    this._spawnTraderShips();
+    this._spawnWrecks();
     this._planetNames = this._buildPlanetNames();
     this.cameraPos = { x: this.player.pos.x, y: this.player.pos.y };
     this.torusDrive = false;
@@ -156,6 +201,7 @@ class SpaceScene extends Scene {
       warpTunnels: this.warpTunnels,
       station: this.station,
     });
+    this.comms = new CommsSystem();
   }
   _buildWarpTunnels() {
     const sysId = this.renderedSystem.id;
@@ -209,6 +255,10 @@ class SpaceScene extends Scene {
     const homePos = this.station.pos;
     factions.forEach((faction, i) => {
       const angle = (i / factions.length) * Math.PI * 2;
+      const isMilitary = faction === 'military';
+      const photonAmmo  = isMilitary ? 30 : 20;
+      const hull        = isMilitary ? 8000 : 5000;
+
       const ship = new Lynx({
         pos: {
           x: homePos.x + Math.cos(angle) * patrolRadius,
@@ -216,7 +266,14 @@ class SpaceScene extends Scene {
         },
         vel: { x: 0, y: 0 },
         r: angle + Math.PI / 2,
+        e: hull,
       });
+
+      const massDriver = new MassDriverGun({ pos: { x: 30, y: 0 }, source: ship._id });
+      const photon     = new PhotonTorpedoLauncher({ pos: { x: 0, y: 0 }, source: ship._id });
+      photon.ammoMax   = photonAmmo;
+      ship.weapons     = [massDriver, photon];
+      ship._initAmmo(ship.weapons);
       ship.npcState     = 'patrol';
       ship.faction      = faction;
       ship.homePos      = homePos;
@@ -227,6 +284,133 @@ class SpaceScene extends Scene {
       ship.attach(this.viewframe);
       this.otherShips.push(ship);
     });
+  }
+
+  _spawnTraderShips() {
+    if (!this.station || this.warpTunnels.length === 0) return;
+    const dist  = this.renderedSystem.shipDistribution;
+    const count = Math.min(3, Math.floor((dist[ShipTypes.TRADER] ?? 0) / 4));
+    if (count === 0) return;
+
+    const stationPos = this.station.pos;
+    const STATION_R  = this.station.radius;
+
+    for (let i = 0; i < count; i++) {
+      const roll   = Math.random();
+      const tunnel = this.warpTunnels[Math.floor(Math.random() * this.warpTunnels.length)];
+      const name   = generateShipName();
+      let ship, npcState, traderDest, traderArrivalRange, spawnPos, spawnAngle;
+
+      if (roll < 0.4) {
+        // Arriving: spawn at tunnel, head to station
+        npcState          = 'arriving';
+        traderDest        = { ...stationPos };
+        traderArrivalRange = STATION_R * 2.5;
+        const offset      = (Math.random() - 0.5) * tunnel.radius * 1.5;
+        const perp        = Math.atan2(tunnel.pos.y, tunnel.pos.x) + Math.PI / 2;
+        spawnPos = {
+          x: tunnel.pos.x + Math.cos(perp) * offset,
+          y: tunnel.pos.y + Math.sin(perp) * offset,
+        };
+        spawnAngle = Math.atan2(stationPos.y - spawnPos.y, stationPos.x - spawnPos.x);
+      } else if (roll < 0.8) {
+        // Departing: spawn near station, head to tunnel
+        npcState          = 'departing';
+        traderDest        = { ...tunnel.pos };
+        traderArrivalRange = tunnel.radius * 3;
+        const angle       = Math.random() * Math.PI * 2;
+        spawnPos = {
+          x: stationPos.x + Math.cos(angle) * STATION_R * 3,
+          y: stationPos.y + Math.sin(angle) * STATION_R * 3,
+        };
+        spawnAngle = Math.atan2(tunnel.pos.y - spawnPos.y, tunnel.pos.x - spawnPos.x);
+      } else {
+        // Idle: drift near station between random nearby waypoints
+        npcState          = 'idle';
+        traderArrivalRange = STATION_R * 0.8;
+        const angle       = Math.random() * Math.PI * 2;
+        spawnPos = {
+          x: stationPos.x + Math.cos(angle) * STATION_R * (2 + Math.random()),
+          y: stationPos.y + Math.sin(angle) * STATION_R * (2 + Math.random()),
+        };
+        spawnAngle = angle + Math.PI / 2;
+        const destAngle = Math.random() * Math.PI * 2;
+        traderDest = {
+          x: stationPos.x + Math.cos(destAngle) * STATION_R * (1.5 + Math.random() * 1.5),
+          y: stationPos.y + Math.sin(destAngle) * STATION_R * (1.5 + Math.random() * 1.5),
+        };
+      }
+
+      ship = new Bobcat({ pos: spawnPos, vel: { x: 0, y: 0 }, r: spawnAngle });
+      ship.npcState          = npcState;
+      ship.npcRole           = 'trader';
+      ship.faction           = 'merchant';
+      ship.traderName        = name;
+      ship.traderDest        = traderDest;
+      ship.traderArrivalRange = traderArrivalRange;
+      ship.traderArrived     = false;
+      ship.traderTunnel      = npcState !== 'idle' ? tunnel : null;
+      ship.generate(this.app);
+      ship.attach(this.viewframe);
+      this.otherShips.push(ship);
+
+      // Comms broadcast staggered so they don't all fire at once
+      const delay = i * 1200 + Math.random() * 600;
+      if (npcState === 'arriving') {
+        const from = tunnel.destinationId !== undefined
+          ? universe[tunnel.destinationId]?.name ?? 'deep space'
+          : 'deep space';
+        setTimeout(() => this.comms?.trader(name, `inbound from ${from}, requesting clearance`), delay);
+      } else if (npcState === 'departing') {
+        const to = tunnel.destinationId !== undefined
+          ? universe[tunnel.destinationId]?.name ?? 'deep space'
+          : 'deep space';
+        setTimeout(() => this.comms?.trader(name, `departing for ${to}`), delay);
+      }
+    }
+  }
+
+  _spawnWrecks() {
+    const planets = this.renderedSystem.planetObjects;
+    planets.forEach((planet, idx) => {
+      if (planet.pos.x === 0 && planet.pos.y === 0) return; // skip sun
+      const rnd = seededRnd(this.systemId * 3001 + idx * 97);
+      if (rnd() > 0.4) return; // 40% chance of a wreck per planet
+      const wrecksHere = 1 + (rnd() < 0.25 ? 1 : 0); // 25% chance of a second wreck
+      for (let w = 0; w < wrecksHere; w++) {
+        const angle  = rnd() * Math.PI * 2;
+        const dist   = (planet.radius ?? 2000) * (2.5 + rnd() * 2);
+        const pos    = {
+          x: planet.pos.x + Math.cos(angle) * dist,
+          y: planet.pos.y + Math.sin(angle) * dist,
+        };
+        const loot = _rollLoot(rnd, planet.kind);
+        const wreck = new Wreck({ pos, loot });
+        wreck._playerRef = this.player;
+        wreck.generate(this.app);
+        wreck.attach(this.viewframe);
+        this.wrecks.push(wreck);
+      }
+    });
+  }
+
+  _onScoop(loot) {
+    for (const item of loot) {
+      if (item.kind === 'ammo') {
+        const current = this.player.ammo[item.weapon] ?? { count: 0, max: 0 };
+        current.count = (current.count ?? 0) + item.count;
+        current.max   = Math.max(current.max ?? 0, current.count);
+        this.player.ammo[item.weapon] = current;
+        this.comms?.system(`Scooped: ${item.count} × ${item.weapon.replace('k','').replace(/([A-Z])/g, ' $1').trim()}`);
+      } else if (item.kind === 'credits') {
+        this.player.credits = (this.player.credits ?? 0) + item.count;
+        this.comms?.system(`Scooped: ${item.count} credits`);
+      } else if (item.kind === 'item') {
+        this.player.cargo = this.player.cargo ?? [];
+        this.player.cargo.push({ id: item.id, name: item.name });
+        this.comms?.system(`Scooped: ${item.name}`);
+      }
+    }
   }
 
   _buildPlanetNames() {
@@ -275,7 +459,11 @@ class SpaceScene extends Scene {
       },
     };
     for (let otherShip of this.otherShips) {
-      if (otherShip.npcState) {
+      if (otherShip.npcRole === 'trader') {
+        if (otherShip.npcState === 'arriving' || otherShip.npcState === 'departing') {
+          traderControl(otherShip, delta.deltaTime);
+        }
+      } else if (otherShip.npcState) {
         npcControl(otherShip, delta.deltaTime);
       } else if (otherShip.action() === "kChase") {
         otherControl(
@@ -317,18 +505,40 @@ class SpaceScene extends Scene {
     }
 
     // Planet/sun proximity zoom: zoom out proportionally to body size when nearby.
+    // The sun uses a tighter range multiplier — its radius is so large that * 5 would
+    // cover the entire inner system and keep the player permanently zoomed out.
     for (const body of this.renderedSystem.planetObjects) {
       const bodyRadius = body.meshes[0].radius;
+      const isSun = body.pos.x === 0 && body.pos.y === 0;
       const pdx = this.player.pos.x - body.pos.x;
       const pdy = this.player.pos.y - body.pos.y;
       const pDist = Math.sqrt(pdx * pdx + pdy * pdy);
-      const BODY_PROX_RANGE = bodyRadius * 5;
+      const BODY_PROX_RANGE = bodyRadius * (isSun ? 1.5 : 5);
       const BODY_PROX_SCALE = Math.min(MAXSCALE, W / (4 * bodyRadius));
       if (pDist < BODY_PROX_RANGE) {
         const pt = Math.max(0, 1 - pDist / BODY_PROX_RANGE);
         const smoothPt = pt * pt * (3 - 2 * pt);
         const proximityScale = MAXSCALE * (1 - smoothPt) + BODY_PROX_SCALE * smoothPt;
         scale = Math.min(scale, proximityScale);
+      }
+    }
+    // Wreck proximity zoom: gently recover toward MAXSCALE when close to a resolved wreck.
+    // Blends between current scale and MAXSCALE — doesn't fight planet zoom-out, just
+    // partially counteracts it. Target is scale*2 capped at MAXSCALE, not a fixed value,
+    // so the recovery is proportional to how zoomed out you already are.
+    for (const wreck of this.wrecks) {
+      const wdx = this.player.pos.x - wreck.pos.x;
+      const wdy = this.player.pos.y - wreck.pos.y;
+      const wDistSq = wdx * wdx + wdy * wdy;
+      if (wDistSq > SCAN_RANGE * SCAN_RANGE) continue; // not resolved yet
+      const wDist = Math.sqrt(wDistSq);
+      const WRECK_PROX_RANGE = HALO_RADIUS;
+      if (wDist < WRECK_PROX_RANGE) {
+        const pt = 1 - wDist / WRECK_PROX_RANGE;
+        const smoothPt = pt * pt * (3 - 2 * pt);
+        const target = Math.min(MAXSCALE, Math.max(scale * 4, MAXSCALE * 0.4));
+        const proximityScale = scale * (1 - smoothPt) + target * smoothPt;
+        scale = Math.max(scale, proximityScale);
       }
     }
 
@@ -467,6 +677,8 @@ class SpaceScene extends Scene {
     }
 
     const dockedFlash = this._dockedAt && (performance.now() - this._dockedAt) < 3000;
+    const playerScreenX = (this.player.pos.x - this.cameraPos.x) * scale;
+    const playerScreenY = (this.player.pos.y - this.cameraPos.y) * scale;
     this.minimap.setHUD({
       ...hudTarget,
       speed: Math.sqrt(nv).toFixed(1),
@@ -476,6 +688,8 @@ class SpaceScene extends Scene {
       dockPrompt,
       dockedFlash,
       zoomRatio: scale / MAXSCALE,
+      playerScreenX,
+      playerScreenY,
     });
 
     //viewframe.scale = nv > 0.2 ? 0.2 * 10000 /nv : 0.2
@@ -627,9 +841,37 @@ class SpaceScene extends Scene {
       }
     }
 
-    // Remove dead other ships
+    // Remove dead or arrived ships
     for (let i = this.otherShips.length - 1; i >= 0; i--) {
-      if (this.otherShips[i].e < 0) {
+      const ship = this.otherShips[i];
+      if (ship.traderArrived) {
+        if (ship.npcState === 'idle') {
+          // Pick a new random waypoint near the station and keep drifting
+          const stPos  = this.station?.pos ?? { x: 0, y: 0 };
+          const stR    = this.station?.radius ?? 2000;
+          const angle  = Math.random() * Math.PI * 2;
+          ship.traderDest = {
+            x: stPos.x + Math.cos(angle) * stR * (1.5 + Math.random() * 1.5),
+            y: stPos.y + Math.sin(angle) * stR * (1.5 + Math.random() * 1.5),
+          };
+          ship.traderArrived = false;
+          continue;
+        }
+        // Arriving/departing trader reached its destination — quietly despawn
+        for (const p of (ship.presentations ?? [])) p?.parent?.removeChild(p);
+        this.otherShips.splice(i, 1);
+        continue;
+      }
+      if (ship.e < 0) {
+        if (ship.npcRole === 'trader') {
+          // Economy impact: one fewer trader in this system
+          const sys = universe[this.systemId];
+          if (sys?.shipDistribution) {
+            sys.shipDistribution[ShipTypes.TRADER] =
+              Math.max(0, (sys.shipDistribution[ShipTypes.TRADER] ?? 1) - 1);
+          }
+          this.comms?.trader(ship.traderName ?? 'UNKNOWN', 'MAYDAY — under attack');
+        }
         this.otherShips.splice(i, 1);
       }
     }
@@ -651,13 +893,32 @@ class SpaceScene extends Scene {
       d.update(delta);
     }
 
+    // Update wrecks + scoop check
+    const px = this.player.pos.x;
+    const py = this.player.pos.y;
+    for (let i = this.wrecks.length - 1; i >= 0; i--) {
+      const wreck = this.wrecks[i];
+      if (wreck.scooped) { this.wrecks.splice(i, 1); continue; }
+      wreck.update(delta);
+      const dx = wreck.pos.x - px;
+      const dy = wreck.pos.y - py;
+      if (dx * dx + dy * dy < SCOOP_RANGE * SCOOP_RANGE) {
+        wreck.despawn();
+        this.wrecks.splice(i, 1);
+        this._onScoop(wreck.loot);
+      }
+    }
+
     this.renderedSystem.update(delta);
     this.minimap.setOtherShips(this.otherShips);
+    this.minimap.setWrecks(this.wrecks);
     this.minimap.update();
+    this.comms.update();
   }
 
   destroy() {
     this.minimap.destroy();
+    this.comms.destroy();
     // Detach the reused player from the viewframe before destroying the scene tree,
     // otherwise destroy({ children: true }) would nuke the player's PIXI objects.
     for (const p of (this.player.presentations ?? [])) {

@@ -1,6 +1,7 @@
 export { SystemMap };
 
 import { PlanetKinds } from "./tinker/system.js";
+import { SCAN_RANGE } from "./wreck.js";
 
 const FACTION_COLOR = {
   police:   "rgba(80,140,255,0.9)",
@@ -11,14 +12,16 @@ const FACTION_COLOR = {
 
 class SystemMap {
   constructor() {
-    this._overlay = null;
-    this._canvas  = null;
-    this._visible = false;
-    this._scene   = null;
-    this._zoom    = 1;
-    this._pan     = { x: 0, y: 0 };
-    this._baseS   = 1; // base world→pixel scale (computed once on show)
-    this._drag    = null; // { startX, startY, panX, panY } while dragging
+    this._overlay  = null;
+    this._canvas   = null;
+    this._tooltip  = null;
+    this._visible  = false;
+    this._scene    = null;
+    this._zoom     = 1;
+    this._pan      = { x: 0, y: 0 };
+    this._baseS    = 1; // base world→pixel scale (computed once on show)
+    this._drag     = null; // { startX, startY, panX, panY } while dragging
+    this._hitTargets = []; // rebuilt each _draw(): [{ x, y, r, label }]
   }
 
   get visible() { return this._visible; }
@@ -45,6 +48,16 @@ class SystemMap {
 
     this._overlay = overlay;
     this._canvas  = canvas;
+
+    const tooltip = document.createElement("div");
+    Object.assign(tooltip.style, {
+      position: "fixed", pointerEvents: "none", zIndex: "9999",
+      background: "rgba(0,0,0,0.82)", border: "1px solid rgba(255,255,255,0.18)",
+      color: "#dde", fontFamily: "monospace", fontSize: "12px",
+      padding: "5px 9px", borderRadius: "4px", display: "none", whiteSpace: "pre",
+    });
+    document.body.appendChild(tooltip);
+    this._tooltip = tooltip;
 
     // Compute base scale once
     const allPos = [
@@ -79,22 +92,38 @@ class SystemMap {
       overlay.style.cursor = "grabbing";
     });
     overlay.addEventListener("mousemove", (e) => {
-      if (!this._drag) return;
-      this._pan.x = this._drag.panX + (e.clientX - this._drag.startX);
-      this._pan.y = this._drag.panY + (e.clientY - this._drag.startY);
-      this._draw();
+      if (this._drag) {
+        this._pan.x = this._drag.panX + (e.clientX - this._drag.startX);
+        this._pan.y = this._drag.panY + (e.clientY - this._drag.startY);
+        this._draw();
+      }
+      // Hover hit-test
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const hit = this._hitTargets.find(t => (mx - t.x) ** 2 + (my - t.y) ** 2 < t.r * t.r);
+      if (hit) {
+        this._tooltip.style.display = "block";
+        this._tooltip.style.left = `${e.clientX + 14}px`;
+        this._tooltip.style.top  = `${e.clientY + 14}px`;
+        this._tooltip.textContent = hit.label;
+      } else {
+        this._tooltip.style.display = "none";
+      }
     });
     const endDrag = () => { this._drag = null; overlay.style.cursor = "grab"; };
     overlay.addEventListener("mouseup",   endDrag);
-    overlay.addEventListener("mouseleave", endDrag);
+    overlay.addEventListener("mouseleave", () => { endDrag(); this._tooltip.style.display = "none"; });
 
     this._draw();
   }
 
   hide() {
     this._overlay?.remove();
+    this._tooltip?.remove();
     this._overlay = null;
     this._canvas  = null;
+    this._tooltip = null;
     this._visible = false;
     this._scene   = null;
   }
@@ -116,6 +145,7 @@ class SystemMap {
     const toScreen = (wx, wy) => ({ x: cx + px + wx * s, y: cy + py + wy * s });
 
     ctx.clearRect(0, 0, W, H);
+    this._hitTargets = [];
 
     // Orbit rings
     ctx.save();
@@ -150,6 +180,7 @@ class SystemMap {
       ctx.textBaseline = "middle";
       ctx.fillText(tunnel.name, 0, -18);
       ctx.restore();
+      this._hitTargets.push({ x: sp.x, y: sp.y, r: 18, label: tunnel.name });
     }
 
     // Planets + sun
@@ -170,6 +201,8 @@ class SystemMap {
       ctx.arc(x, y, r, 0, Math.PI * 2);
       ctx.fillStyle = cssCol;
       ctx.fill();
+      const bodyName = isSun ? obj.name : (obj.p?.kind ?? obj.kind ?? 'Planet').replace('k','');
+      this._hitTargets.push({ x, y, r: Math.max(14, r * 2), label: bodyName });
       if (isSun) {
         ctx.beginPath();
         ctx.arc(x, y, r * 2.4, 0, Math.PI * 2);
@@ -195,6 +228,7 @@ class SystemMap {
       ctx.textAlign = "center";
       ctx.textBaseline = "top";
       ctx.fillText(scene.station.name, x, y + 10);
+      this._hitTargets.push({ x, y, r: 16, label: scene.station.name });
     }
 
     // Other ships
@@ -205,6 +239,47 @@ class SystemMap {
       ctx.arc(x, y, 2.5, 0, Math.PI * 2);
       ctx.fillStyle = FACTION_COLOR[ship.faction] ?? FACTION_COLOR.pirate;
       ctx.fill();
+      const shipLabel = ship.traderName
+        ? `${ship.traderName} (${ship.faction})`
+        : ship.faction ?? 'unknown';
+      this._hitTargets.push({ x, y, r: 10, label: shipLabel });
+    }
+
+    // Wrecks — ? if unresolved, × if within scan range
+    // INVARIANT: wreck rendering must mirror minimap.js wreck rendering.
+    // Both use SCAN_RANGE to gate ? (unresolved) vs × (resolved).
+    // If you change the logic here, change it there too, and vice versa.
+    const plx = scene.player.pos.x;
+    const ply = scene.player.pos.y;
+    for (const wreck of (scene.wrecks ?? [])) {
+      const { x, y } = toScreen(wreck.pos.x, wreck.pos.y);
+      const dx = wreck.pos.x - plx;
+      const dy = wreck.pos.y - ply;
+      const resolved = dx * dx + dy * dy < SCAN_RANGE * SCAN_RANGE;
+      ctx.save();
+      if (resolved) {
+        const cs = 5;
+        ctx.strokeStyle = "rgba(255,170,50,0.85)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(x - cs, y - cs); ctx.lineTo(x + cs, y + cs);
+        ctx.moveTo(x + cs, y - cs); ctx.lineTo(x - cs, y + cs);
+        ctx.stroke();
+        const lootDesc = wreck.loot.map(l =>
+          l.kind === 'ammo'    ? `${l.count}× ${l.weapon.replace('k','').replace(/([A-Z])/g,' $1').trim()}` :
+          l.kind === 'credits' ? `${l.count} credits` :
+          l.name ?? l.id
+        ).join('\n');
+        this._hitTargets.push({ x, y, r: 12, label: `Wreck\n${lootDesc}` });
+      } else {
+        ctx.fillStyle = "rgba(220,220,255,0.9)";
+        ctx.font = "11px monospace";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("?", x, y);
+        this._hitTargets.push({ x, y, r: 12, label: "Unknown signal source" });
+      }
+      ctx.restore();
     }
 
     // Player
@@ -222,6 +297,27 @@ class SystemMap {
       ctx.fillStyle = "#00ff88";
       ctx.fill();
       ctx.restore();
+
+      const p = scene.player;
+      const weaponNames = (p.weapons ?? [])
+        .map(w => w.kind?.replace('k','').replace(/([A-Z])/g,' $1').trim() ?? '?')
+        .join(', ');
+      const ammoLines = Object.entries(p.ammo ?? {})
+        .map(([kind, a]) => `  ${kind.replace('k','').replace(/([A-Z])/g,' $1').trim()}: ${Math.floor(a.count)}`)
+        .join('\n');
+      const cargoLines = (p.cargo ?? [])
+        .map(item => `  ${item.name ?? item.id}`)
+        .join('\n');
+      const credits = p.credits != null ? `Credits: ${p.credits}` : null;
+
+      const lines = [
+        `Weapons: ${weaponNames || 'none'}`,
+        ammoLines ? `Ammo:\n${ammoLines}` : null,
+        `Cargo: ${(p.cargo ?? []).length === 0 ? 'empty' : ''}` + (cargoLines ? `\n${cargoLines}` : ''),
+        `Credits: ${p.credits ?? 0}`,
+      ].filter(Boolean).join('\n');
+
+      this._hitTargets.push({ x, y, r: 14, label: lines });
     }
 
     // System name

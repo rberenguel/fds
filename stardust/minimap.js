@@ -1,4 +1,5 @@
 export { Minimap };
+import { SCAN_RANGE } from "./wreck.js";
 
 const SIZE = Math.round(window.innerWidth / 5.5);
 const PADDING = Math.round(SIZE * 0.075);
@@ -38,6 +39,7 @@ class Minimap {
     this._scale = null;
     this._hud = { targetName: null, targetColor: null, targetDist: null, targetPos: null, speed: null, torus: false, velAngle: null, shipAngle: 0, dockPrompt: null, dockedFlash: false, zoomRatio: 1 };
     this._otherShips = [];
+    this._wrecks = [];
 
     const GS = 200;
     this._ghostSize = GS;
@@ -62,6 +64,10 @@ class Minimap {
 
   setOtherShips(ships) {
     this._otherShips = ships;
+  }
+
+  setWrecks(wrecks) {
+    this._wrecks = wrecks;
   }
 
   destroy() {
@@ -210,6 +216,41 @@ class Minimap {
       ctx.fill();
     }
 
+    // Wreck scanner blips
+    // INVARIANT: wreck rendering must mirror systemMap.js wreck rendering.
+    // Both use SCAN_RANGE to gate ? (unresolved) vs × (resolved).
+    // If you change the logic here, change it there too, and vice versa.
+    for (const wreck of this._wrecks) {
+      const wdx = wreck.pos.x - ox;
+      const wdy = wreck.pos.y - oy;
+      const distSq = wdx * wdx + wdy * wdy;
+      if (distSq > VIEW_RADIUS * VIEW_RADIUS) continue;
+      const wx = cx + wdx * s;
+      const wy = cy + wdy * s;
+      const resolved = distSq < SCAN_RANGE * SCAN_RANGE;
+      if (resolved) {
+        // Resolved: bright amber × cross
+        const cs = SIZE * 0.018;
+        ctx.save();
+        ctx.strokeStyle = "rgba(255,180,40,0.95)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(wx - cs, wy - cs); ctx.lineTo(wx + cs, wy + cs);
+        ctx.moveTo(wx + cs, wy - cs); ctx.lineTo(wx - cs, wy + cs);
+        ctx.stroke();
+        ctx.restore();
+      } else {
+        // Unresolved: dim grey ? mark
+        ctx.save();
+        ctx.fillStyle = "rgba(220,220,255,0.9)";
+        ctx.font = `${SIZE * 0.045}px monospace`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("?", wx, wy);
+        ctx.restore();
+      }
+    }
+
     // Prograde / retrograde markers
     const { velAngle, shipAngle } = this._hud;
     if (velAngle !== null) {
@@ -331,7 +372,7 @@ class Minimap {
   }
 
   _drawGhost() {
-    const { shipAngle, zoomRatio } = this._hud;
+    const { shipAngle, zoomRatio, playerScreenX, playerScreenY } = this._hud;
     const gc = this._ghostCtx;
     const GS = this._ghostSize;
 
@@ -343,6 +384,15 @@ class Minimap {
     if (zoomRatio == null || zoomRatio > FADE_START) return;
     const alpha = Math.min(0.65, (FADE_START - zoomRatio) / (FADE_START - FADE_FULL));
     if (alpha <= 0) return;
+
+    // Track the player's actual screen position (camera dead zone can offset it from centre)
+    const screenCX = window.innerWidth  / 2 + (playerScreenX ?? 0);
+    const screenCY = window.innerHeight / 2 + (playerScreenY ?? 0);
+    Object.assign(this._ghostCanvas.style, {
+      left: `${screenCX}px`,
+      top:  `${screenCY}px`,
+      transform: "translate(-50%, -50%)",
+    });
 
     const cx = GS / 2;
     const cy = GS / 2;

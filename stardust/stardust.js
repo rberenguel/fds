@@ -24,6 +24,8 @@ import { Asteroid } from "./asteroid.js";
 
 import { SpaceScene, computeEntryPosition } from "./scene.js";
 import { SystemMap } from "./systemMap.js";
+import { generateShipName } from "./comms.js";
+import { universe } from "./tinker/universe.js";
 
 import { seededRnd } from "./rnd.js";
 
@@ -74,7 +76,7 @@ const gameActions = {
     if (player.e < 10 || spaceScene.torusDrive) {
       return;
     }
-    player.forwardThrust();
+    player.forwardThrust(1);
     player.vel.x *= 0.999;
     player.vel.y *= 0.999;
   },
@@ -90,13 +92,13 @@ const gameActions = {
     if (player.e < 10 || spaceScene.torusDrive) {
       return;
     }
-    player.backThrust();
+    player.backThrust(1, 100.5 * 100.5);
   },
   fastDown: () => {
     if (player.e < 10 || spaceScene.torusDrive) {
       return;
     }
-    player.backThrust(5);
+    player.backThrust(5, 100.5 * 100.5);
   },
   moveRight: (f = 1) => {
     player.yawRight();
@@ -329,7 +331,54 @@ const systemMap = new SystemMap();
 let dockedScreen = null;
 let crashScreen  = null;
 
+const _traderChatter = () => {
+  const comms  = spaceScene.comms;
+  const sysId  = spaceScene.systemId;
+  const sys    = universe[sysId];
+  const neighborNames = Object.keys(sys?.neighbors ?? {})
+    .map(id => universe[id]?.name)
+    .filter(Boolean);
+
+  const arriving = [
+    (n) => `inbound from ${n}, requesting docking clearance`,
+    (n) => `arriving from ${n}, cargo secure`,
+    (n) => `on final approach from ${n}`,
+  ];
+  const departing = [
+    (n) => `departing for ${n}`,
+    (n) => `cargo loaded, heading for ${n}`,
+    (n) => `clearance confirmed, outbound to ${n}`,
+  ];
+  const idle = [
+    () => `standing by`,
+    () => `awaiting cargo manifest`,
+    () => `docked, maintenance in progress`,
+  ];
+
+  const count = 1 + Math.floor(Math.random() * 2);
+  for (let i = 0; i < count; i++) {
+    const name = generateShipName();
+    const roll = Math.random();
+    let text;
+    if (neighborNames.length > 0 && roll < 0.4) {
+      const n = neighborNames[Math.floor(Math.random() * neighborNames.length)];
+      text = arriving[Math.floor(Math.random() * arriving.length)](n);
+    } else if (neighborNames.length > 0 && roll < 0.75) {
+      const n = neighborNames[Math.floor(Math.random() * neighborNames.length)];
+      text = departing[Math.floor(Math.random() * departing.length)](n);
+    } else {
+      text = idle[Math.floor(Math.random() * idle.length)]();
+    }
+    const delay = i * 1800 + Math.random() * 800;
+    setTimeout(() => comms.trader(name, text), delay);
+  }
+};
+
 const showDockedScreen = () => {
+  const stationName = spaceScene.station?.name ?? "Station";
+  spaceScene.comms.station(stationName, "docking confirmed. welcome aboard.");
+  setTimeout(() => _traderChatter(), 2200);
+
   const el = document.createElement("div");
   Object.assign(el.style, {
     position: "fixed", inset: "0", background: "rgba(0,0,0,0.82)",
@@ -340,7 +389,7 @@ const showDockedScreen = () => {
   });
   el.innerHTML = `
     <div style="font-size:2.2em;font-weight:bold;letter-spacing:0.15em">DOCKED</div>
-    <div style="font-size:1em;color:#aaffcc">${spaceScene.station?.name ?? "Station"}</div>
+    <div style="font-size:1em;color:#aaffcc">${stationName}</div>
     <div style="margin-top:1.5em;font-size:0.8em;color:#558866">[ SPACE ] to undock</div>
   `;
   document.body.appendChild(el);
@@ -348,6 +397,8 @@ const showDockedScreen = () => {
 };
 
 const dismissDockedScreen = () => {
+  const stationName = spaceScene.station?.name ?? "Station";
+  spaceScene.comms.station(stationName, "clearance granted. safe travels.");
   dockedScreen?.remove();
   dockedScreen = null;
 };

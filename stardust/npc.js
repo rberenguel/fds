@@ -1,4 +1,4 @@
-export { NPC_PRESETS, initNpcPIDs, npcControl };
+export { NPC_PRESETS, initNpcPIDs, npcControl, traderControl };
 
 import { PIDController } from './pid.js';
 import { normalizeAngle } from './math.js';
@@ -8,6 +8,11 @@ import { normalizeAngle } from './math.js';
 // Chase is toned down from Destrier to reduce overshoot in open space.
 // Raid is aggressive but still physically believable.
 const NPC_PRESETS = {
+  trader: {
+    yaw:    { Kp: 0.03,  Ki: 0.001,  Kd: 0.004   },
+    thrust: { Kp: 0.025, Ki: 0.0003, Kd: 0.00003 },
+    pos:    { Kp: 0.008, Ki: 0,       Kd: 0       },
+  },
   patrol: {
     yaw:    { Kp: 0.04,  Ki: 0.002,  Kd: 0.005   },
     thrust: { Kp: 0.03,  Ki: 0.0005, Kd: 0.00005  },
@@ -46,6 +51,45 @@ const npcControl = (ship, deltaTime) => {
 
   if (ship.npcState === 'patrol') _patrolTick(ship, deltaTime);
 };
+
+// Fly toward ship.traderDest, decelerate on approach, set ship.traderArrived when close.
+// ship.traderArrivalRange: distance threshold to count as "arrived".
+function traderControl(ship, deltaTime) {
+  if (!ship.traderDest) return;
+
+  if (!ship.yawPID || ship._npcPreset !== 'trader') initNpcPIDs(ship, 'trader');
+  const dt = deltaTime / 1000;
+
+  const dx   = ship.traderDest.x - ship.pos.x;
+  const dy   = ship.traderDest.y - ship.pos.y;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  const arrivalRange = ship.traderArrivalRange ?? 8000;
+
+  if (dist < arrivalRange) {
+    ship.traderArrived = true;
+    return;
+  }
+
+  // Yaw toward destination
+  const desiredAngle = Math.atan2(dy, dx);
+  const angleDiff    = normalizeAngle(desiredAngle - ship.r);
+  const yawOut       = ship.yawPID.update(0, angleDiff, dt);
+  if      (yawOut >  0.015) ship.yawRight();
+  else if (yawOut < -0.015) ship.yawLeft();
+
+  // Thrust: full ahead when well-aligned and far; coast+brake when close
+  const brakeDist = arrivalRange * 5;
+  const speed     = Math.sqrt(ship.vel.x ** 2 + ship.vel.y ** 2);
+  const aligned   = Math.abs(angleDiff) < Math.PI / 3;
+
+  if (dist > brakeDist) {
+    if (aligned) ship.forwardThrust();
+  } else {
+    // Decelerate — back-thrust if still moving toward target
+    const fwd = ship.vel.x * Math.cos(ship.r) + ship.vel.y * Math.sin(ship.r);
+    if (speed > 8 && fwd > 0) ship.backThrust();
+  }
+}
 
 function _patrolTick(ship, deltaTime) {
   const dt = deltaTime / 1000; // matches pid.js convention

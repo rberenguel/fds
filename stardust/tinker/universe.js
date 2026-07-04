@@ -14,8 +14,8 @@ for (let i = 0; i < SYSTEMS; i++) {
   const sys = new System({ id: i });
   let nneighbors = 1 + rnd() * 2;
   for (let j = 0; j < nneighbors; j++) {
-    const linked = Math.min(rnd() * i, SYSTEMS - 1);
-    sys.neighbors[Math.floor(linked)] = true;
+    const linked = Math.floor(Math.min(rnd() * i, SYSTEMS - 1));
+    if (linked !== i) sys.neighbors[linked] = true;
   }
   universe.push(sys);
 }
@@ -24,7 +24,7 @@ const relink = (universe) => {
   // Link everything as needed
   for (let sys of universe) {
     for (const nei in sys.neighbors) {
-      universe[nei].neighbors[sys.id] = true;
+      if (parseInt(nei) !== sys.id) universe[nei].neighbors[sys.id] = true;
     }
   }
 };

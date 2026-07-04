@@ -2,7 +2,7 @@ export { Bobcat };
 
 import { Mesh, Meshes } from "../mesh.js";
 import { Ship } from "./shipbase.js";
-import { MassDriverGun } from "../weapons/weapons.js";
+import { PlasmaGun } from "../weapons/weapons.js";
 
 class Bobcat extends Ship {
   constructor(props) {
@@ -97,23 +97,15 @@ class Bobcat extends Ship {
       vertices: vertices,
     });
     try {
-      const massDriverGun1 = new MassDriverGun({
-        pos: {
-          x: -30,
-          y: 50,
-        },
-        rh: true,
+      const plasmaGun1 = new PlasmaGun({
+        pos: { x: -30, y: 50 },
         source: this._id,
       });
-      const massDriverGun2 = new MassDriverGun({
-        pos: {
-          x: -30,
-          y: -50,
-        },
-        rh: false,
+      const plasmaGun2 = new PlasmaGun({
+        pos: { x: -30, y: -50 },
         source: this._id,
       });
-      weapons = [massDriverGun1, massDriverGun2];
+      weapons = [plasmaGun1, plasmaGun2];
       this.weapons = weapons;
       this._initAmmo(weapons);
     } catch (err) {
