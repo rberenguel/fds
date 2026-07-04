@@ -183,29 +183,35 @@ class SpaceScene extends Scene {
   _spawnSecurityShips() {
     if (!this.station) return;
     const dist = this.renderedSystem.shipDistribution;
-    const count = Math.min(3, (dist.police ?? 0) + Math.floor((dist.military ?? 0) / 4));
-    if (count === 0) return;
+    const policeCount   = Math.min(2, dist.police ?? 0);
+    const militaryCount = Math.min(1, Math.floor((dist.military ?? 0) / 4));
+    const factions = [
+      ...Array(policeCount).fill('police'),
+      ...Array(militaryCount).fill('military'),
+    ];
+    if (factions.length === 0) return;
     const patrolRadius = this.station.planetRadius * 2;
     const homePos = this.station.pos;
-    for (let i = 0; i < count; i++) {
-      const angle = (i / count) * Math.PI * 2;
+    factions.forEach((faction, i) => {
+      const angle = (i / factions.length) * Math.PI * 2;
       const ship = new Lynx({
         pos: {
           x: homePos.x + Math.cos(angle) * patrolRadius,
           y: homePos.y + Math.sin(angle) * patrolRadius,
         },
         vel: { x: 0, y: 0 },
-        r: angle + Math.PI / 2, // face tangent to orbit initially
+        r: angle + Math.PI / 2,
       });
-      ship.npcState    = 'patrol';
-      ship.homePos     = homePos;
+      ship.npcState     = 'patrol';
+      ship.faction      = faction;
+      ship.homePos      = homePos;
       ship.patrolRadius = patrolRadius;
-      ship.orbitAngle  = angle;
-      ship.orbitSpeed  = 0.0003; // rad/deltaTime; full circle ≈ 20k frames ≈ 5 min at 60fps
+      ship.orbitAngle   = angle;
+      ship.orbitSpeed   = 0.0003;
       ship.generate(this.app);
       ship.attach(this.viewframe);
       this.otherShips.push(ship);
-    }
+    });
   }
 
   _buildPlanetNames() {
@@ -267,36 +273,55 @@ class SpaceScene extends Scene {
       }
       otherShip.update(delta);
     }
-    // Elastic dead-zone camera: player moves freely in the inner 3/5 of screen;
-    // the 1/5 border region pulls the camera and triggers zoom-out.
     const W = this.app.screen.width;
     const H = this.app.screen.height;
-    const MARGIN = 0.02;
 
+    // Zoom: speed-driven, independent of camera tracking.
     const speedScale = linScale(rawSpeedScale, {
       minScale: 1e-15,
       maxScale: MAXSCALE,
       minOutput: 1e-2,
       maxOutput: MAXSCALE,
     });
+    const zoomT = 1 - speedScale / MAXSCALE; // 0 = slow, 1 = fast
+    const scale = MAXSCALE + (speedScale - MAXSCALE) * zoomT;
 
-    // Where would the player appear at max scale given current camera?
-    const screenX = (this.player.pos.x - this.cameraPos.x) * MAXSCALE + W / 2;
-    const screenY = (this.player.pos.y - this.cameraPos.y) * MAXSCALE + H / 2;
+    // Camera tracking: dead zone shrinks and follow strength grows with speed.
+    // Below CAM_LOW_SPEED: full dead zone (PULL_BASE of viewport), gentle pull at border.
+    // CAM_LOW_SPEED→CAM_HIGH_SPEED: dead zone shrinks to zero, follow tightens.
+    // Torus: lock to player.
+    const CAM_LOW_SPEED  = 50;
+    const CAM_HIGH_SPEED = 100;
+    const PULL_BASE      = 0.80; // dead zone radius at low speed (inner 80%)
+    const FOLLOW_LOW     = 0.03; // gentle pull at low speed, border
+    const FOLLOW_HIGH    = 0.25; // tight pull just before torus
 
-    // How far into the border zone (0 = safe, 1 = at screen edge)?
-    const excessX = Math.max(0, (Math.abs(screenX - W / 2) - (0.5 - MARGIN) * W) / (MARGIN * W));
-    const excessY = Math.max(0, (Math.abs(screenY - H / 2) - (0.5 - MARGIN) * H) / (MARGIN * H));
-    const excess = Math.min(1, Math.max(excessX, excessY));
+    if (this.torusDrive) {
+      this.cameraPos.x = this.player.pos.x;
+      this.cameraPos.y = this.player.pos.y;
+    } else {
+      const speed = Math.sqrt(nv);
+      const sf = Math.max(0, Math.min(1, (speed - CAM_LOW_SPEED) / (CAM_HIGH_SPEED - CAM_LOW_SPEED)));
+      const deadRadius = PULL_BASE * (1 - sf);
 
-    // At warp speed the dead-zone melts away and camera locks to player;
-    // at low speed it's elastic (0.12 at border, 0 at centre).
-    const warpFactor = 1 - speedScale / MAXSCALE; // 0 = stationary, 1 = max speed
-    const followRate = warpFactor + (1 - warpFactor) * excess * 0.12;
-    this.cameraPos.x += (this.player.pos.x - this.cameraPos.x) * followRate;
-    this.cameraPos.y += (this.player.pos.y - this.cameraPos.y) * followRate;
+      // norm: where the player sits on screen relative to center (0=center, 1=edge)
+      const offsetX = (this.player.pos.x - this.cameraPos.x) * scale;
+      const offsetY = (this.player.pos.y - this.cameraPos.y) * scale;
+      const norm = Math.min(1, Math.max(
+        Math.abs(offsetX) / (W / 2),
+        Math.abs(offsetY) / (H / 2),
+      ));
 
-    const scale = MAXSCALE + (speedScale - MAXSCALE) * Math.max(excess, warpFactor);
+      if (norm > deadRadius) {
+        const pullRange = Math.max(0.001, 1 - deadRadius);
+        const t = (norm - deadRadius) / pullRange;
+        const smoothT = t * t * (3 - 2 * t);
+        const maxFollow = FOLLOW_LOW + sf * (FOLLOW_HIGH - FOLLOW_LOW);
+        const followRate = smoothT * maxFollow;
+        this.cameraPos.x += (this.player.pos.x - this.cameraPos.x) * followRate;
+        this.cameraPos.y += (this.player.pos.y - this.cameraPos.y) * followRate;
+      }
+    }
 
     this.viewframe.scale = scale;
     this.viewframe.pos.x = this.cameraPos.x - (W / 2) / scale;

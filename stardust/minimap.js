@@ -7,6 +7,12 @@ const PLAYER_COLOR = "#00ff88";
 const PLANET_COLOR = "#8888ff";
 const BG_COLOR = "rgba(0,0,0,0.55)";
 const BORDER_COLOR = "rgba(255,255,255,0.18)";
+const FACTION_COLOR = {
+  police:   "rgba(80,140,255,0.85)",
+  military: "rgba(80,220,100,0.85)",
+  pirate:   "rgba(255,80,80,0.85)",
+  merchant: "rgba(255,210,60,0.85)",
+};
 
 class Minimap {
   constructor(props = {}) {
@@ -161,12 +167,15 @@ class Minimap {
       ctx.restore();
     }
 
-    // Other ships
+    // Other ships — only within minimap view radius, colored by faction
     for (const ship of this._otherShips) {
       if (ship.e < 0) continue;
+      const sdx = ship.pos.x - ox;
+      const sdy = ship.pos.y - oy;
+      if (sdx * sdx + sdy * sdy > VIEW_RADIUS * VIEW_RADIUS) continue;
       ctx.beginPath();
-      ctx.arc(cx + (ship.pos.x - ox) * s, cy + (ship.pos.y - oy) * s, SIZE * 0.013, 0, Math.PI * 2);
-      ctx.fillStyle = "rgba(255,80,80,0.85)";
+      ctx.arc(cx + sdx * s, cy + sdy * s, SIZE * 0.013, 0, Math.PI * 2);
+      ctx.fillStyle = FACTION_COLOR[ship.faction] ?? FACTION_COLOR.pirate;
       ctx.fill();
     }
 
@@ -231,7 +240,7 @@ class Minimap {
     ctx.restore();
 
     // HUD text — faint separator arc
-    const { targetName, targetColor, targetDist, speed } = this._hud;
+    const { targetName, targetColor, targetDist, speed, torus } = this._hud;
 
     const fontSize = Math.round(SIZE * 0.075);
     const smallFontSize = Math.round(SIZE * 0.065);
@@ -253,14 +262,13 @@ class Minimap {
     ctx.textAlign = "center";
     ctx.font = `${smallFontSize}px monospace`;
     if (speed !== null) {
-      ctx.fillStyle = "rgba(0,255,136,0.8)";
-      ctx.fillText(speed + " m/s", cx, cy + curveR - fontSize * 1.3);
+      ctx.fillStyle = torus ? "rgba(100,200,255,0.9)" : "rgba(0,255,136,0.8)";
+      ctx.fillText(torus ? "c" : speed + " m/s", cx, cy + curveR - fontSize * 1.3);
     }
 
     ctx.restore();
 
     // Border ring — blue pulse during torus
-    const { torus } = this._hud;
     ctx.beginPath();
     ctx.arc(cx, cy, SIZE / 2 - 0.5, 0, Math.PI * 2);
     ctx.strokeStyle = torus

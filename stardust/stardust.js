@@ -70,7 +70,7 @@ const gameActions = {
     player.viewframe.scale *= 1.1;
   },
   moveUp: (f = 1) => {
-    if (player.e < 10) {
+    if (player.e < 10 || spaceScene.torusDrive) {
       return;
     }
     player.forwardThrust();
@@ -78,7 +78,7 @@ const gameActions = {
     player.vel.y *= 0.999;
   },
   fastUp: () => {
-    if (player.e < 10) {
+    if (player.e < 10 || spaceScene.torusDrive) {
       return;
     }
     player.forwardThrust(5);
@@ -86,13 +86,13 @@ const gameActions = {
     player.vel.y *= 0.997;
   },
   moveDown: (f = 1) => {
-    if (player.e < 10) {
+    if (player.e < 10 || spaceScene.torusDrive) {
       return;
     }
     player.backThrust();
   },
   fastDown: () => {
-    if (player.e < 10) {
+    if (player.e < 10 || spaceScene.torusDrive) {
       return;
     }
     player.backThrust(5);
