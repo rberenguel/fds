@@ -4,8 +4,8 @@ import { Graphics, Container } from "../libs/3rdparty/pixi.mjs";
 
 const STATION_RADIUS  = 2000;
 const APPROACH_RANGE  = 40000;  // world units: show name/dist in HUD
-const DOCK_BAY_RANGE  = STATION_RADIUS * 0.15; // max distance from bay entrance to trigger
-const DOCK_MAX_SPEED  = 20;     // m/s
+const DOCK_BAY_RANGE  = STATION_RADIUS * 0.1; // max distance from bay entrance to trigger
+const DOCK_MAX_SPEED  = 5;      // m/s — approach slowly or it counts as a crash
 const DOCK_CONE_COS   = Math.cos(Math.PI / 8); // 22.5° half-angle — bay must be facing player
 const ROT_SPEED       = 0.0015; // rad/frame — full rotation ≈ 70 s at 60fps
 const BAY_OFFSET      = Math.PI / 8; // bay face centre is at this angle from vertex 0 (N=8)

@@ -21,7 +21,8 @@ class SystemMap {
     this._pan      = { x: 0, y: 0 };
     this._baseS    = 1; // base world→pixel scale (computed once on show)
     this._drag     = null; // { startX, startY, panX, panY } while dragging
-    this._hitTargets = []; // rebuilt each _draw(): [{ x, y, r, label }]
+    this._hitTargets   = []; // rebuilt each _draw(): [{ x, y, r, label, wx, wy }]
+    this._hoveredTarget = null;
   }
 
   get visible() { return this._visible; }
@@ -95,13 +96,13 @@ class SystemMap {
       if (this._drag) {
         this._pan.x = this._drag.panX + (e.clientX - this._drag.startX);
         this._pan.y = this._drag.panY + (e.clientY - this._drag.startY);
-        this._draw();
       }
       // Hover hit-test
       const rect = canvas.getBoundingClientRect();
       const mx = e.clientX - rect.left;
       const my = e.clientY - rect.top;
       const hit = this._hitTargets.find(t => (mx - t.x) ** 2 + (my - t.y) ** 2 < t.r * t.r);
+      this._hoveredTarget = hit ?? null;
       if (hit) {
         this._tooltip.style.display = "block";
         this._tooltip.style.left = `${e.clientX + 14}px`;
@@ -110,10 +111,16 @@ class SystemMap {
       } else {
         this._tooltip.style.display = "none";
       }
+      this._draw();
     });
     const endDrag = () => { this._drag = null; overlay.style.cursor = "grab"; };
     overlay.addEventListener("mouseup",   endDrag);
-    overlay.addEventListener("mouseleave", () => { endDrag(); this._tooltip.style.display = "none"; });
+    overlay.addEventListener("mouseleave", () => {
+      endDrag();
+      this._hoveredTarget = null;
+      this._tooltip.style.display = "none";
+      this._draw();
+    });
 
     this._draw();
   }
@@ -180,7 +187,7 @@ class SystemMap {
       ctx.textBaseline = "middle";
       ctx.fillText(tunnel.name, 0, -18);
       ctx.restore();
-      this._hitTargets.push({ x: sp.x, y: sp.y, r: 18, label: tunnel.name });
+      this._hitTargets.push({ x: sp.x, y: sp.y, r: 18, label: tunnel.name, wx: tunnel.pos.x, wy: tunnel.pos.y });
     }
 
     // Planets + sun
@@ -202,7 +209,7 @@ class SystemMap {
       ctx.fillStyle = cssCol;
       ctx.fill();
       const bodyName = isSun ? obj.name : (obj.p?.kind ?? obj.kind ?? 'Planet').replace('k','');
-      this._hitTargets.push({ x, y, r: Math.max(14, r * 2), label: bodyName });
+      this._hitTargets.push({ x, y, r: Math.max(14, r * 2), label: bodyName, wx: obj.pos.x, wy: obj.pos.y });
       if (isSun) {
         ctx.beginPath();
         ctx.arc(x, y, r * 2.4, 0, Math.PI * 2);
@@ -228,7 +235,7 @@ class SystemMap {
       ctx.textAlign = "center";
       ctx.textBaseline = "top";
       ctx.fillText(scene.station.name, x, y + 10);
-      this._hitTargets.push({ x, y, r: 16, label: scene.station.name });
+      this._hitTargets.push({ x, y, r: 16, label: scene.station.name, wx: scene.station.pos.x, wy: scene.station.pos.y });
     }
 
     // Other ships
@@ -242,7 +249,7 @@ class SystemMap {
       const shipLabel = ship.traderName
         ? `${ship.traderName} (${ship.faction})`
         : ship.faction ?? 'unknown';
-      this._hitTargets.push({ x, y, r: 10, label: shipLabel });
+      this._hitTargets.push({ x, y, r: 10, label: shipLabel, wx: ship.pos.x, wy: ship.pos.y });
     }
 
     // Wrecks — ? if unresolved, × if within scan range
@@ -270,14 +277,14 @@ class SystemMap {
           l.kind === 'credits' ? `${l.count} credits` :
           l.name ?? l.id
         ).join('\n');
-        this._hitTargets.push({ x, y, r: 12, label: `Wreck\n${lootDesc}` });
+        this._hitTargets.push({ x, y, r: 12, label: `Wreck\n${lootDesc}`, wx: wreck.pos.x, wy: wreck.pos.y });
       } else {
         ctx.fillStyle = "rgba(220,220,255,0.9)";
         ctx.font = "11px monospace";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText("?", x, y);
-        this._hitTargets.push({ x, y, r: 12, label: "Unknown signal source" });
+        this._hitTargets.push({ x, y, r: 12, label: "Unknown signal source", wx: wreck.pos.x, wy: wreck.pos.y });
       }
       ctx.restore();
     }
@@ -317,7 +324,42 @@ class SystemMap {
         `Credits: ${p.credits ?? 0}`,
       ].filter(Boolean).join('\n');
 
-      this._hitTargets.push({ x, y, r: 14, label: lines });
+      this._hitTargets.push({ x, y, r: 14, label: lines, isPlayer: true });
+    }
+
+    // Hover distance line — from player to hovered object
+    const ht = this._hoveredTarget;
+    if (ht && !ht.isPlayer && ht.wx != null) {
+      const playerHit = this._hitTargets.find(t => t.isPlayer);
+      if (playerHit) {
+        const dx = ht.wx - scene.player.pos.x;
+        const dy = ht.wy - scene.player.pos.y;
+        const distWorld = Math.sqrt(dx * dx + dy * dy);
+        const distLabel = distWorld < 1000
+          ? `${Math.round(distWorld)} u`
+          : distWorld < 1e6
+          ? `${(distWorld / 1000).toFixed(1)}k u`
+          : `${(distWorld / 1e6).toFixed(2)}M u`;
+
+        ctx.save();
+        ctx.setLineDash([5, 5]);
+        ctx.strokeStyle = "rgba(0,255,136,0.45)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(playerHit.x, playerHit.y);
+        ctx.lineTo(ht.x, ht.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        const mx = (playerHit.x + ht.x) / 2;
+        const my = (playerHit.y + ht.y) / 2;
+        ctx.font = "11px monospace";
+        ctx.fillStyle = "rgba(0,255,136,0.8)";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(distLabel, mx, my - 10);
+        ctx.restore();
+      }
     }
 
     // System name

@@ -1,5 +1,6 @@
 export { Minimap };
 import { SCAN_RANGE } from "./wreck.js";
+import { STATION_EXCLUSION_ZONE, TUNNEL_APPROACH_ZONE } from "./scene.js";
 
 const SIZE = Math.round(window.innerWidth / 5.5);
 const PADDING = Math.round(SIZE * 0.075);
@@ -168,6 +169,29 @@ class Minimap {
       ctx.restore();
     }
 
+    // Speed-cap zone rings
+    ctx.save();
+    ctx.setLineDash([4, 4]);
+    ctx.lineWidth = 1.5;
+    if (this.station) {
+      const sx = cx + (this.station.pos.x - ox) * s;
+      const sy = cy + (this.station.pos.y - oy) * s;
+      ctx.strokeStyle = "rgba(80,200,255,0.7)";
+      ctx.beginPath();
+      ctx.arc(sx, sy, STATION_EXCLUSION_ZONE * s, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    for (const tunnel of this.warpTunnels) {
+      const tx = cx + (tunnel.pos.x - ox) * s;
+      const ty = cy + (tunnel.pos.y - oy) * s;
+      ctx.strokeStyle = "rgba(255,160,40,0.7)";
+      ctx.beginPath();
+      ctx.arc(tx, ty, TUNNEL_APPROACH_ZONE * s, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    ctx.restore();
+
     // Station marker — small diamond (square rotated 45°)
     if (this.station) {
       const sx = cx + (this.station.pos.x - ox) * s;
@@ -267,30 +291,31 @@ class Minimap {
       const rgx = cx - markerR * Math.cos(velAngle);
       const rgy = cy - markerR * Math.sin(velAngle);
 
-      // Prograde — open circle
+      // Prograde — triangle pointing in velocity direction, centroid at origin
       ctx.save();
+      ctx.translate(pgx, pgy);
+      ctx.rotate(velAngle);
       ctx.strokeStyle = progradeAligned ? "rgba(0,255,136,1)" : "rgba(0,255,136,0.45)";
       ctx.lineWidth = progradeAligned ? 2 : 1;
       ctx.beginPath();
-      ctx.arc(pgx, pgy, markerSize, 0, Math.PI * 2);
+      ctx.moveTo( markerSize,          0);
+      ctx.lineTo(-markerSize * 0.5,  markerSize * 0.75);
+      ctx.lineTo(-markerSize * 0.5, -markerSize * 0.75);
       ctx.closePath();
       ctx.stroke();
       ctx.restore();
 
-      // Retrograde — circle with cross inside
+      // Retrograde — triangle pointing opposite to velocity, centroid at origin
       ctx.save();
+      ctx.translate(rgx, rgy);
+      ctx.rotate(velAngle + Math.PI);
       ctx.strokeStyle = retrogradeAligned ? "rgba(255,160,0,1)" : "rgba(255,160,0,0.35)";
       ctx.lineWidth = retrogradeAligned ? 2 : 1;
       ctx.beginPath();
-      ctx.arc(rgx, rgy, markerSize, 0, Math.PI * 2);
+      ctx.moveTo( markerSize,          0);
+      ctx.lineTo(-markerSize * 0.5,  markerSize * 0.75);
+      ctx.lineTo(-markerSize * 0.5, -markerSize * 0.75);
       ctx.closePath();
-      ctx.stroke();
-      const cr = markerSize * 0.55;
-      ctx.beginPath();
-      ctx.moveTo(rgx - cr, rgy);
-      ctx.lineTo(rgx + cr, rgy);
-      ctx.moveTo(rgx, rgy - cr);
-      ctx.lineTo(rgx, rgy + cr);
       ctx.stroke();
       ctx.restore();
     }

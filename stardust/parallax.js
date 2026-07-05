@@ -162,6 +162,7 @@ class Starfield {
       dust.y = y;
       this.dust.push(dust);
     }
+    this.dustLines = new Graphics();
     /*
     for(const pt of this.dustfieldPts){
       console.log(pt)
@@ -188,11 +189,12 @@ class Starfield {
     app.stage.addChild(starContainer);
     starContainer.addChild(...this.stars);
     dustContainer.addChild(...this.dust);
+    dustContainer.addChild(this.dustLines);
     this.starContainer = starContainer;
     this.dustContainer = dustContainer;
   }
 
-  update(vel) {
+  update(vel, isWarp) {
     const angle = Math.atan2(vel.y, vel.x);
     const nv = sqnorm(vel.x, vel.y);
     const maxSkew = (0.9 * Math.PI) / 2;
@@ -218,6 +220,19 @@ class Starfield {
       dust.skew.x = skew;
       dust.scale = 1 + skew;
       dust.rotation = angle;
+    }
+    if (isWarp) {
+      this.dustLines.clear();
+      const lineLen = 250;
+      const rdx = -Math.cos(angle) * lineLen;
+      const rdy = -Math.sin(angle) * lineLen;
+      for (const dust of this.dust) {
+        this.dustLines.moveTo(dust.x, dust.y);
+        this.dustLines.lineTo(dust.x + rdx, dust.y + rdy);
+        this.dustLines.stroke({ color: dust.tint, width: 1 });
+      }
+    } else {
+      this.dustLines.clear();
     }
     //this.starContainer.x += 0.01;
     //this.starContainer.y = this.height / 4;

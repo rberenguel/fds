@@ -59,7 +59,7 @@ class System {
     );
     this.stations = this._stations();
     this.currentProduction = {}; // TODO deprecated?
-    this.inventory = {};
+    this.inventory = this._initInventory();
     this.hasNebula = true;
     this.health = 0;
     this.stabilityCounter = 0;
@@ -214,6 +214,14 @@ class System {
   getInventory(commodityId) {
     //Helper
     return this.inventory[commodityId] || 0;
+  }
+
+  _initInventory() {
+    const inv = {};
+    for (const { commodity, weight } of commodityRegistry.getProducedCommodities(this.subCategory)) {
+      inv[commodity.id] = Math.round(weight * 100);
+    }
+    return inv;
   }
 
   _planets() {

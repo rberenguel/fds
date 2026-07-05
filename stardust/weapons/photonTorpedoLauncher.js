@@ -59,8 +59,8 @@ class PhotonTorpedoLauncher extends Gun {
     const spread = 0;
     const ivx = Math.cos(shooter.r + spread);
     const ivy = Math.sin(shooter.r + spread);
-    const vx = this.stats.ACCEL * ivx + 0.1 * shooter.vel.x;
-    const vy = this.stats.ACCEL * ivy + 0.1 * shooter.vel.y; // Less affected by player speed
+    const vx = this.stats.ACCEL * ivx + shooter.vel.x;
+    const vy = this.stats.ACCEL * ivy + shooter.vel.y;
     const [rpx, rpy] = rotate(this.pos.x, this.pos.y, shooter.r);
     const b = new PhotonTorpedo({
       mass: 3,
@@ -152,12 +152,13 @@ class PhotonTorpedo extends Base1 {
     if (this.flameList && this.e > 0) {
       const fl = new Flame({
         pos: {
-          x: this.pos.x,
-          y: this.pos.y,
+          // Spawn slightly behind the torpedo so the trail visually follows the circle.
+          x: this.pos.x - this.vel.x * delta.deltaTime,
+          y: this.pos.y - this.vel.y * delta.deltaTime,
         },
         vel: {
-          x: 0.2 * this.vel.x,
-          y: 0.2 * this.vel.y,
+          x: this.vel.x,
+          y: this.vel.y,
         },
         fill: this.haloColor,
         r: 0,

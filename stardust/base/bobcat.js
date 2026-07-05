@@ -115,5 +115,6 @@ class Bobcat extends Ship {
     this.mass = 10;
     this.width = width;
     this.color = color;
+    this.cargoMax = 20;
   }
 }

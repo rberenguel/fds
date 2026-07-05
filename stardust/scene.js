@@ -1,4 +1,4 @@
-export { Scene, SpaceScene, computeEntryPosition };
+export { Scene, SpaceScene, computeEntryPosition, STATION_EXCLUSION_ZONE, TUNNEL_APPROACH_ZONE };
 
 import { Viewframe } from "./viewframe.js";
 import { Starfield } from "./parallax.js";
@@ -22,6 +22,7 @@ import { generateShipName } from "./comms.js";
 import { seededRnd } from "./rnd.js";
 import { MassDriverGun, PhotonTorpedoLauncher } from "./weapons/weapons.js";
 import { Wreck, SCOOP_RANGE, SCAN_RANGE, HALO_RADIUS } from "./wreck.js";
+import { SystemCategories } from "./tinker/systemEconomy.js";
 
 // Loot tables keyed by planet kind.
 // Each entry: [weight, loot object]  — rnd() selects by cumulative weight.
@@ -112,12 +113,24 @@ const linScale = (
   return output;
 };
 
+const JUMP_COSTS = {
+  [SystemCategories.Frontier]:    50,
+  [SystemCategories.Agricultural]: 100,
+  [SystemCategories.Mining]:      100,
+  [SystemCategories.Industrial]:  150,
+  [SystemCategories.Services]:    200,
+  [SystemCategories.HighTech]:    200,
+};
+const jumpCost = (category) => JUMP_COSTS[category] ?? 100;
+
 const MAXSCALE = 0.2;
 const TORUS_WARP_SPEED = 5000;    // world units/sec while in torus
 const TORUS_SPEED_SQ  = 100 * 100; // engage threshold: 100 m/s
 const TORUS_HOLD_SQ   =  60 *  60; // disengage below this (hysteresis)
 const TORUS_DROP_DIST = 200000;    // drop out within this distance of target
 const TORUS_ENEMY_DIST = 150000;   // drop out if an enemy is this close
+const STATION_EXCLUSION_ZONE = 120000; // no torus + 50 m/s speed cap within this radius of station
+const TUNNEL_APPROACH_ZONE  =  60000; // 50 m/s speed cap within this radius of each warp tunnel
 
 class SpaceScene extends Scene {
   constructor(props = {}) {
@@ -191,6 +204,7 @@ class SpaceScene extends Scene {
     this._wasColliding = false;
     this._dockedAt     = null;
     this._spawnSecurityShips();
+    this._spawnDebugPolice(); // DEBUG — remove when aggro tuning is done
     this._spawnTraderShips();
     this._spawnWrecks();
     this._planetNames = this._buildPlanetNames();
@@ -225,21 +239,55 @@ class SpaceScene extends Scene {
   }
 
   _buildStation() {
-    const earthLike = this.renderedSystem.planetObjects.find(
-      p => p.kind === PlanetKinds.EarthLike
-    );
-    if (!earthLike) return null;
-    const planetRadius = earthLike.p?.radius ?? earthLike.meshes[0]?.radius ?? 20000;
-    const a = Math.atan2(earthLike.pos.y, earthLike.pos.x);
+    const bodies = this.renderedSystem.planetObjects;
+    // Prefer earth-like; fall back to the innermost non-sun body so every system gets a station.
+    const anchor = bodies.find(p => p.kind === PlanetKinds.EarthLike)
+      ?? bodies
+          .filter(p => p.kind !== PlanetKinds.Sun)
+          .sort((a, b) => (a.pos.x ** 2 + a.pos.y ** 2) - (b.pos.x ** 2 + b.pos.y ** 2))[0];
+    if (!anchor) return null;
+    const planetRadius = anchor.p?.radius ?? anchor.meshes[0]?.radius ?? 20000;
+    const a = Math.atan2(anchor.pos.y, anchor.pos.x);
     const perpAngle = a + Math.PI / 2;
     return new Station({
       pos: {
-        x: earthLike.pos.x + Math.cos(perpAngle) * planetRadius * 1.5,
-        y: earthLike.pos.y + Math.sin(perpAngle) * planetRadius * 1.5,
+        x: anchor.pos.x + Math.cos(perpAngle) * planetRadius * 1.5,
+        y: anchor.pos.y + Math.sin(perpAngle) * planetRadius * 1.5,
       },
       planetRadius,
       name: `${this.renderedSystem.name} Station`,
     });
+  }
+
+  // DEBUG: spawns one police ship 3000 units ahead of the player for aggro testing.
+  _spawnDebugPolice() {
+    const ship = new Lynx({
+      pos: { x: this.player.pos.x + 3000, y: this.player.pos.y },
+      vel: { x: 0, y: 0 },
+      r: 0,
+      e: 5000,
+    });
+    const massDriver = new MassDriverGun({ pos: { x: 30, y: 0 }, source: ship._id });
+    const photon     = new PhotonTorpedoLauncher({ pos: { x: 0, y: 0 }, source: ship._id });
+    photon.ammoMax        = 20;
+    photon.firerate       = 6000;
+    ship.weapons          = [massDriver];
+    ship.secondaryWeapons = [photon];
+    ship._initAmmo(ship.weapons);
+    ship._initAmmo(ship.secondaryWeapons);
+    ship.npcState      = 'patrol';
+    ship.npcRole       = 'security';
+    ship.faction       = 'police';
+    ship.homePos       = { x: this.player.pos.x + 3000, y: this.player.pos.y };
+    ship.patrolRadius  = 500;
+    ship.orbitAngle    = 0;
+    ship.orbitSpeed    = 0.0003;
+    ship.chaseMaxSpeed = 105;
+    ship.chaseFwdRate  = 0.7;
+    ship.npcAccuracy   = 0.95;
+    ship.generate(this.app);
+    ship.attach(this.viewframe);
+    this.otherShips.push(ship);
   }
 
   _spawnSecurityShips() {
@@ -273,8 +321,11 @@ class SpaceScene extends Scene {
       const massDriver = new MassDriverGun({ pos: { x: 30, y: 0 }, source: ship._id });
       const photon     = new PhotonTorpedoLauncher({ pos: { x: 0, y: 0 }, source: ship._id });
       photon.ammoMax   = photonAmmo;
-      ship.weapons     = [massDriver, photon];
+      photon.firerate  = 6000;
+      ship.weapons          = [massDriver];
+      ship.secondaryWeapons = [photon];
       ship._initAmmo(ship.weapons);
+      ship._initAmmo(ship.secondaryWeapons);
       ship.npcState     = 'patrol';
       ship.npcRole      = 'security';
       ship.faction      = faction;
@@ -282,6 +333,9 @@ class SpaceScene extends Scene {
       ship.patrolRadius = patrolRadius;
       ship.orbitAngle   = angle;
       ship.orbitSpeed   = 0.0003;
+      ship.chaseMaxSpeed = isMilitary ? 110 : 105;
+      ship.chaseFwdRate  = isMilitary ? 1.0 : 0.7;
+      ship.npcAccuracy   = isMilitary ? 1.0 : 0.95;
       ship.generate(this.app);
       ship.attach(this.viewframe);
       this.otherShips.push(ship);
@@ -347,6 +401,7 @@ class SpaceScene extends Scene {
       ship.npcState          = npcState;
       ship.npcRole           = 'trader';
       ship.faction           = 'merchant';
+      ship.npcAccuracy       = Math.random() * 0.4 + 0.1;
       ship.traderName        = name;
       ship.traderDest        = traderDest;
       ship.traderArrivalRange = traderArrivalRange;
@@ -448,7 +503,9 @@ class SpaceScene extends Scene {
   // TODO: will need a destructor for all the created objects
   update(delta) {
     const nv = sqnorm(this.player.vel.x, this.player.vel.y);
-    this.starfield.update(this.player.vel);
+    // ALWAYS pass real player velocity here. Never pass fake warp velocity — it destroys star positions.
+    // Warp visual effects belong inside parallax.js, not here.
+    this.starfield.update(this.player.vel, this.torusDrive);
 
     this.viewframe.move(delta.deltaTime);
     this.viewframe.update();
@@ -668,6 +725,27 @@ class SpaceScene extends Scene {
         const sdy = ship.pos.y - this.player.pos.y;
         if (sdx * sdx + sdy * sdy < TORUS_ENEMY_DIST * TORUS_ENEMY_DIST) {
           torusActive = false;
+          if (this.torusDrive) {
+            this.comms.broadcast({ source: 'system', label: 'NAVCON',
+              text: 'mass lock — torus disengaged' });
+          }
+          break;
+        }
+      }
+    }
+    if (torusActive && this.station) {
+      const stx = this.station.pos.x - this.player.pos.x;
+      const sty = this.station.pos.y - this.player.pos.y;
+      if (stx * stx + sty * sty < STATION_EXCLUSION_ZONE * STATION_EXCLUSION_ZONE) {
+        torusActive = false;
+      }
+    }
+    if (torusActive) {
+      for (const tunnel of this.warpTunnels) {
+        const tx = tunnel.pos.x - this.player.pos.x;
+        const ty = tunnel.pos.y - this.player.pos.y;
+        if (tx * tx + ty * ty < TUNNEL_APPROACH_ZONE * TUNNEL_APPROACH_ZONE) {
+          torusActive = false;
           break;
         }
       }
@@ -730,6 +808,46 @@ class SpaceScene extends Scene {
 
     this.player.update(delta);
 
+    // Speed cap: 50 m/s inside station exclusion zone or near any warp tunnel
+    {
+      const MAX_APPROACH_SPEED = 50;
+      let inZone = false;
+      let zoneName = null;
+      if (this.station) {
+        const stx = this.station.pos.x - this.player.pos.x;
+        const sty = this.station.pos.y - this.player.pos.y;
+        if (stx * stx + sty * sty < STATION_EXCLUSION_ZONE * STATION_EXCLUSION_ZONE) {
+          inZone = true;
+          zoneName = this.station.name;
+        }
+      }
+      if (!inZone) {
+        for (const tunnel of this.warpTunnels) {
+          const tx = tunnel.pos.x - this.player.pos.x;
+          const ty = tunnel.pos.y - this.player.pos.y;
+          if (tx * tx + ty * ty < TUNNEL_APPROACH_ZONE * TUNNEL_APPROACH_ZONE) {
+            inZone = true;
+            zoneName = tunnel.name;
+            break;
+          }
+        }
+      }
+      if (inZone) {
+        const spd = Math.sqrt(this.player.vel.x ** 2 + this.player.vel.y ** 2);
+        if (spd > MAX_APPROACH_SPEED) {
+          const scale = MAX_APPROACH_SPEED / spd;
+          this.player.vel.x *= scale;
+          this.player.vel.y *= scale;
+          const now = performance.now();
+          if (!this._speedCapNotifiedAt || now - this._speedCapNotifiedAt > 4000) {
+            this._speedCapNotifiedAt = now;
+            this.comms.broadcast({ source: 'system', label: 'NAVCON',
+              text: `speed control near ${zoneName}` });
+          }
+        }
+      }
+    }
+
     // Warp displacement: added on top of normal physics during torus
     if (this.torusDrive && hudTarget.targetPos) {
       const tdx = hudTarget.targetPos.x - this.player.pos.x;
@@ -747,6 +865,20 @@ class SpaceScene extends Scene {
       const jdx = tunnel.pos.x - this.player.pos.x;
       const jdy = tunnel.pos.y - this.player.pos.y;
       if (jdx * jdx + jdy * jdy < TUNNEL_RADIUS * TUNNEL_RADIUS) {
+        const dest = universe[tunnel.destinationId];
+        const cost = jumpCost(dest.category);
+        const credits = this.player.credits ?? 0;
+        if (credits < cost) {
+          if (!this._jumpBlockedAt || performance.now() - this._jumpBlockedAt > 3000) {
+            this._jumpBlockedAt = performance.now();
+            this.comms.broadcast({ source: 'system', label: 'TOLLGATE',
+              text: `jump fee ${cost} cr — insufficient funds (${Math.floor(credits)} cr)` });
+          }
+          return;
+        }
+        this.player.credits = credits - cost;
+        this.comms.broadcast({ source: 'system', label: 'TOLLGATE',
+          text: `jump clearance granted: −${cost} cr` });
         this.pendingJump = { destId: tunnel.destinationId, fromId: this.renderedSystem.id };
         return;
       }

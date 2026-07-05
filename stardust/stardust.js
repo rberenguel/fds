@@ -28,6 +28,8 @@ import { generateShipName } from "./comms.js";
 import { universe } from "./tinker/universe.js";
 
 import { seededRnd } from "./rnd.js";
+import { MarketScreen } from "./market.js";
+import { LaserGun, PhotonTorpedoLauncher } from "./weapons/weapons.js";
 
 const rnd = seededRnd(performance.now());
 
@@ -45,6 +47,7 @@ if (keyMap === undefined) {
     ArrowLeft: "moveLeft",
     ArrowRight: "moveRight",
     Space: "shoot",
+    Enter: "secondaryShoot",
     Comma: "zoomOut",
     Period: "zoomIn",
   };
@@ -59,7 +62,7 @@ if (buttonMap === undefined) {
     b13: "moveDown",
     b12: "moveUp",
     b1: "shoot",
-    //b2: "reload",
+    b2: "secondaryShoot",
   };
 }
 
@@ -105,6 +108,14 @@ const gameActions = {
   },
   moveLeft: (f = 1) => {
     player.yawLeft();
+  },
+  secondaryShoot: () => {
+    const w = player.secondaryWeapons?.[0];
+    if (!w) return;
+    const now = performance.now();
+    if (now - (player.secondaryPrevshot ?? 0) < w.firerate) return;
+    player.secondaryPrevshot = now;
+    w.fire(player, player.bulletList);
   },
   shoot: () => {
     if (player.e < 10) {
@@ -217,6 +228,19 @@ const player = new Bobcat({
     y: 0,
   },
 });
+player.credits       = 0;
+player.inventory     = {};
+player.inventoryCost = {}; // commodityId → weighted avg cost per unit
+player.cargo         = [];
+
+const laser1  = new LaserGun({ pos: { x: -30, y: 50 },  source: player._id });
+const laser2  = new LaserGun({ pos: { x: -30, y: -50 }, source: player._id });
+const torpedo = new PhotonTorpedoLauncher({ pos: { x: 0, y: 0 }, source: player._id });
+torpedo.ammoMax = 5;
+player.weapons          = [laser1, laser2];
+player.secondaryWeapons = [torpedo];
+player._initAmmo(player.weapons);
+player._initAmmo(player.secondaryWeapons);
 
 player.generate();
 
@@ -328,7 +352,7 @@ metaP.bind(commands);
 const systemMap = new SystemMap();
 
 // Docked / crashed screens
-let dockedScreen = null;
+let marketScreen = null;
 let crashScreen  = null;
 
 const _traderChatter = () => {
@@ -379,28 +403,31 @@ const showDockedScreen = () => {
   spaceScene.comms.station(stationName, "docking confirmed. welcome aboard.");
   setTimeout(() => _traderChatter(), 2200);
 
-  const el = document.createElement("div");
-  Object.assign(el.style, {
-    position: "fixed", inset: "0", background: "rgba(0,0,0,0.82)",
-    color: "#00ff88", fontFamily: "monospace",
-    display: "flex", flexDirection: "column",
-    alignItems: "center", justifyContent: "center",
-    zIndex: "9999", gap: "1em",
+  const sys = universe[spaceScene.systemId];
+  marketScreen = new MarketScreen({
+    player:      player,
+    system:      sys,
+    stationName,
+    onUndock:    dismissDockedScreen,
   });
-  el.innerHTML = `
-    <div style="font-size:2.2em;font-weight:bold;letter-spacing:0.15em">DOCKED</div>
-    <div style="font-size:1em;color:#aaffcc">${stationName}</div>
-    <div style="margin-top:1.5em;font-size:0.8em;color:#558866">[ SPACE ] to undock</div>
-  `;
-  document.body.appendChild(el);
-  dockedScreen = el;
+  marketScreen.show();
 };
 
 const dismissDockedScreen = () => {
   const stationName = spaceScene.station?.name ?? "Station";
   spaceScene.comms.station(stationName, "clearance granted. safe travels.");
-  dockedScreen?.remove();
-  dockedScreen = null;
+  marketScreen?.hide();
+  marketScreen = null;
+  if (spaceScene.station) {
+    const angle  = spaceScene.station.dockAngle;
+    const dist   = spaceScene.station.radius * 1.5;
+    player.pos.x = spaceScene.station.pos.x + Math.cos(angle) * dist;
+    player.pos.y = spaceScene.station.pos.y + Math.sin(angle) * dist;
+  }
+  player.vel.x = 0;
+  player.vel.y = 0;
+  spaceScene._wasDocking   = false;
+  spaceScene._wasColliding = false;
 };
 
 const showCrashScreen = () => {
@@ -441,13 +468,13 @@ const dismissCrashScreen = () => {
 document.addEventListener("keydown", (e) => {
   if (e.code === "Escape") {
     e.preventDefault();
-    if (dockedScreen) { dismissDockedScreen(); return; }
+    if (marketScreen) { dismissDockedScreen(); return; }
     systemMap.visible ? systemMap.hide() : systemMap.show(spaceScene);
     return;
   }
-  if (e.code === "Space" && (dockedScreen || crashScreen)) {
+  if (e.code === "Space" && (marketScreen || crashScreen)) {
     e.preventDefault();
-    if (dockedScreen) dismissDockedScreen();
+    if (marketScreen) dismissDockedScreen();
     if (crashScreen)  dismissCrashScreen();
   }
 });
@@ -457,7 +484,7 @@ app.ticker.add((delta) => {
     stepCRT(delta);
     return;
   }
-  if (dockedScreen || crashScreen || systemMap.visible) return;
+  if (marketScreen || crashScreen || systemMap.visible) return;
   spaceScene.update(delta);
   if (spaceScene.pendingJump) {
     const { destId, fromId } = spaceScene.pendingJump;
