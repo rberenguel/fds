@@ -40,7 +40,8 @@ function initNpcPIDs(ship, preset) {
 
 // Main NPC control tick.  deltaTime is the raw PIXI delta.deltaTime (~1.0 at 60fps).
 // Ship must have: npcState ('patrol'|'chase'|'raid'), homePos, patrolRadius, orbitAngle, orbitSpeed.
-const npcControl = (ship, deltaTime) => {
+// player is passed so chase mode can fall back to patrol when needed.
+const npcControl = (ship, deltaTime, player) => {
   if (!ship.npcState) return;
 
   const preset = ship.npcState === 'patrol' ? 'patrol'
@@ -50,6 +51,7 @@ const npcControl = (ship, deltaTime) => {
   if (!ship.yawPID || ship._npcPreset !== preset) initNpcPIDs(ship, preset);
 
   if (ship.npcState === 'patrol') _patrolTick(ship, deltaTime);
+  else if (ship.npcState === 'chase') _chaseTick(ship, deltaTime);
 };
 
 // Fly toward ship.traderDest, decelerate on approach, set ship.traderArrived when close.
@@ -88,6 +90,81 @@ function traderControl(ship, deltaTime) {
     // Decelerate — back-thrust if still moving toward target
     const fwd = ship.vel.x * Math.cos(ship.r) + ship.vel.y * Math.sin(ship.r);
     if (speed > 8 && fwd > 0) ship.backThrust();
+  }
+}
+
+const CHASE_ATTACK_RANGE  = 1400; // world units — desired engagement distance
+const CHASE_SHOOT_ANGLE   = 0.22; // radians — firing cone half-angle
+const CHASE_ABANDON_RANGE = 200_000; // give up if target escapes this far
+const CHASE_ORBIT_SPEED   = 0.0018; // rad/tick — orbit waypoint rotation speed
+
+// Orbit-and-strafe: the ship chases a waypoint that orbits the player at ATTACK_RANGE.
+// This is inherently stable — the waypoint never stops, so there's no position to
+// oscillate around.  Thrust convention matches _patrolTick (confirmed working):
+//   backThrust() = accelerate in heading direction, forwardThrust() = brake/reverse.
+function _chaseTick(ship, deltaTime) {
+  const target = ship.chaseTarget;
+  if (!target || target.e < 0) {
+    ship.npcState = 'patrol';
+    return;
+  }
+
+  const dt = deltaTime / 1000;
+  const dx = target.pos.x - ship.pos.x;
+  const dy = target.pos.y - ship.pos.y;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+
+  if (dist > CHASE_ABANDON_RANGE) {
+    ship.npcState = 'patrol';
+    return;
+  }
+
+  // Initialise orbit angle to the ship's current bearing from the target,
+  // then advance each tick.
+  if (ship._chaseOrbitAngle === undefined) {
+    ship._chaseOrbitAngle = Math.atan2(ship.pos.y - target.pos.y, ship.pos.x - target.pos.x);
+  }
+  ship._chaseOrbitAngle += CHASE_ORBIT_SPEED * deltaTime;
+
+  // Orbit waypoint: always ATTACK_RANGE away from target, revolving slowly.
+  const wpx = target.pos.x + Math.cos(ship._chaseOrbitAngle) * CHASE_ATTACK_RANGE;
+  const wpy = target.pos.y + Math.sin(ship._chaseOrbitAngle) * CHASE_ATTACK_RANGE;
+
+  const wdx   = wpx - ship.pos.x;
+  const wdy   = wpy - ship.pos.y;
+  const wdist = Math.sqrt(wdx * wdx + wdy * wdy);
+
+  // Yaw toward orbit waypoint
+  const desiredAngle = Math.atan2(wdy, wdx);
+  const angleDiff    = normalizeAngle(desiredAngle - ship.r);
+  const yawOut       = ship.yawPID.update(0, angleDiff, dt);
+  if      (yawOut >  0.01) ship.yawRight();
+  else if (yawOut < -0.01) ship.yawLeft();
+
+  // Thrust — same convention as _patrolTick (confirmed working):
+  //   backThrust() = accelerate in heading direction, forwardThrust() = brake/reverse
+  const BRAKE_DIST = CHASE_ATTACK_RANGE * 3;
+  const speed      = Math.sqrt(ship.vel.x ** 2 + ship.vel.y ** 2);
+  const aligned    = Math.abs(angleDiff) < Math.PI / 3;
+  if (wdist > BRAKE_DIST) {
+    if (aligned) ship.backThrust();
+  } else {
+    const fwd = ship.vel.x * Math.cos(ship.r) + ship.vel.y * Math.sin(ship.r);
+    if (speed > 8 && fwd > 0) ship.forwardThrust();
+    else if (wdist > 400 && aligned) ship.backThrust();
+  }
+
+  // Fire at target (not waypoint) when the nose sweeps through the firing cone
+  const aimDiff = normalizeAngle(Math.atan2(dy, dx) - ship.r);
+  if (Math.abs(aimDiff) < CHASE_SHOOT_ANGLE && dist < CHASE_ATTACK_RANGE * 2.5) {
+    const now = performance.now();
+    for (const weapon of (ship.weapons ?? [])) {
+      if (!weapon) continue;
+      const elapsed = now - (ship[`_prevshot_${weapon.kind}`] ?? 0);
+      if (elapsed < (weapon.firerate ?? 200)) continue;
+      weapon.fire(ship, ship.bulletList);
+      ship[`_prevshot_${weapon.kind}`] = now;
+    }
   }
 }
 

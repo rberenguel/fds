@@ -112,9 +112,6 @@ class Debris extends Base1 {
     super.move(t);
 
     this.e -= 0.1;
-    if (this.kind === kinds.kShipDebris) {
-      this.e = Math.max(1, this.e);
-    }
     const ne = Math.max(0, Math.min(1, this.e / this.initialE));
     const g = (this.kind === kinds.kShipDebris ? 100 : 0) + 155 * ne;
     const hexColor = (g << 16) | (g << 8) | g;

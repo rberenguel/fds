@@ -184,6 +184,7 @@ class SpaceScene extends Scene {
     this.otherShips = [];
     this.debrisList = [];
     this.wrecks     = [];
+    this.wantedLevel   = 0;
     this.pendingDock   = false;
     this.pendingCrash  = false;
     this._wasDocking   = false;
@@ -275,6 +276,7 @@ class SpaceScene extends Scene {
       ship.weapons     = [massDriver, photon];
       ship._initAmmo(ship.weapons);
       ship.npcState     = 'patrol';
+      ship.npcRole      = 'security';
       ship.faction      = faction;
       ship.homePos      = homePos;
       ship.patrolRadius = patrolRadius;
@@ -413,6 +415,21 @@ class SpaceScene extends Scene {
     }
   }
 
+  _alertNearbySecurityFor(victim) {
+    const ALERT_RANGE = 30_000; // respond to incidents within sensor range of the crime scene
+    for (const ship of this.otherShips) {
+      if (ship.npcRole !== 'security') continue;
+      if (ship.npcState === 'chase') continue;
+      const dx = ship.pos.x - victim.pos.x;  // proximity to the attacked ship, not the player
+      const dy = ship.pos.y - victim.pos.y;
+      if (dx * dx + dy * dy < ALERT_RANGE * ALERT_RANGE) {
+        ship.npcState    = 'chase';
+        ship.chaseTarget = this.player;
+        this.comms?.system(`${ship.faction === 'military' ? 'Military' : 'Police'} ship responding`);
+      }
+    }
+  }
+
   _buildPlanetNames() {
     const roman = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"];
     const sysName = this.renderedSystem.name;
@@ -464,7 +481,7 @@ class SpaceScene extends Scene {
           traderControl(otherShip, delta.deltaTime);
         }
       } else if (otherShip.npcState) {
-        npcControl(otherShip, delta.deltaTime);
+        npcControl(otherShip, delta.deltaTime, this.player);
       } else if (otherShip.action() === "kChase") {
         otherControl(
           otherShip,
@@ -538,6 +555,21 @@ class SpaceScene extends Scene {
         const smoothPt = pt * pt * (3 - 2 * pt);
         const target = Math.min(MAXSCALE, Math.max(scale * 4, MAXSCALE * 0.4));
         const proximityScale = scale * (1 - smoothPt) + target * smoothPt;
+        scale = Math.max(scale, proximityScale);
+      }
+    }
+
+    // Ship proximity zoom: zoom in when close to any ship so ships near planets/
+    // stations remain visible and interactive.  Counteracts body zoom-out.
+    const SHIP_PROX_RANGE = 12000;
+    for (const ship of this.otherShips) {
+      const shdx = this.player.pos.x - ship.pos.x;
+      const shdy = this.player.pos.y - ship.pos.y;
+      const shDist = Math.sqrt(shdx * shdx + shdy * shdy);
+      if (shDist < SHIP_PROX_RANGE) {
+        const pt = 1 - shDist / SHIP_PROX_RANGE;
+        const smoothPt = pt * pt * (3 - 2 * pt);
+        const proximityScale = scale + (MAXSCALE - scale) * smoothPt;
         scale = Math.max(scale, proximityScale);
       }
     }
@@ -791,6 +823,8 @@ class SpaceScene extends Scene {
           const collisioning = o.collision(b);
           if (collisioning === 1) {
             o.showHit = performance.now() + settings.showHitMs;
+            o.lastAttacker = b.source;
+            o.lastHitTime  = performance.now();
             const oe = o.e;
             if (b.kind === "kMissile") {
               o.e -= b.e;
@@ -799,6 +833,9 @@ class SpaceScene extends Scene {
             } else {
               o.e -= b.e;
               b.e -= oe;
+            }
+            if (b.source === this.player._id) {
+              this._alertNearbySecurityFor(o);
             }
             const bnv = sqnorm(b.vel.x, b.vel.y) + 0.01;
             const onv = sqnorm(o.vel.x, o.vel.y) + 0.01;
@@ -817,6 +854,9 @@ class SpaceScene extends Scene {
               this.player.flameList.push(fl);
             }
             if (o.e < 0) {
+              if (b.source === this.player._id) {
+                this.wantedLevel = Math.min(5, this.wantedLevel + 1);
+              }
               const debris = o.explode({
                 e: Math.abs(o.e) + 1,
                 vel: {
@@ -872,6 +912,7 @@ class SpaceScene extends Scene {
           }
           this.comms?.trader(ship.traderName ?? 'UNKNOWN', 'MAYDAY — under attack');
         }
+        for (const p of (ship.presentations ?? [])) p?.parent?.removeChild(p);
         this.otherShips.splice(i, 1);
       }
     }
